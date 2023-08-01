@@ -1,8 +1,7 @@
-// SPD-License-Identifier: MIT
-
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {IStUSD} from "../interfaces/IStUSD.sol";
 
@@ -10,7 +9,7 @@ contract WstUSD is ERC20 {
     IStUSD public stUSD;
 
     /// @param _stUSD address of the StUSD token to wrap
-    constructor(IStUSD _stUSD) ERC20("Wrapped staked USD", "wstUSD", 18) {
+    constructor(IStUSD _stUSD) ERC20("Wrapped staked USD", "wstUSD") {
         stUSD = _stUSD;
     }
 
