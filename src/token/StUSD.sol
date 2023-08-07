@@ -22,7 +22,7 @@ contract StUSD is IERC20, Ownable, Pausable {
     /// normalized, so the contract also stores the sum of all shares to calculate
     /// each account's token balance which equals to:
     ///
-    ///   _shares[account] * _getTotalPooledUsd() / _getTotalShares()
+    ///   _shares[account] * _getTotalUsd() / _getTotalShares()
     mapping(address => uint256) private _shares;
 
     /// @dev Allowances are nominated in tokens, not token shares.
@@ -30,6 +30,9 @@ contract StUSD is IERC20, Ownable, Pausable {
 
     /// @dev Total amount of shares
     uint256 internal _totalShares;
+
+    /// @dev Total amount of Usd
+    uint256 internal _totalUsd;
 
     /// @dev Mapping of TBY to bool
     mapping(address => bool) internal _whitelisted;
@@ -91,17 +94,17 @@ contract StUSD is IERC20, Ownable, Pausable {
 
     /// @return the amount of tokens in existence.
     ///
-    /// @dev Always equals to `_getTotalPooledUsd()` since token amount
+    /// @dev Always equals to `_getTotalUsd()` since token amount
     /// is pegged to the total amount of Usd controlled by the protocol.
     function totalSupply() external view returns (uint256) {
-        return _getTotalPooledUsd();
+        return _getTotalUsd();
     }
 
     /// @return the entire amount of Usd controlled by the protocol.
     ///
     /// @dev The sum of all USD balances in the protocol, equals to the total supply of stUSD.
-    function getTotalPooledUsd() external view returns (uint256) {
-        return _getTotalPooledUsd();
+    function getTotalUsd() external view returns (uint256) {
+        return _getTotalUsd();
     }
 
     /// @return the amount of tokens owned by the `_account`.
@@ -109,7 +112,7 @@ contract StUSD is IERC20, Ownable, Pausable {
     /// @dev Balances are dynamic and equal the `_account`'s share in the amount of the
     /// total Usd controlled by the protocol. See `sharesOf`.
     function balanceOf(address _account) external view returns (uint256) {
-        return getPooledUsdByShares(_sharesOf(_account));
+        return getUsdByShares(_sharesOf(_account));
     }
 
     /// @notice Moves `_amount` tokens from the caller's account to the `_recipient` account.
@@ -224,13 +227,13 @@ contract StUSD is IERC20, Ownable, Pausable {
     }
 
     /// @return the amount of shares that corresponds to `_usdAmount` protocol-controlled Usd.
-    function getSharesByPooledUsd(uint256 _usdAmount) public view returns (uint256) {
-        return _usdAmount * _getTotalShares() / _getTotalPooledUsd();
+    function getSharesByUsd(uint256 _usdAmount) public view returns (uint256) {
+        return _usdAmount * _getTotalShares() / _getTotalUsd();
     }
 
     /// @return the amount of Usd that corresponds to `_sharesAmount` token shares.
-    function getPooledUsdByShares(uint256 _sharesAmount) public view returns (uint256) {
-        return _sharesAmount * _getTotalPooledUsd() / _getTotalShares();
+    function getUsdByShares(uint256 _sharesAmount) public view returns (uint256) {
+        return _sharesAmount * _getTotalUsd() / _getTotalShares();
     }
 
     /// @notice Moves `_sharesAmount` token shares from the caller's account to the `_recipient` account.
@@ -248,7 +251,7 @@ contract StUSD is IERC20, Ownable, Pausable {
     /// @dev The `_sharesAmount` argument is the amount of shares, not tokens.
     function transferShares(address _recipient, uint256 _sharesAmount) external returns (uint256) {
         _transferShares(msg.sender, _recipient, _sharesAmount);
-        uint256 tokensAmount = getPooledUsdByShares(_sharesAmount);
+        uint256 tokensAmount = getUsdByShares(_sharesAmount);
         _emitTransferEvents(msg.sender, _recipient, tokensAmount, _sharesAmount);
         return tokensAmount;
     }
@@ -263,14 +266,14 @@ contract StUSD is IERC20, Ownable, Pausable {
     ///
     /// - `_sender` and `_recipient` cannot be the zero addresses.
     /// - `_sender` must have at least `_sharesAmount` shares.
-    /// - the caller must have allowance for `_sender`'s tokens of at least `getPooledUsdByShares(_sharesAmount)`.
+    /// - the caller must have allowance for `_sender`'s tokens of at least `getUsdByShares(_sharesAmount)`.
     /// - the contract must not be paused.
     ///
     /// @dev The `_sharesAmount` argument is the amount of shares, not tokens.
     function transferSharesFrom(
         address _sender, address _recipient, uint256 _sharesAmount
     ) external returns (uint256) {
-        uint256 tokensAmount = getPooledUsdByShares(_sharesAmount);
+        uint256 tokensAmount = getUsdByShares(_sharesAmount);
         _spendAllowance(_sender, msg.sender, tokensAmount);
         _transferShares(_sender, _recipient, _sharesAmount);
         _emitTransferEvents(_sender, _recipient, tokensAmount, _sharesAmount);
@@ -280,15 +283,15 @@ contract StUSD is IERC20, Ownable, Pausable {
     /// @return the total amount (in wei) of Usd controlled by the protocol.
     /// @dev This is used for calculating tokens from shares and vice versa.
     /// @dev This function is required to be implemented in a derived contract.
-    function _getTotalPooledUsd() internal view returns (uint256) {
-        // TODO: complete this
+    function _getTotalUsd() internal view returns (uint256) {
+        return _totalUsd;
     }
 
     /// @notice Moves `_amount` tokens from `_sender` to `_recipient`.
     /// Emits a `Transfer` event.
     /// Emits a `TransferShares` event.
     function _transfer(address _sender, address _recipient, uint256 _amount) internal {
-        uint256 _sharesToTransfer = getSharesByPooledUsd(_amount);
+        uint256 _sharesToTransfer = getSharesByUsd(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
         _emitTransferEvents(_sender, _recipient, _amount, _sharesToTransfer);
     }
@@ -394,14 +397,14 @@ contract StUSD is IERC20, Ownable, Pausable {
         uint256 accountShares = _shares[_account];
         require(_sharesAmount <= accountShares, "BALANCE_EXCEEDED");
 
-        uint256 preRebaseTokenAmount = getPooledUsdByShares(_sharesAmount);
+        uint256 preRebaseTokenAmount = getUsdByShares(_sharesAmount);
 
         newTotalShares = _getTotalShares() - _sharesAmount;
         _totalShares = newTotalShares;
 
         _shares[_account] = accountShares - _sharesAmount;
 
-        uint256 postRebaseTokenAmount = getPooledUsdByShares(_sharesAmount);
+        uint256 postRebaseTokenAmount = getUsdByShares(_sharesAmount);
 
         emit SharesBurnt(_account, preRebaseTokenAmount, postRebaseTokenAmount, _sharesAmount);
 
@@ -431,6 +434,13 @@ contract StUSD is IERC20, Ownable, Pausable {
     /*************************************/
     /********** Owner Functions **********/
     /*************************************/
+
+    /// @notice Update _totalUsd value
+    /// @dev Restricted to owner only
+    /// @param _amount new amount
+    function setTotalUsd(uint256 _amount) external onlyOwner {
+        _totalUsd = _amount;
+    }
 
     /// @notice Whitelist TBY
     /// @dev Restricted to owner only
