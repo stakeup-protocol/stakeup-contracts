@@ -147,16 +147,13 @@ contract WithdrawalQueueERC721 is IERC721Metadata, IERC4906, WithdrawalQueue {
 
     /// @notice Finalize requests from last finalized one up to `_lastRequestIdToBeFinalized`
     /// @dev usd to finalize all the requests should be calculated using `prefinalize()` and sent along
-    function finalize(
-        uint256 _lastRequestIdToBeFinalized,
-        uint256 _maxShareRate
-    ) external payable {
+    function finalize(uint256 _lastRequestIdToBeFinalized) external payable {
         _requireNotPaused();
         _checkRole(FINALIZE_ROLE, msg.sender);
 
         uint256 firstFinalizedRequestId = getLastFinalizedRequestId() + 1;
 
-        _finalize(_lastRequestIdToBeFinalized, msg.value, _maxShareRate);
+        _finalize(_lastRequestIdToBeFinalized, msg.value);
 
         // ERC4906 metadata update event
         // We are updating all unfinalized to make it look different as they move closer to finalization in the future

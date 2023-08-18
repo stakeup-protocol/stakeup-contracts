@@ -27,7 +27,7 @@ abstract contract WithdrawalQueueBase {
     /// @dev last index of finalized request in the queue
     uint256 internal _lastFinalizedRequestId;
     /// @dev finalization rate history, indexes start from 1
-    mapping(uint256 => Checkpoint) internal _checkpoints;
+    mapping(uint256 => uint256) internal _fromRequestIds;
     /// @dev last index in checkpoints array
     uint256 internal _lastCheckpointIndex;
     /// @dev amount of usd locked on contract for further claiming
@@ -51,12 +51,6 @@ abstract contract WithdrawalQueueBase {
         bool claimed;
         /// @notice timestamp of last oracle report for this request
         uint40 reportTimestamp;
-    }
-
-    /// @notice structure to store discounts for requests that are affected by negative rebase
-    struct Checkpoint {
-        uint256 fromRequestId;
-        uint256 maxShareRate;
     }
 
     /// @notice output format struct for `_getWithdrawalStatus()` method
@@ -98,7 +92,6 @@ abstract contract WithdrawalQueueBase {
     );
 
     error ZeroAmountOfUSD();
-    error ZeroShareRate();
     error ZeroTimestamp();
     error TooMuchUsdToFinalize(uint256 sent, uint256 maxExpected);
     error NotOwner(address _sender, address _owner);
@@ -155,30 +148,22 @@ abstract contract WithdrawalQueueBase {
     // FINALIZATION FLOW
     //
     // Process when protocol is fixing the withdrawal request value and lock the required amount of USD.
-    // The value of a request after finalization can be:
-    //  - nominal (when the amount of usd locked for this request are equal to the request's stUSD)
-    //  - discounted (when the amount of usd will be lower, because the protocol share rate dropped
-    //   before request is finalized, so it will be equal to `request's shares` * `protocol share rate`)
     // The parameters that are required for finalization are:
-    //  - current share rate of the protocol
     //  - id of the last request that can be finalized
     //  - the amount of usd that must be locked for these requests
-    // To calculate the usd amount we'll need to know which requests in the queue will be finalized as nominal
-    // and which as discounted and the exact value of the discount. It's impossible to calculate without the unbounded
+    // To calculate the usd amount we'll need to know which requests in the queue will be finalized as nominal.
+    // It's impossible to calculate without the unbounded
     // loop over the unfinalized part of the queue. So, we need to extract a part of the algorithm off-chain, bring the
     // result with oracle report and check it later and check the result later.
     // So, we came to this solution:
     // Off-chain
     // 1. Oracle iterates over the queue off-chain and calculate the id of the latest finalizable request
     // in the queue. Then it splits all the requests that will be finalized into batches the way,
-    // that requests in a batch are all nominal or all discounted.
     // And passes them in the report as the array of the ending ids of these batches. So it can be reconstructed like
     // `[lastFinalizedRequestId+1, batches[0]], [batches[0]+1, batches[1]] ... [batches[n-2], batches[n-1]]`
     // 2. Contract checks the validity of the batches on-chain and calculate the amount of usd required to
     //  finalize them. It can be done without unbounded loop using partial sums that are calculated on request enqueueing.
-    // 3. Contract marks the request's as finalized and locks the usd for claiming. It also,
-    //  set's the discount checkpoint for these request's if required that will be applied on claim for each request's
-    // individually depending on request's share rate.
+    // 3. Contract marks the request's as finalized and locks the usd for claiming.
 
     /// @notice transient state that is used to pass intermediate results between several `calculateFinalizationBatches`
     //   invocations
@@ -197,21 +182,6 @@ abstract contract WithdrawalQueueBase {
 
     /// @notice Offchain view for the oracle daemon that calculates how many requests can be finalized within
     /// the given budget, time period and share rate limits. Returned requests are split into batches.
-    /// Each batch consist of the requests that all have the share rate below the `_maxShareRate` or above it.
-    /// Below you can see an example how 14 requests with different share rates will be split into 5 batches by
-    /// this method
-    ///
-    /// ^ share rate
-    /// |
-    /// |         • •
-    /// |       •    •   • • •
-    /// |----------------------•------ _maxShareRate
-    /// |   •          •        • • •
-    /// | •
-    /// +-------------------------------> requestId
-    ///  | 1st|  2nd  |3| 4th | 5th  |
-    ///
-    /// @param _maxShareRate current share rate of the protocol (1e27 precision)
     /// @param _maxTimestamp max timestamp of the request that can be finalized
     /// @param _maxRequestsPerCall max request number that can be processed per call.
     /// @param _state structure that accumulates the state across multiple invocations to overcome gas limits.
@@ -219,7 +189,6 @@ abstract contract WithdrawalQueueBase {
     ///  the function with returned `state` until it returns a state with `finished` flag set
     /// @return state that is changing on each call and should be passed to the next call until `state.finished` is true
     function calculateFinalizationBatches(
-        uint256 _maxShareRate,
         uint256 _maxTimestamp,
         uint256 _maxRequestsPerCall,
         BatchesCalculationState memory _state
@@ -256,16 +225,10 @@ abstract contract WithdrawalQueueBase {
 
             if (request.timestamp > _maxTimestamp) break; // max timestamp break
 
-            (
-                uint256 requestShareRate,
-                uint256 usdToFinalize,
-                uint256 shares
-            ) = _calcBatch(prevRequest, request);
-
-            if (requestShareRate > _maxShareRate) {
-                // discounted
-                usdToFinalize = (shares * _maxShareRate) / E27_PRECISION_BASE;
-            }
+            (uint256 requestShareRate, uint256 usdToFinalize, ) = _calcBatch(
+                prevRequest,
+                request
+            );
 
             if (usdToFinalize > _state.remainingEthBudget) break; // budget break
             _state.remainingEthBudget -= usdToFinalize;
@@ -276,13 +239,7 @@ abstract contract WithdrawalQueueBase {
                 // (issue: https://github.com/lidofinance/lido-dao/issues/442 )
                 // so we're taking requests that are placed during the same report
                 // as equal even if their actual share rate are different
-                prevRequest.reportTimestamp == request.reportTimestamp ||
-                // both requests are below the line
-                    (prevRequestShareRate <= _maxShareRate &&
-                        requestShareRate <= _maxShareRate) ||
-                // both requests are above the line
-                    (prevRequestShareRate > _maxShareRate &&
-                        requestShareRate > _maxShareRate))
+                prevRequest.reportTimestamp == request.reportTimestamp)
             ) {
                 _state.batches[_state.batchesLength - 1] = currentId; // extend the last batch
             } else {
@@ -310,14 +267,11 @@ abstract contract WithdrawalQueueBase {
 
     /// @notice Checks finalization batches, calculates required usd and the amount of shares to burn
     /// @param _batches finalization batches calculated offchain using `calculateFinalizationBatches()`
-    /// @param _maxShareRate max share rate that will be used for request finalization (1e27 precision)
     /// @return usdToLock amount of usd that should be sent with `finalize()` method
     /// @return sharesToBurn amount of shares that belongs to requests that will be finalized
     function prefinalize(
-        uint256[] calldata _batches,
-        uint256 _maxShareRate
+        uint256[] calldata _batches
     ) external view returns (uint256 usdToLock, uint256 sharesToBurn) {
-        if (_maxShareRate == 0) revert ZeroShareRate();
         if (_batches.length == 0) revert EmptyBatches();
 
         if (_batches[0] <= getLastFinalizedRequestId())
@@ -335,19 +289,12 @@ abstract contract WithdrawalQueueBase {
 
             WithdrawalRequest memory batchEnd = _queue[batchEndRequestId];
 
-            (
-                uint256 batchShareRate,
-                uint256 stUSD,
-                uint256 shares
-            ) = _calcBatch(prevBatchEnd, batchEnd);
+            (, uint256 stUSD, uint256 shares) = _calcBatch(
+                prevBatchEnd,
+                batchEnd
+            );
 
-            if (batchShareRate > _maxShareRate) {
-                // discounted
-                usdToLock += (shares * _maxShareRate) / E27_PRECISION_BASE;
-            } else {
-                // nominal
-                usdToLock += stUSD;
-            }
+            usdToLock += stUSD;
             sharesToBurn += shares;
 
             prevBatchEndRequestId = batchEndRequestId;
@@ -362,8 +309,7 @@ abstract contract WithdrawalQueueBase {
     ///  Emits WithdrawalsFinalized event.
     function _finalize(
         uint256 _lastRequestIdToBeFinalized,
-        uint256 _amountOfUSD,
-        uint256 _maxShareRate
+        uint256 _amountOfUSD
     ) internal {
         if (_lastRequestIdToBeFinalized > getLastRequestId())
             revert InvalidRequestId(_lastRequestIdToBeFinalized);
@@ -387,10 +333,7 @@ abstract contract WithdrawalQueueBase {
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
 
         // add a new checkpoint with current finalization max share rate
-        _checkpoints[lastCheckpointIndex + 1] = Checkpoint(
-            firstRequestIdToFinalize,
-            _maxShareRate
-        );
+        _fromRequestIds[lastCheckpointIndex + 1] = firstRequestIdToFinalize;
         _setLastCheckpointIndex(lastCheckpointIndex + 1);
 
         _setLockedUsdAmount(getLockedUsdAmount() + _amountOfUSD);
@@ -492,16 +435,16 @@ abstract contract WithdrawalQueueBase {
         ) return NOT_FOUND;
 
         // Right boundary
-        if (_requestId >= _checkpoints[_end].fromRequestId) {
+        if (_requestId >= _fromRequestIds[_end]) {
             // it's the last checkpoint, so it's valid
             if (_end == lastCheckpointIndex) return _end;
             // it fits right before the next checkpoint
-            if (_requestId < _checkpoints[_end + 1].fromRequestId) return _end;
+            if (_requestId < _fromRequestIds[_end + 1]) return _end;
 
             return NOT_FOUND;
         }
         // Left boundary
-        if (_requestId < _checkpoints[_start].fromRequestId) {
+        if (_requestId < _fromRequestIds[_start]) {
             return NOT_FOUND;
         }
 
@@ -511,7 +454,7 @@ abstract contract WithdrawalQueueBase {
 
         while (max > min) {
             uint256 mid = (max + min + 1) / 2;
-            if (_checkpoints[mid].fromRequestId <= _requestId) {
+            if (_fromRequestIds[mid] <= _requestId) {
                 min = mid;
             } else {
                 max = mid - 1;
@@ -543,27 +486,18 @@ abstract contract WithdrawalQueueBase {
         request.claimed = true;
         assert(_requestsByOwner[request.owner].remove(_requestId));
 
-        uint256 usdWithDiscount = _calculateClaimableUsd(
-            request,
-            _requestId,
-            _hint
-        );
+        uint256 usd = _calculateClaimableUsd(request, _requestId, _hint);
         // because of the stUSD rounding issue
         // (issue: https://github.com/lidofinance/lido-dao/issues/442 )
         // some dust (1-2 wei per request) will be accumulated upon claiming
-        _setLockedUsdAmount(getLockedUsdAmount() - usdWithDiscount);
-        _transferUnderlying(_recipient, usdWithDiscount);
+        _setLockedUsdAmount(getLockedUsdAmount() - usd);
+        _transferUnderlying(_recipient, usd);
 
-        emit WithdrawalClaimed(
-            _requestId,
-            msg.sender,
-            _recipient,
-            usdWithDiscount
-        );
+        emit WithdrawalClaimed(_requestId, msg.sender, _recipient, usd);
     }
 
     /// @dev Calculates usd value for the request using the provided hint. Checks if hint is valid
-    /// @return claimableUsd discounted usd for `_requestId`
+    /// @return claimableUsd usd for `_requestId`
     function _calculateClaimableUsd(
         WithdrawalRequest storage _request,
         uint256 _requestId,
@@ -574,28 +508,20 @@ abstract contract WithdrawalQueueBase {
         uint256 lastCheckpointIndex = getLastCheckpointIndex();
         if (_hint > lastCheckpointIndex) revert InvalidHint(_hint);
 
-        Checkpoint memory checkpoint = _checkpoints[_hint];
-        // Reverts if requestId is not in range [checkpoint[hint], checkpoint[hint+1])
+        uint256 fromRequestId = _fromRequestIds[_hint];
+        // Reverts if requestId is not in range [fromRequestIds[hint], fromRequestIds[hint+1])
         // ______(>______
         //    ^  hint
-        if (_requestId < checkpoint.fromRequestId) revert InvalidHint(_hint);
+        if (_requestId < fromRequestId) revert InvalidHint(_hint);
         if (_hint < lastCheckpointIndex) {
             // ______(>______(>________
             //       hint    hint+1  ^
-            Checkpoint memory nextCheckpoint = _checkpoints[_hint + 1];
-            if (nextCheckpoint.fromRequestId <= _requestId)
-                revert InvalidHint(_hint);
+            uint256 nextFromRequestId = _fromRequestIds[_hint + 1];
+            if (nextFromRequestId <= _requestId) revert InvalidHint(_hint);
         }
 
         WithdrawalRequest memory prevRequest = _queue[_requestId - 1];
-        (uint256 batchShareRate, uint256 usd, uint256 shares) = _calcBatch(
-            prevRequest,
-            _request
-        );
-
-        if (batchShareRate > checkpoint.maxShareRate) {
-            usd = (shares * checkpoint.maxShareRate) / E27_PRECISION_BASE;
-        }
+        (, uint256 usd, ) = _calcBatch(prevRequest, _request);
 
         return usd;
     }
@@ -613,11 +539,12 @@ abstract contract WithdrawalQueueBase {
             true,
             0
         );
-        _checkpoints[getLastCheckpointIndex()] = Checkpoint(0, 0);
+        _fromRequestIds[getLastCheckpointIndex()] = 0;
     }
 
     function _transferUnderlying(address _recipient, uint256 _amount) internal {
-        if (underlying.balanceOf(address(this)) < _amount) revert NotEnoughUsd();
+        if (underlying.balanceOf(address(this)) < _amount)
+            revert NotEnoughUsd();
 
         underlying.safeTransfer(_recipient, _amount);
     }
