@@ -24,7 +24,7 @@ contract WstUSD is ERC20 {
     /// @return Amount of wstUSD user receives after wrap
     function wrap(uint256 _stUSDAmount) external returns (uint256) {
         require(_stUSDAmount > 0, "wstUSD: can't wrap zero stUSD");
-        uint256 wstUSDAmount = stUSD.getSharesByPooledUsd(_stUSDAmount);
+        uint256 wstUSDAmount = stUSD.getSharesByUsd(_stUSDAmount);
         _mint(msg.sender, wstUSDAmount);
         stUSD.transferFrom(msg.sender, address(this), _stUSDAmount);
         return wstUSDAmount;
@@ -38,7 +38,7 @@ contract WstUSD is ERC20 {
     /// @return Amount of stUSD user receives after unwrap
     function unwrap(uint256 _wstUSDAmount) external returns (uint256) {
         require(_wstUSDAmount > 0, "wstUSD: zero amount unwrap not allowed");
-        uint256 stUSDAmount = stUSD.getPooledUsdByShares(_wstUSDAmount);
+        uint256 stUSDAmount = stUSD.getUsdByShares(_wstUSDAmount);
         _burn(msg.sender, _wstUSDAmount);
         stUSD.transfer(msg.sender, stUSDAmount);
         return stUSDAmount;
@@ -50,7 +50,7 @@ contract WstUSD is ERC20 {
     function getWstUSDByStUSD(
         uint256 _stUSDAmount
     ) external view returns (uint256) {
-        return stUSD.getSharesByPooledUsd(_stUSDAmount);
+        return stUSD.getSharesByUsd(_stUSDAmount);
     }
 
     /// @notice Get amount of stUSD for a given amount of wstUSD
@@ -59,18 +59,18 @@ contract WstUSD is ERC20 {
     function getStUSDByWstUSD(
         uint256 _wstUSDAmount
     ) external view returns (uint256) {
-        return stUSD.getPooledUsdByShares(_wstUSDAmount);
+        return stUSD.getUsdByShares(_wstUSDAmount);
     }
 
     /// @notice Get amount of stUSD for a one wstUSD
     /// @return Amount of stUSD for 1 wstUSD
     function stUsdPerToken() external view returns (uint256) {
-        return stUSD.getPooledUsdByShares(1 ether);
+        return stUSD.getUsdByShares(1 ether);
     }
 
     /// @notice Get amount of wstUSD for a one stUSD
     /// @return Amount of wstUSD for a 1 stUSD
     function tokensPerStUsd() external view returns (uint256) {
-        return stUSD.getSharesByPooledUsd(1 ether);
+        return stUSD.getSharesByUsd(1 ether);
     }
 }
