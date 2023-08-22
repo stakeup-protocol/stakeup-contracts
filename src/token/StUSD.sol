@@ -151,11 +151,10 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     ///
     /// Emits a {Withdrawn} event.
     ///
-    /// @param _maxAmount Maximum amount of underlying tokens to withdraw
-    function withdraw(uint256 _maxAmount) external whenNotPaused nonReentrant {
-        uint256 amount = Math.min(
-            redemptionAvailable(msg.sender, _processedRedemptionQueue),
-            _maxAmount
+    function withdraw() external whenNotPaused nonReentrant {
+        uint256 amount = redemptionAvailable(
+            msg.sender,
+            _processedRedemptionQueue
         );
 
         if (amount != 0) {
