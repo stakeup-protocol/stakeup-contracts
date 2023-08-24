@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "./StUSDBase.sol";
+import "../interfaces/IBloomPool.sol";
 
 /// @title Staked USD Contract
 contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
@@ -50,6 +51,9 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
 
     /// @dev Mapping of account to redemption state
     mapping(address => Redemption) internal _redemptions;
+
+    /// @dev Remaining underlying token balance
+    uint256 internal _remainingBalance;
 
     /************************************/
     /************** Events **************/
@@ -116,6 +120,42 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
         _setTotalUsd(_getTotalUsd() + _amount);
 
         emit Deposit(msg.sender, _tby, _amount, sharesAmount);
+    }
+
+    /// @notice Redeem underlying token from TBY
+    /// @param _tby TBY address
+    /// @param _amount Redeem amount
+    function redeemUnderlying(
+        address _tby,
+        uint256 _amount
+    ) external onlyOwner whenNotPaused {
+        IBloomPool pool = IBloomPool(_tby);
+
+        _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
+
+        uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(
+            address(this)
+        );
+
+        pool.withdrawLender(_amount);
+
+        uint256 withdrawn = underlyingToken.balanceOf(address(this)) -
+            beforeUnderlyingBalance;
+
+        _setTotalUsd(_getTotalUsd() - _amount + withdrawn);
+
+        _processProceeds(withdrawn);
+    }
+
+    /// @notice Deposit remaining underlying token to new TBY
+    /// @param _tby TBY address
+    function depositUnderlying(address _tby) external onlyOwner whenNotPaused {
+        IBloomPool pool = IBloomPool(_tby);
+
+        uint256 amount = _remainingBalance;
+        delete _remainingBalance;
+
+        pool.depositLender(amount);
     }
 
     /// @notice Get redemption state for account
@@ -254,7 +294,7 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
         // Process junior redemptions
         _proceeds = _processRedemptions(_proceeds);
 
-        // TODO:reinvest underlying tokens into tby
+        _remainingBalance += _proceeds;
     }
 
     /*************************************/
@@ -273,7 +313,7 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     /// @param _tby TBY address
     /// @param _whitelist whitelisted or not
     function whitelistTBY(address _tby, bool _whitelist) external onlyOwner {
-        require(_tby != address(0), "!tby");
+        if (_tby == address(0)) revert InvalidAddress();
         _whitelisted[_tby] = _whitelist;
         emit TBYWhitelisted(_tby, _whitelist);
     }
