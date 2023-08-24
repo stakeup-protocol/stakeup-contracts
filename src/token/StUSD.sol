@@ -2,521 +2,116 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+
+import "./StUSDBase.sol";
+import "../interfaces/IBloomPool.sol";
 
 /// @title Staked USD Contract
-contract StUSD is IERC20, Ownable, Pausable {
-    /*************************************/
-    /************* Constants *************/
-    /*************************************/
+contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
 
-    uint256 internal constant INFINITE_ALLOWANCE = type(uint256).max;
+    /************************************/
+    /************** Struct **************/
+    /************************************/
+
+    /// @notice Redemption state for account
+    /// @param pending Pending redemption amount
+    /// @param withdrawn Withdrawn redemption amount
+    /// @param redemptionQueueTarget Target in vault's redemption queue
+    struct Redemption {
+        uint256 pending;
+        uint256 withdrawn;
+        uint256 redemptionQueueTarget;
+    }
 
     /*************************************/
     /************** Storage **************/
     /*************************************/
 
-    /// @dev StUSD balances are dynamic and are calculated based on the accounts' shares
-    /// and the total amount of USD controlled by the protocol. Account shares aren't
-    /// normalized, so the contract also stores the sum of all shares to calculate
-    /// each account's token balance which equals to:
-    ///
-    ///   _shares[account] * _getTotalUsd() / _getTotalShares()
-    mapping(address => uint256) private _shares;
-
-    /// @dev Allowances are nominated in tokens, not token shares.
-    mapping(address => mapping(address => uint256)) private _allowances;
-
-    /// @dev Total amount of shares
-    uint256 internal _totalShares;
-
-    /// @dev Total amount of Usd
-    uint256 internal _totalUsd;
+    /// @dev Underlying token
+    IERC20 public immutable underlyingToken;
 
     /// @dev Mapping of TBY to bool
     mapping(address => bool) internal _whitelisted;
 
+    /// @dev Total withdrawal balance
+    uint256 internal _totalWithdrawalBalance;
+
+    /// @dev Pending redemptions
+    uint256 internal _pendingRedemptions;
+
+    /// @dev Redemption queue
+    uint256 internal _redemptionQueue;
+
+    /// @dev Processed redemption queue
+    uint256 internal _processedRedemptionQueue;
+
+    /// @dev Mapping of account to redemption state
+    mapping(address => Redemption) internal _redemptions;
+
+    /// @dev Remaining underlying token balance
+    uint256 internal _remainingBalance;
+
     /************************************/
     /************** Events **************/
     /************************************/
-
-    /// @notice An executed shares transfer from `sender` to `recipient`.
-    ///
-    /// @dev emitted in pair with an ERC20-defined `Transfer` event.
-    event TransferShares(
-        address indexed from,
-        address indexed to,
-        uint256 sharesValue
-    );
-
-    /// @notice An executed `burnShares` request
-    ///
-    /// @dev Reports simultaneously burnt shares amount
-    /// and corresponding stUSD amount.
-    /// The stUSD amount is calculated twice: before and after the burning incurred rebase.
-    ///
-    /// @param account holder of the burnt shares
-    /// @param preRebaseTokenAmount amount of stUSD the burnt shares corresponded to before the burn
-    /// @param postRebaseTokenAmount amount of stUSD the burnt shares corresponded to after the burn
-    /// @param sharesAmount amount of burnt shares
-    event SharesBurnt(
-        address indexed account,
-        uint256 preRebaseTokenAmount,
-        uint256 postRebaseTokenAmount,
-        uint256 sharesAmount
-    );
-
-    /// @notice Emitted when user deposits
-    /// @param account User address
-    /// @param tby TBY address
-    /// @param amount TBY deposit amount
-    /// @param shares Amount of shares minted to the user
-    event Deposit(
-        address indexed account,
-        address tby,
-        uint256 amount,
-        uint256 shares
-    );
 
     /// @notice Emitted when new TBY is whitelisted
     /// @param tby TBY address
     /// @param whitelist whitelisted or not
     event TBYWhitelisted(address tby, bool whitelist);
 
+    /// @notice Emitted when LP tokens are redeemed
+    /// @param account Redeeming account
+    /// @param shares Amount of LP tokens burned
+    /// @param amount Amount of underlying tokens
+    event Redeemed(address indexed account, uint256 shares, uint256 amount);
+
+    /// @notice Emitted when redeemed underlying tokens are withdrawn
+    /// @param account Withdrawing account
+    /// @param amount Amount of underlying tokens withdrawn
+    event Withdrawn(address indexed account, uint256 amount);
+
+    /************************************/
+    /************** Errors **************/
+    /************************************/
+
+    /// @notice Invalid address (e.g. zero address)
+    error InvalidAddress();
+
+    /// @notice Parameter out of bounds
+    error ParameterOutOfBounds();
+
+    /// @notice Insufficient balance
+    error InsufficientBalance();
+
+    /// @notice Redemption in progress
+    error RedemptionInProgress();
+
+    /// @notice Invalid amount
+    error InvalidAmount();
+
+    /// @notice TBY not whitelisted
+    error TBYNotWhitelisted();
+
+    constructor(IERC20 _underlyingToken) {
+        if (address(_underlyingToken) == address(0)) revert InvalidAddress();
+
+        underlyingToken = _underlyingToken;
+    }
+
     /***********************************/
     /************ Functions ************/
     /***********************************/
-
-    /// @return the name of the token.
-    function name() external pure returns (string memory) {
-        return "Staked USD";
-    }
-
-    /// @return the symbol of the token, usually a shorter version of the
-    /// name.
-    function symbol() external pure returns (string memory) {
-        return "stUSD";
-    }
-
-    /// @return the number of decimals for getting user representation of a token amount.
-    function decimals() external pure returns (uint8) {
-        return 18;
-    }
-
-    /// @return the amount of tokens in existence.
-    ///
-    /// @dev Always equals to `_getTotalUsd()` since token amount
-    /// is pegged to the total amount of Usd controlled by the protocol.
-    function totalSupply() external view returns (uint256) {
-        return _getTotalUsd();
-    }
-
-    /// @return the entire amount of Usd controlled by the protocol.
-    ///
-    /// @dev The sum of all USD balances in the protocol, equals to the total supply of stUSD.
-    function getTotalUsd() external view returns (uint256) {
-        return _getTotalUsd();
-    }
-
-    /// @return the amount of tokens owned by the `_account`.
-    ///
-    /// @dev Balances are dynamic and equal the `_account`'s share in the amount of the
-    /// total Usd controlled by the protocol. See `sharesOf`.
-    function balanceOf(address _account) external view returns (uint256) {
-        return getUsdByShares(_sharesOf(_account));
-    }
-
-    /// @notice Moves `_amount` tokens from the caller's account to the `_recipient` account.
-    ///
-    /// @return a boolean value indicating whether the operation succeeded.
-    /// Emits a `Transfer` event.
-    /// Emits a `TransferShares` event.
-    ///
-    /// Requirements:
-    ///
-    /// - `_recipient` cannot be the zero address.
-    /// - the caller must have a balance of at least `_amount`.
-    /// - the contract must not be paused.
-    ///
-    /// @dev The `_amount` argument is the amount of tokens, not shares.
-    function transfer(
-        address _recipient,
-        uint256 _amount
-    ) external returns (bool) {
-        _transfer(msg.sender, _recipient, _amount);
-        return true;
-    }
-
-    /// @return the remaining number of tokens that `_spender` is allowed to spend
-    /// on behalf of `_owner` through `transferFrom`. This is zero by default.
-    ///
-    /// @dev This value changes when `approve` or `transferFrom` is called.
-    function allowance(
-        address _owner,
-        address _spender
-    ) external view returns (uint256) {
-        return _allowances[_owner][_spender];
-    }
-
-    /// @notice Sets `_amount` as the allowance of `_spender` over the caller's tokens.
-    ///
-    /// @return a boolean value indicating whether the operation succeeded.
-    /// Emits an `Approval` event.
-    ///
-    /// Requirements:
-    ///
-    /// - `_spender` cannot be the zero address.
-    ///
-    /// @dev The `_amount` argument is the amount of tokens, not shares.
-    function approve(
-        address _spender,
-        uint256 _amount
-    ) external returns (bool) {
-        _approve(msg.sender, _spender, _amount);
-        return true;
-    }
-
-    /// @notice Moves `_amount` tokens from `_sender` to `_recipient` using the
-    /// allowance mechanism. `_amount` is then deducted from the caller's
-    /// allowance.
-    ///
-    /// @return a boolean value indicating whether the operation succeeded.
-    ///
-    /// Emits a `Transfer` event.
-    /// Emits a `TransferShares` event.
-    /// Emits an `Approval` event indicating the updated allowance.
-    ///
-    /// Requirements:
-    ///
-    /// - `_sender` and `_recipient` cannot be the zero addresses.
-    /// - `_sender` must have a balance of at least `_amount`.
-    /// - the caller must have allowance for `_sender`'s tokens of at least `_amount`.
-    /// - the contract must not be paused.
-    ///
-    /// @dev The `_amount` argument is the amount of tokens, not shares.
-    function transferFrom(
-        address _sender,
-        address _recipient,
-        uint256 _amount
-    ) external returns (bool) {
-        _spendAllowance(_sender, msg.sender, _amount);
-        _transfer(_sender, _recipient, _amount);
-        return true;
-    }
-
-    /// @notice Atomically increases the allowance granted to `_spender` by the caller by `_addedValue`.
-    ///
-    /// This is an alternative to `approve` that can be used as a mitigation for
-    /// problems described in:
-    /// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/b709eae01d1da91902d06ace340df6b324e6f049/contracts/token/ERC20/IERC20.sol#L57
-    /// Emits an `Approval` event indicating the updated allowance.
-    ///
-    /// Requirements:
-    ///
-    /// - `_spender` cannot be the the zero address.
-    function increaseAllowance(
-        address _spender,
-        uint256 _addedValue
-    ) external returns (bool) {
-        _approve(
-            msg.sender,
-            _spender,
-            _allowances[msg.sender][_spender] + _addedValue
-        );
-        return true;
-    }
-
-    /// @notice Atomically decreases the allowance granted to `_spender` by the caller by `_subtractedValue`.
-    ///
-    /// This is an alternative to `approve` that can be used as a mitigation for
-    /// problems described in:
-    /// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/b709eae01d1da91902d06ace340df6b324e6f049/contracts/token/ERC20/IERC20.sol#L57
-    /// Emits an `Approval` event indicating the updated allowance.
-    ///
-    /// Requirements:
-    ///
-    /// - `_spender` cannot be the zero address.
-    /// - `_spender` must have allowance for the caller of at least `_subtractedValue`.
-    function decreaseAllowance(
-        address _spender,
-        uint256 _subtractedValue
-    ) external returns (bool) {
-        uint256 currentAllowance = _allowances[msg.sender][_spender];
-        require(currentAllowance >= _subtractedValue, "ALLOWANCE_BELOW_ZERO");
-        _approve(msg.sender, _spender, currentAllowance - _subtractedValue);
-        return true;
-    }
-
-    /// @return the total amount of shares in existence.
-    ///
-    /// @dev The sum of all accounts' shares can be an arbitrary number, therefore
-    /// it is necessary to store it in order to calculate each account's relative share.
-    function getTotalShares() external view returns (uint256) {
-        return _getTotalShares();
-    }
-
-    /// @return the amount of shares owned by `_account`.
-    function sharesOf(address _account) external view returns (uint256) {
-        return _sharesOf(_account);
-    }
-
-    /// @return the amount of shares that corresponds to `_usdAmount` protocol-controlled Usd.
-    function getSharesByUsd(uint256 _usdAmount) public view returns (uint256) {
-        return (_usdAmount * _getTotalShares()) / _getTotalUsd();
-    }
-
-    /// @return the amount of Usd that corresponds to `_sharesAmount` token shares.
-    function getUsdByShares(
-        uint256 _sharesAmount
-    ) public view returns (uint256) {
-        return (_sharesAmount * _getTotalUsd()) / _getTotalShares();
-    }
-
-    /// @notice Moves `_sharesAmount` token shares from the caller's account to the `_recipient` account.
-    ///
-    /// @return amount of transferred tokens.
-    /// Emits a `TransferShares` event.
-    /// Emits a `Transfer` event.
-    ///
-    /// Requirements:
-    ///
-    /// - `_recipient` cannot be the zero address.
-    /// - the caller must have at least `_sharesAmount` shares.
-    /// - the contract must not be paused.
-    ///
-    /// @dev The `_sharesAmount` argument is the amount of shares, not tokens.
-    function transferShares(
-        address _recipient,
-        uint256 _sharesAmount
-    ) external returns (uint256) {
-        _transferShares(msg.sender, _recipient, _sharesAmount);
-        uint256 tokensAmount = getUsdByShares(_sharesAmount);
-        _emitTransferEvents(
-            msg.sender,
-            _recipient,
-            tokensAmount,
-            _sharesAmount
-        );
-        return tokensAmount;
-    }
-
-    /// @notice Moves `_sharesAmount` token shares from the `_sender` account to the `_recipient` account.
-    ///
-    /// @return amount of transferred tokens.
-    /// Emits a `TransferShares` event.
-    /// Emits a `Transfer` event.
-    ///
-    /// Requirements:
-    ///
-    /// - `_sender` and `_recipient` cannot be the zero addresses.
-    /// - `_sender` must have at least `_sharesAmount` shares.
-    /// - the caller must have allowance for `_sender`'s tokens of at least `getUsdByShares(_sharesAmount)`.
-    /// - the contract must not be paused.
-    ///
-    /// @dev The `_sharesAmount` argument is the amount of shares, not tokens.
-    function transferSharesFrom(
-        address _sender,
-        address _recipient,
-        uint256 _sharesAmount
-    ) external returns (uint256) {
-        uint256 tokensAmount = getUsdByShares(_sharesAmount);
-        _spendAllowance(_sender, msg.sender, tokensAmount);
-        _transferShares(_sender, _recipient, _sharesAmount);
-        _emitTransferEvents(_sender, _recipient, tokensAmount, _sharesAmount);
-        return tokensAmount;
-    }
-
-    /// @return the total amount (in wei) of Usd controlled by the protocol.
-    /// @dev This is used for calculating tokens from shares and vice versa.
-    /// @dev This function is required to be implemented in a derived contract.
-    function _getTotalUsd() internal view returns (uint256) {
-        return _totalUsd;
-    }
-
-    /// @dev set the total usd amount
-    /// @param _amount the amount
-    function _setTotalUsd(uint256 _amount) internal {
-        _totalUsd = _amount;
-    }
-
-    /// @notice Moves `_amount` tokens from `_sender` to `_recipient`.
-    /// Emits a `Transfer` event.
-    /// Emits a `TransferShares` event.
-    function _transfer(
-        address _sender,
-        address _recipient,
-        uint256 _amount
-    ) internal {
-        uint256 _sharesToTransfer = getSharesByUsd(_amount);
-        _transferShares(_sender, _recipient, _sharesToTransfer);
-        _emitTransferEvents(_sender, _recipient, _amount, _sharesToTransfer);
-    }
-
-    /// @notice Sets `_amount` as the allowance of `_spender` over the `_owner` s tokens.
-    ///
-    /// Emits an `Approval` event.
-    ///
-    /// NB: the method can be invoked even if the protocol paused.
-    ///
-    /// Requirements:
-    ///
-    /// - `_owner` cannot be the zero address.
-    /// - `_spender` cannot be the zero address.
-    function _approve(
-        address _owner,
-        address _spender,
-        uint256 _amount
-    ) internal {
-        require(_owner != address(0), "APPROVE_FROM_ZERO_ADDR");
-        require(_spender != address(0), "APPROVE_TO_ZERO_ADDR");
-
-        _allowances[_owner][_spender] = _amount;
-        emit Approval(_owner, _spender, _amount);
-    }
-
-    /// @dev Updates `owner` s allowance for `spender` based on spent `amount`.
-    ///
-    /// Does not update the allowance amount in case of infinite allowance.
-    /// Revert if not enough allowance is available.
-    ///
-    /// Might emit an {Approval} event.
-    function _spendAllowance(
-        address _owner,
-        address _spender,
-        uint256 _amount
-    ) internal {
-        uint256 currentAllowance = _allowances[_owner][_spender];
-        if (currentAllowance != INFINITE_ALLOWANCE) {
-            require(currentAllowance >= _amount, "ALLOWANCE_EXCEEDED");
-            _approve(_owner, _spender, currentAllowance - _amount);
-        }
-    }
-
-    /// @return the total amount of shares in existence.
-    function _getTotalShares() internal view returns (uint256) {
-        return _totalShares;
-    }
-
-    /// @return the amount of shares owned by `_account`.
-    function _sharesOf(address _account) internal view returns (uint256) {
-        return _shares[_account];
-    }
-
-    /// @notice Moves `_sharesAmount` shares from `_sender` to `_recipient`.
-    ///
-    /// Requirements:
-    ///
-    /// - `_sender` cannot be the zero address.
-    /// - `_recipient` cannot be the zero address or the `stUSD` token contract itself
-    /// - `_sender` must hold at least `_sharesAmount` shares.
-    /// - the contract must not be paused.
-    function _transferShares(
-        address _sender,
-        address _recipient,
-        uint256 _sharesAmount
-    ) internal whenNotPaused {
-        require(_sender != address(0), "TRANSFER_FROM_ZERO_ADDR");
-        require(_recipient != address(0), "TRANSFER_TO_ZERO_ADDR");
-        require(_recipient != address(this), "TRANSFER_TO_STUSD_CONTRACT");
-
-        uint256 currentSenderShares = _shares[_sender];
-        require(_sharesAmount <= currentSenderShares, "BALANCE_EXCEEDED");
-
-        _shares[_sender] = currentSenderShares - _sharesAmount;
-        _shares[_recipient] = _shares[_recipient] + _sharesAmount;
-    }
-
-    /// @notice Creates `_sharesAmount` shares and assigns them to `_recipient`, increasing the total amount of shares.
-    /// @dev This doesn't increase the token total supply.
-    ///
-    /// NB: The method doesn't check protocol pause relying on the external enforcement.
-    ///
-    /// Requirements:
-    ///
-    /// - `_recipient` cannot be the zero address.
-    /// - the contract must not be paused.
-    function _mintShares(
-        address _recipient,
-        uint256 _sharesAmount
-    ) internal returns (uint256 newTotalShares) {
-        require(_recipient != address(0), "MINT_TO_ZERO_ADDR");
-
-        newTotalShares = _getTotalShares() + _sharesAmount;
-        _totalShares = newTotalShares;
-
-        _shares[_recipient] = _shares[_recipient] + _sharesAmount;
-
-        // Notice: we're not emitting a Transfer event from the zero address here since shares mint
-        // works by taking the amount of tokens corresponding to the minted shares from all other
-        // token holders, proportionally to their share. The total supply of the token doesn't change
-        // as the result. This is equivalent to performing a send from each other token holder's
-        // address to `address`, but we cannot reflect this as it would require sending an unbounded
-        // number of events.
-    }
-
-    /// @notice Destroys `_sharesAmount` shares from `_account`'s holdings, decreasing the total amount of shares.
-    /// @dev This doesn't decrease the token total supply.
-    ///
-    /// Requirements:
-    ///
-    /// - `_account` cannot be the zero address.
-    /// - `_account` must hold at least `_sharesAmount` shares.
-    /// - the contract must not be paused.
-    function _burnShares(
-        address _account,
-        uint256 _sharesAmount
-    ) internal returns (uint256 newTotalShares) {
-        require(_account != address(0), "BURN_FROM_ZERO_ADDR");
-
-        uint256 accountShares = _shares[_account];
-        require(_sharesAmount <= accountShares, "BALANCE_EXCEEDED");
-
-        uint256 preRebaseTokenAmount = getUsdByShares(_sharesAmount);
-
-        newTotalShares = _getTotalShares() - _sharesAmount;
-        _totalShares = newTotalShares;
-
-        _shares[_account] = accountShares - _sharesAmount;
-
-        uint256 postRebaseTokenAmount = getUsdByShares(_sharesAmount);
-
-        emit SharesBurnt(
-            _account,
-            preRebaseTokenAmount,
-            postRebaseTokenAmount,
-            _sharesAmount
-        );
-
-        // Notice: we're not emitting a Transfer event to the zero address here since shares burn
-        // works by redistributing the amount of tokens corresponding to the burned shares between
-        // all other token holders. The total supply of the token doesn't change as the result.
-        // This is equivalent to performing a send from `address` to each other token holder address,
-        // but we cannot reflect this as it would require sending an unbounded number of events.
-
-        // We're emitting `SharesBurnt` event to provide an explicit rebase log record nonetheless.
-    }
-
-    /// @dev Emits {Transfer} and {TransferShares} events
-    function _emitTransferEvents(
-        address _from,
-        address _to,
-        uint _tokenAmount,
-        uint256 _sharesAmount
-    ) internal {
-        emit Transfer(_from, _to, _tokenAmount);
-        emit TransferShares(_from, _to, _sharesAmount);
-    }
-
-    /************************************/
-    /********** User Functions **********/
-    /************************************/
 
     /// @notice Deposit TBY and get stUSD minted
     /// @param _tby TBY address
     /// @param _amount TBY amount to deposit
     function depositTBY(address _tby, uint256 _amount) external whenNotPaused {
-        require(_whitelisted[_tby], "tby not whitelisted");
+        if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
 
         uint256 sharesAmount = getSharesByUsd(_amount);
 
@@ -525,6 +120,181 @@ contract StUSD is IERC20, Ownable, Pausable {
         _setTotalUsd(_getTotalUsd() + _amount);
 
         emit Deposit(msg.sender, _tby, _amount, sharesAmount);
+    }
+
+    /// @notice Redeem underlying token from TBY
+    /// @param _tby TBY address
+    /// @param _amount Redeem amount
+    function redeemUnderlying(
+        address _tby,
+        uint256 _amount
+    ) external onlyOwner whenNotPaused {
+        IBloomPool pool = IBloomPool(_tby);
+
+        _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
+
+        uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(
+            address(this)
+        );
+
+        pool.withdrawLender(_amount);
+
+        uint256 withdrawn = underlyingToken.balanceOf(address(this)) -
+            beforeUnderlyingBalance;
+
+        _setTotalUsd(_getTotalUsd() - _amount + withdrawn);
+
+        _processProceeds(withdrawn);
+    }
+
+    /// @notice Deposit remaining underlying token to new TBY
+    /// @param _tby TBY address
+    function depositUnderlying(address _tby) external onlyOwner whenNotPaused {
+        IBloomPool pool = IBloomPool(_tby);
+
+        uint256 amount = _remainingBalance;
+        delete _remainingBalance;
+
+        pool.depositLender(amount);
+    }
+
+    /// @notice Get redemption state for account
+    /// @param account Account
+    /// @return Redemption state
+    function redemptions(
+        address account
+    ) external view returns (Redemption memory) {
+        return _redemptions[account];
+    }
+
+    /// @notice Redeem stUSD in exchange for underlying tokens. Underlying
+    /// tokens can be withdrawn with the `withdraw()` method, once the
+    /// redemption is processed.
+    ///
+    /// Emits a {Redeemed} event.
+    ///
+    /// @param _shares Amount of stUSD
+    function redeem(uint256 _shares) external whenNotPaused nonReentrant {
+        if (_shares == 0) revert ParameterOutOfBounds();
+
+        uint256 redemptionAmount = getUsdByShares(_shares);
+
+        _redeem(msg.sender, _shares, redemptionAmount, _redemptionQueue);
+
+        _pendingRedemptions += redemptionAmount;
+        _redemptionQueue += redemptionAmount;
+
+        emit Redeemed(msg.sender, _shares, redemptionAmount);
+    }
+
+    /// @notice Withdraw redeemed underlying tokens
+    ///
+    /// Emits a {Withdrawn} event.
+    ///
+    function withdraw() external whenNotPaused nonReentrant {
+        uint256 amount = redemptionAvailable(
+            msg.sender,
+            _processedRedemptionQueue
+        );
+
+        if (amount != 0) {
+            _withdraw(msg.sender, amount);
+
+            _totalWithdrawalBalance -= amount;
+
+            underlyingToken.safeTransfer(msg.sender, amount);
+        }
+
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    /// @notice Get amount of redemption available for withdraw for account
+    /// @param account Account
+    /// @param processedRedemptionQueue Current value of processed redemption queue
+    /// @return Amount available for withdraw
+    function redemptionAvailable(
+        address account,
+        uint256 processedRedemptionQueue
+    ) public view returns (uint256) {
+        Redemption storage redemption = _redemptions[account];
+
+        if (redemption.pending == 0) {
+            return 0;
+        } else if (
+            processedRedemptionQueue >=
+            redemption.redemptionQueueTarget + redemption.pending
+        ) {
+            return redemption.pending - redemption.withdrawn;
+        } else if (
+            processedRedemptionQueue > redemption.redemptionQueueTarget
+        ) {
+            return
+                processedRedemptionQueue -
+                redemption.redemptionQueueTarget -
+                redemption.withdrawn;
+        } else {
+            return 0;
+        }
+    }
+
+    function _redeem(
+        address _account,
+        uint256 _shares,
+        uint256 _underlyingAmount,
+        uint256 _redemptionQueueTarget
+    ) internal {
+        Redemption storage redemption = _redemptions[_account];
+
+        if (balanceOf(_account) < _shares) revert InsufficientBalance();
+        if (redemption.pending != 0) revert RedemptionInProgress();
+
+        redemption.pending = _underlyingAmount;
+        redemption.withdrawn = 0;
+        redemption.redemptionQueueTarget = _redemptionQueueTarget;
+
+        _burnShares(_account, _shares);
+    }
+
+    function _withdraw(address _account, uint256 _underlyingAmount) internal {
+        Redemption storage redemption = _redemptions[_account];
+
+        if (
+            redemptionAvailable(_account, _processedRedemptionQueue) <
+            _underlyingAmount
+        ) revert InvalidAmount();
+
+        if (redemption.withdrawn + _underlyingAmount == redemption.pending) {
+            delete _redemptions[_account];
+        } else {
+            redemption.withdrawn += _underlyingAmount;
+        }
+    }
+
+    /// @dev Process redemptions
+    /// @param _proceeds Proceeds in underlying tokens
+    function _processRedemptions(uint256 _proceeds) internal returns (uint256) {
+        // Compute maximum redemption possible
+        uint256 redemptionAmount = Math.min(_pendingRedemptions, _proceeds);
+
+        // Update redemption state
+        _pendingRedemptions -= redemptionAmount;
+        _processedRedemptionQueue += redemptionAmount;
+
+        // Add redemption to withdrawal balance
+        _totalWithdrawalBalance += redemptionAmount;
+
+        // Return amount of proceeds leftover
+        return _proceeds - redemptionAmount;
+    }
+
+    /// @dev Process new proceeds by applying them to redemptions and undeployed
+    /// cash
+    /// @param _proceeds Proceeds in underlying tokens
+    function _processProceeds(uint256 _proceeds) internal {
+        // Process junior redemptions
+        _proceeds = _processRedemptions(_proceeds);
+
+        _remainingBalance += _proceeds;
     }
 
     /*************************************/
@@ -543,7 +313,7 @@ contract StUSD is IERC20, Ownable, Pausable {
     /// @param _tby TBY address
     /// @param _whitelist whitelisted or not
     function whitelistTBY(address _tby, bool _whitelist) external onlyOwner {
-        require(_tby != address(0), "!tby");
+        if (_tby == address(0)) revert InvalidAddress();
         _whitelisted[_tby] = _whitelist;
         emit TBYWhitelisted(_tby, _whitelist);
     }
