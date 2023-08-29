@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "./StUSDBase.sol";
@@ -12,6 +13,7 @@ import "../interfaces/IBloomPool.sol";
 /// @title Staked USD Contract
 contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Metadata;
 
     /************************************/
     /************** Struct **************/
@@ -33,6 +35,9 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
 
     /// @dev Underlying token
     IERC20 public immutable underlyingToken;
+
+    /// @dev Underlying token decimals
+    uint8 internal immutable underlyingDecimals;
 
     /// @dev Mapping of TBY to bool
     mapping(address => bool) internal _whitelisted;
@@ -97,10 +102,11 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     /// @notice TBY not whitelisted
     error TBYNotWhitelisted();
 
-    constructor(IERC20 _underlyingToken) {
-        if (address(_underlyingToken) == address(0)) revert InvalidAddress();
+    constructor(address _underlyingToken) {
+        if (_underlyingToken == address(0)) revert InvalidAddress();
 
-        underlyingToken = _underlyingToken;
+        underlyingToken = IERC20(_underlyingToken);
+        underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
     }
 
     /***********************************/
@@ -110,8 +116,10 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     /// @notice Deposit TBY and get stUSD minted
     /// @param _tby TBY address
     /// @param _amount TBY amount to deposit
-    function depositTBY(address _tby, uint256 _amount) external whenNotPaused {
+    function deposit(address _tby, uint256 _amount) external whenNotPaused {
         if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
+
+        IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 sharesAmount = getSharesByUsd(_amount);
 
@@ -120,51 +128,6 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
         _setTotalUsd(_getTotalUsd() + _amount);
 
         emit Deposit(msg.sender, _tby, _amount, sharesAmount);
-    }
-
-    /// @notice Redeem underlying token from TBY
-    /// @param _tby TBY address
-    /// @param _amount Redeem amount
-    function redeemUnderlying(
-        address _tby,
-        uint256 _amount
-    ) external onlyOwner whenNotPaused {
-        IBloomPool pool = IBloomPool(_tby);
-
-        _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
-
-        uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(
-            address(this)
-        );
-
-        pool.withdrawLender(_amount);
-
-        uint256 withdrawn = underlyingToken.balanceOf(address(this)) -
-            beforeUnderlyingBalance;
-
-        _setTotalUsd(_getTotalUsd() - _amount + withdrawn);
-
-        _processProceeds(withdrawn);
-    }
-
-    /// @notice Deposit remaining underlying token to new TBY
-    /// @param _tby TBY address
-    function depositUnderlying(address _tby) external onlyOwner whenNotPaused {
-        IBloomPool pool = IBloomPool(_tby);
-
-        uint256 amount = _remainingBalance;
-        delete _remainingBalance;
-
-        pool.depositLender(amount);
-    }
-
-    /// @notice Get redemption state for account
-    /// @param account Account
-    /// @return Redemption state
-    function redemptions(
-        address account
-    ) external view returns (Redemption memory) {
-        return _redemptions[account];
     }
 
     /// @notice Redeem stUSD in exchange for underlying tokens. Underlying
@@ -202,10 +165,22 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
 
             _totalWithdrawalBalance -= amount;
 
-            underlyingToken.safeTransfer(msg.sender, amount);
+            underlyingToken.safeTransfer(
+                msg.sender,
+                amount / (10 ** (18 - underlyingDecimals))
+            );
         }
 
         emit Withdrawn(msg.sender, amount);
+    }
+
+    /// @notice Get redemption state for account
+    /// @param account Account
+    /// @return Redemption state
+    function redemptions(
+        address account
+    ) external view returns (Redemption memory) {
+        return _redemptions[account];
     }
 
     /// @notice Get amount of redemption available for withdraw for account
@@ -253,6 +228,7 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
         redemption.redemptionQueueTarget = _redemptionQueueTarget;
 
         _burnShares(_account, _shares);
+        _setTotalUsd(_getTotalUsd() - _underlyingAmount);
     }
 
     function _withdraw(address _account, uint256 _underlyingAmount) internal {
@@ -294,7 +270,11 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
         // Process junior redemptions
         _proceeds = _processRedemptions(_proceeds);
 
-        _remainingBalance += _proceeds;
+        if (_proceeds > 0) {
+            _remainingBalance += _proceeds;
+
+            _setTotalUsd(_getTotalUsd() + _proceeds);
+        }
     }
 
     /*************************************/
@@ -316,6 +296,40 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
         if (_tby == address(0)) revert InvalidAddress();
         _whitelisted[_tby] = _whitelist;
         emit TBYWhitelisted(_tby, _whitelist);
+    }
+
+    /// @notice Redeem underlying token from TBY
+    /// @param _tby TBY address
+    /// @param _amount Redeem amount
+    function redeemUnderlying(
+        address _tby,
+        uint256 _amount
+    ) external onlyOwner whenNotPaused {
+        IBloomPool pool = IBloomPool(_tby);
+
+        _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
+
+        uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(
+            address(this)
+        );
+
+        pool.withdrawLender(_amount);
+
+        uint256 withdrawn = underlyingToken.balanceOf(address(this)) -
+            beforeUnderlyingBalance;
+
+        _processProceeds(withdrawn * 10 ** (18 - underlyingDecimals));
+    }
+
+    /// @notice Deposit remaining underlying token to new TBY
+    /// @param _tby TBY address
+    function depositUnderlying(address _tby) external onlyOwner whenNotPaused {
+        IBloomPool pool = IBloomPool(_tby);
+
+        uint256 amount = _remainingBalance;
+        delete _remainingBalance;
+
+        pool.depositLender(amount);
     }
 
     /// @notice Pause the contract
