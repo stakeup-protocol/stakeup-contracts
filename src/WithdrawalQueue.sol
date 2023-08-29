@@ -301,7 +301,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, Pausable, Withdraw
     function _requestWithdrawal(uint256 _amountOfStUSD, address _owner) internal returns (uint256 requestId) {
         STUSD.transferFrom(msg.sender, address(this), _amountOfStUSD);
 
-        uint256 amountOfShares = STUSD.getSharesByPooledUsd(_amountOfStUSD);
+        uint256 amountOfShares = STUSD.getSharesByUsd(_amountOfStUSD);
 
         requestId = _enqueue(uint128(_amountOfStUSD), uint128(amountOfShares), _owner);
 
@@ -313,7 +313,7 @@ abstract contract WithdrawalQueue is AccessControlEnumerable, Pausable, Withdraw
         uint256 amountOfStUSD = WSTUSD.unwrap(_amountOfWstUSD);
         _checkWithdrawalRequestAmount(amountOfStUSD);
 
-        uint256 amountOfShares = STUSD.getSharesByPooledUsd(amountOfStUSD);
+        uint256 amountOfShares = STUSD.getSharesByUsd(amountOfStUSD);
 
         requestId = _enqueue(uint128(amountOfStUSD), uint128(amountOfShares), _owner);
 
