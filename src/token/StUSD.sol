@@ -9,11 +9,12 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "./StUSDBase.sol";
 import "../interfaces/IBloomPool.sol";
+import "../interfaces/IWstUSD.sol";
 
 /// @title Staked USD Contract
 contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    using SafeERC20 for IERC20Metadata;
+    using SafeERC20 for IWstUSD;
 
     /************************************/
     /************** Struct **************/
@@ -32,6 +33,9 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     /*************************************/
     /************** Storage **************/
     /*************************************/
+
+    /// @notice WstUSD token
+    IWstUSD public wstUSD;
 
     /// @dev Underlying token
     IERC20 public immutable underlyingToken;
@@ -102,11 +106,23 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     /// @notice TBY not whitelisted
     error TBYNotWhitelisted();
 
+    /// @notice WstUSD already initialized
+    error AlreadyInitialized();
+
     constructor(address _underlyingToken) {
         if (_underlyingToken == address(0)) revert InvalidAddress();
 
         underlyingToken = IERC20(_underlyingToken);
         underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
+    }
+
+    /// @notice Sets WstUSD token address
+    /// @param _wstUSD WstUSD token address
+    function setWstUSD(address _wstUSD) external onlyOwner {
+        if (_wstUSD == address(0)) revert InvalidAddress();
+        if (address(wstUSD) != address(0)) revert AlreadyInitialized();
+
+        wstUSD = IWstUSD(_wstUSD);
     }
 
     /***********************************/
@@ -136,18 +152,40 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     ///
     /// Emits a {Redeemed} event.
     ///
-    /// @param _shares Amount of stUSD
-    function redeem(uint256 _shares) external whenNotPaused nonReentrant {
-        if (_shares == 0) revert ParameterOutOfBounds();
+    /// @param _stUSDAmount Amount of stUSD
+    function redeemStUSD(
+        uint256 _stUSDAmount
+    ) external whenNotPaused nonReentrant {
+        _redeemStUSD(_stUSDAmount);
+    }
 
-        uint256 redemptionAmount = getUsdByShares(_shares);
+    /// @notice Redeem wstUSD in exchange for underlying tokens. Underlying
+    /// tokens can be withdrawn with the `withdraw()` method, once the
+    /// redemption is processed.
+    ///
+    /// Emits a {Redeemed} event.
+    ///
+    /// @param _wstUSDAmount Amount of wstUSD
+    function redeemWstUSD(
+        uint256 _wstUSDAmount
+    ) external whenNotPaused nonReentrant {
+        wstUSD.safeTransferFrom(msg.sender, address(this), _wstUSDAmount);
+        uint256 _stUSDAmount = wstUSD.unwrap(_wstUSDAmount);
+        _transfer(address(this), msg.sender, _stUSDAmount);
+        _redeemStUSD(_stUSDAmount);
+    }
 
-        _redeem(msg.sender, _shares, redemptionAmount, _redemptionQueue);
+    function _redeemStUSD(uint256 _stUSDAmount) internal {
+        if (_stUSDAmount == 0) revert ParameterOutOfBounds();
 
-        _pendingRedemptions += redemptionAmount;
-        _redemptionQueue += redemptionAmount;
+        uint256 shares = getSharesByUsd(_stUSDAmount);
 
-        emit Redeemed(msg.sender, _shares, redemptionAmount);
+        _redeem(msg.sender, shares, _stUSDAmount, _redemptionQueue);
+
+        _pendingRedemptions += _stUSDAmount;
+        _redemptionQueue += _stUSDAmount;
+
+        emit Redeemed(msg.sender, shares, _stUSDAmount);
     }
 
     /// @notice Withdraw redeemed underlying tokens
