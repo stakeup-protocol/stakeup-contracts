@@ -254,14 +254,22 @@ contract StUSDBase is IERC20, Pausable {
 
     /// @return the amount of shares that corresponds to `_usdAmount` protocol-controlled Usd.
     function getSharesByUsd(uint256 _usdAmount) public view returns (uint256) {
-        return (_usdAmount * _getTotalShares()) / _getTotalUsd();
+        uint256 totalShares = _getTotalShares();
+        if (totalShares == 0) {
+            return _usdAmount;
+        }
+        return (_usdAmount * totalShares) / _getTotalUsd();
     }
 
     /// @return the amount of Usd that corresponds to `_sharesAmount` token shares.
     function getUsdByShares(
         uint256 _sharesAmount
     ) public view returns (uint256) {
-        return (_sharesAmount * _getTotalUsd()) / _getTotalShares();
+        uint256 totalShares = _getTotalShares();
+        if (totalShares == 0) {
+            return _sharesAmount;
+        }
+        return (_sharesAmount * _getTotalUsd()) / totalShares;
     }
 
     /// @notice Moves `_sharesAmount` token shares from the caller's account to the `_recipient` account.
@@ -409,7 +417,6 @@ contract StUSDBase is IERC20, Pausable {
     ) internal whenNotPaused {
         require(_sender != address(0), "TRANSFER_FROM_ZERO_ADDR");
         require(_recipient != address(0), "TRANSFER_TO_ZERO_ADDR");
-        require(_recipient != address(this), "TRANSFER_TO_STUSD_CONTRACT");
 
         uint256 currentSenderShares = _shares[_sender];
         require(_sharesAmount <= currentSenderShares, "BALANCE_EXCEEDED");

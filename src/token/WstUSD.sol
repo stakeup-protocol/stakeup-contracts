@@ -6,11 +6,12 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IStUSD} from "../interfaces/IStUSD.sol";
 
 contract WstUSD is ERC20 {
+    /// @notice StUSD token
     IStUSD public stUSD;
 
     /// @param _stUSD address of the StUSD token to wrap
-    constructor(IStUSD _stUSD) ERC20("Wrapped staked USD", "wstUSD") {
-        stUSD = _stUSD;
+    constructor(address _stUSD) ERC20("Wrapped staked USD", "wstUSD") {
+        stUSD = IStUSD(_stUSD);
     }
 
     /// @notice Exchanges stUSD to wstUSD
