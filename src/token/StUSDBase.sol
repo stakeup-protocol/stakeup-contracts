@@ -417,7 +417,6 @@ contract StUSDBase is IERC20, Pausable {
     ) internal whenNotPaused {
         require(_sender != address(0), "TRANSFER_FROM_ZERO_ADDR");
         require(_recipient != address(0), "TRANSFER_TO_ZERO_ADDR");
-        // require(_recipient != address(this), "TRANSFER_TO_STUSD_CONTRACT");
 
         uint256 currentSenderShares = _shares[_sender];
         require(_sharesAmount <= currentSenderShares, "BALANCE_EXCEEDED");

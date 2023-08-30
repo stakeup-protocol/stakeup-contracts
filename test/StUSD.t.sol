@@ -8,7 +8,6 @@ import {WstUSD} from "src/token/WstUSD.sol";
 import {MockERC20} from "./mock/MockERC20.sol";
 import {MockSwapFacility} from "./mock/MockSwapFacility.sol";
 import {MockBloomPool} from "./mock/MockBloomPool.sol";
-import "forge-std/console.sol";
 
 contract StUSDTest is Test {
     StUSD internal stUSD;
@@ -160,6 +159,11 @@ contract StUSDTest is Test {
         wstUSD.wrap(2 ether);
         vm.stopPrank();
 
+        assertEq(wstUSD.getWstUSDByStUSD(1 ether), 1 ether);
+        assertEq(wstUSD.getStUSDByWstUSD(1 ether), 1 ether);
+        assertEq(wstUSD.stUsdPerToken(), 1 ether);
+        assertEq(wstUSD.tokensPerStUsd(), 1 ether);
+
         stableToken.mint(address(pool), 3_000000);
         swap.setRate(1e18);
         pool.initiatePreHoldSwap();
@@ -171,6 +175,11 @@ contract StUSDTest is Test {
 
         vm.prank(owner);
         stUSD.setTotalUsd(3.3 ether);
+
+        assertEq(wstUSD.getWstUSDByStUSD(1.1 ether), 1 ether);
+        assertEq(wstUSD.getStUSDByWstUSD(1 ether), 1.1 ether);
+        assertEq(wstUSD.stUsdPerToken(), 1.1 ether);
+        assertEq(wstUSD.tokensPerStUsd(), 909090909090909090);
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
