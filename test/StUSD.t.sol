@@ -4,12 +4,15 @@ pragma solidity 0.8.19;
 import {Test} from "forge-std/Test.sol";
 
 import {StUSD, IERC20} from "src/token/StUSD.sol";
+import {WstUSD} from "src/token/WstUSD.sol";
 import {MockERC20} from "./mock/MockERC20.sol";
 import {MockSwapFacility} from "./mock/MockSwapFacility.sol";
 import {MockBloomPool} from "./mock/MockBloomPool.sol";
+import "forge-std/console.sol";
 
 contract StUSDTest is Test {
     StUSD internal stUSD;
+    WstUSD internal wstUSD;
 
     MockERC20 internal stableToken;
     MockERC20 internal billyToken;
@@ -51,12 +54,20 @@ contract StUSDTest is Test {
         );
         vm.label(address(pool), "MockBloomPool");
 
-        vm.prank(owner);
+        vm.startPrank(owner);
         stUSD = new StUSD(address(stableToken));
         vm.label(address(stUSD), "StUSD");
 
         assertEq(stUSD.owner(), owner);
         assertEq(address(stUSD.underlyingToken()), address(stableToken));
+
+        wstUSD = new WstUSD(address(stUSD));
+
+        assertEq(address(wstUSD.stUSD()), address(stUSD));
+
+        stUSD.setWstUSD(address(wstUSD));
+
+        vm.stopPrank();
     }
 
     function whitelistTBY(address tby, bool whitelist) public {
@@ -145,6 +156,8 @@ contract StUSDTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Deposit(bob, address(pool), 2 ether, 2 ether);
         stUSD.deposit(address(pool), 2 ether);
+        stUSD.approve(address(wstUSD), 2 ether);
+        wstUSD.wrap(2 ether);
         vm.stopPrank();
 
         stableToken.mint(address(pool), 3_000000);
@@ -162,11 +175,13 @@ contract StUSDTest is Test {
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
         emit Redeemed(alice, 1 ether, 1.1 ether);
-        stUSD.redeem(1 ether);
-        vm.prank(bob);
+        stUSD.redeemStUSD(1.1 ether);
+        vm.startPrank(bob);
+        wstUSD.approve(address(stUSD), 2 ether);
         vm.expectEmit(true, true, true, true);
         emit Redeemed(bob, 2 ether, 2.2 ether);
-        stUSD.redeem(2 ether);
+        stUSD.redeemWstUSD(2 ether);
+        vm.stopPrank();
 
         vm.prank(owner);
         stUSD.redeemUnderlying(address(pool), 3 ether);
