@@ -172,7 +172,7 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
 
         if (mintFee > 0) {
             _amount -= mintFee;
-            IERC20(_tby).safeTransferFrom(msg.sender, treasury, _amount);
+            IERC20(_tby).safeTransferFrom(msg.sender, treasury, mintFee);
         }
         IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
 

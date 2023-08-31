@@ -132,15 +132,20 @@ contract StUSDTest is Test {
     }
 
     function test_deposit_success() public {
-        pool.mint(alice, 1 ether);
+        uint256 amount = 1.1 ether;
+        uint256 fee = amount * stUSD.mintBps() / stUSD.BPS();
+        pool.mint(alice, amount);
         whitelistTBY(address(pool), true);
 
         vm.startPrank(alice);
-        pool.approve(address(stUSD), 1 ether);
+        pool.approve(address(stUSD), amount);
         vm.expectEmit(true, true, true, true);
-        emit Deposit(alice, address(pool), 1 ether, 1 ether);
-        stUSD.deposit(address(pool), 1 ether);
+        emit Deposit(alice, address(pool), amount - fee, amount - fee);
+        stUSD.deposit(address(pool), amount);
         vm.stopPrank();
+
+        assertEq(pool.balanceOf(treasury), fee);
+        assertEq(stUSD.balanceOf(alice), amount - fee);
     }
 
     function testFullFlow() public {
