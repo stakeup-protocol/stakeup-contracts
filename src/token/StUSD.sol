@@ -41,7 +41,20 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     IERC20 public immutable underlyingToken;
 
     /// @dev Underlying token decimals
-    uint8 internal immutable underlyingDecimals;
+    uint8 internal immutable _underlyingDecimals;
+
+    /// @notice Mint fee bps
+    uint16 public mintBps;
+
+    /// @notice Redeem fee bps
+    uint16 public redeemBps;
+
+    uint16 public constant BPS = 10000;
+
+    uint16 public constant MAX_BPS = 200; // Max 2%
+
+    /// @notice Treasury address
+    address public treasury;
 
     /// @dev Mapping of TBY to bool
     mapping(address => bool) internal _whitelisted;
@@ -67,6 +80,18 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     /************************************/
     /************** Events **************/
     /************************************/
+
+    /// @notice Emitted when mintBps is updated
+    /// @param mintBps New mint bps value
+    event MintBpsUpdated(uint16 mintBps);
+
+    /// @notice Emitted when redeempBps is updated
+    /// @param redeempBps New redeemp bps value
+    event RedeemBpsUpdated(uint16 redeempBps);
+
+    /// @notice Emitted when treasury is updated
+    /// @param treasury New treasury address
+    event TreasuryUpdated(address treasury);
 
     /// @notice Emitted when new TBY is whitelisted
     /// @param tby TBY address
@@ -109,11 +134,19 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     /// @notice WstUSD already initialized
     error AlreadyInitialized();
 
-    constructor(address _underlyingToken) {
+    /// @notice Constructor
+    /// @param _underlyingToken The underlying token address
+    /// @param _treasury Treasury address
+    constructor(address _underlyingToken, address _treasury) {
         if (_underlyingToken == address(0)) revert InvalidAddress();
+        if (_treasury == address(0)) revert InvalidAddress();
 
         underlyingToken = IERC20(_underlyingToken);
-        underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
+        _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
+        treasury = _treasury;
+
+        mintBps = 50; // Default 0.5%
+        redeemBps = 50; // Default 0.5%
     }
 
     /// @notice Sets WstUSD token address
@@ -135,6 +168,12 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     function deposit(address _tby, uint256 _amount) external whenNotPaused {
         if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
 
+        uint256 mintFee = (_amount * mintBps) / BPS;
+
+        if (mintFee > 0) {
+            _amount -= mintFee;
+            IERC20(_tby).safeTransferFrom(msg.sender, treasury, mintFee);
+        }
         IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 sharesAmount = getSharesByUsd(_amount);
@@ -203,10 +242,14 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
 
             _totalWithdrawalBalance -= amount;
 
-            underlyingToken.safeTransfer(
-                msg.sender,
-                amount / (10 ** (18 - underlyingDecimals))
-            );
+            uint256 transferAmount = amount /
+                (10 ** (18 - _underlyingDecimals));
+            uint256 redeemFee = (transferAmount * redeemBps) / BPS;
+            if (redeemFee > 0) {
+                transferAmount -= redeemFee;
+                underlyingToken.safeTransfer(treasury, redeemFee);
+            }
+            underlyingToken.safeTransfer(msg.sender, transferAmount);
         }
 
         emit Withdrawn(msg.sender, amount);
@@ -326,6 +369,36 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
         _setTotalUsd(_amount);
     }
 
+    /// @notice Set mintBps value
+    /// @dev Restricted to owner only
+    /// @param _mintBps new mintBps value
+    function setMintBps(uint16 _mintBps) external onlyOwner {
+        if (_mintBps > MAX_BPS) revert ParameterOutOfBounds();
+        mintBps = _mintBps;
+
+        emit MintBpsUpdated(_mintBps);
+    }
+
+    /// @notice Set redeemBps value
+    /// @dev Restricted to owner only
+    /// @param _redeemBps new redeemBps value
+    function setRedeemBps(uint16 _redeemBps) external onlyOwner {
+        if (_redeemBps > MAX_BPS) revert ParameterOutOfBounds();
+        redeemBps = _redeemBps;
+
+        emit RedeemBpsUpdated(_redeemBps);
+    }
+
+    /// @notice Set treasury address
+    /// @dev Restricted to owner only
+    /// @param _treasury new treasury address
+    function setTreasury(address _treasury) external onlyOwner {
+        if (_treasury == address(0)) revert InvalidAddress();
+        treasury = _treasury;
+
+        emit TreasuryUpdated(_treasury);
+    }
+
     /// @notice Whitelist TBY
     /// @dev Restricted to owner only
     /// @param _tby TBY address
@@ -356,7 +429,7 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
         uint256 withdrawn = underlyingToken.balanceOf(address(this)) -
             beforeUnderlyingBalance;
 
-        _processProceeds(withdrawn * 10 ** (18 - underlyingDecimals));
+        _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals));
     }
 
     /// @notice Deposit remaining underlying token to new TBY
