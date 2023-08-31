@@ -20,6 +20,7 @@ contract StUSDTest is Test {
 
     address internal owner = makeAddr("owner");
     address internal nonOwner = makeAddr("nonOwner");
+    address internal treasury = makeAddr("treasury");
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
@@ -54,10 +55,11 @@ contract StUSDTest is Test {
         vm.label(address(pool), "MockBloomPool");
 
         vm.startPrank(owner);
-        stUSD = new StUSD(address(stableToken));
+        stUSD = new StUSD(address(stableToken), treasury);
         vm.label(address(stUSD), "StUSD");
 
         assertEq(stUSD.owner(), owner);
+        assertEq(stUSD.treasury(), treasury);
         assertEq(address(stUSD.underlyingToken()), address(stableToken));
 
         wstUSD = new WstUSD(address(stUSD));
@@ -76,7 +78,10 @@ contract StUSDTest is Test {
 
     function test_init_fail_with_InvalidAddress() public {
         vm.expectRevert(StUSD.InvalidAddress.selector);
-        new StUSD(address(0));
+        new StUSD(address(0), treasury);
+
+        vm.expectRevert(StUSD.InvalidAddress.selector);
+        new StUSD(address(stableToken), address(0));
     }
 
     function test_whitelistTBY_fail_with_InvalidAddress() public {
