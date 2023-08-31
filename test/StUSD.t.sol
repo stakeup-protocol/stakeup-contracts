@@ -20,6 +20,7 @@ contract StUSDTest is Test {
 
     address internal owner = makeAddr("owner");
     address internal nonOwner = makeAddr("nonOwner");
+    address internal treasury = makeAddr("treasury");
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
@@ -27,6 +28,9 @@ contract StUSDTest is Test {
         bytes("Ownable: caller is not the owner");
 
     // ============== Redefined Events ===============
+    event MintBpsUpdated(uint16 mintBps);
+    event RedeemBpsUpdated(uint16 redeempBps);
+    event TreasuryUpdated(address treasury);
     event TBYWhitelisted(address tby, bool whitelist);
     event Deposit(
         address indexed account,
@@ -54,10 +58,11 @@ contract StUSDTest is Test {
         vm.label(address(pool), "MockBloomPool");
 
         vm.startPrank(owner);
-        stUSD = new StUSD(address(stableToken));
+        stUSD = new StUSD(address(stableToken), treasury);
         vm.label(address(stUSD), "StUSD");
 
         assertEq(stUSD.owner(), owner);
+        assertEq(stUSD.treasury(), treasury);
         assertEq(address(stUSD.underlyingToken()), address(stableToken));
 
         wstUSD = new WstUSD(address(stUSD));
@@ -76,7 +81,74 @@ contract StUSDTest is Test {
 
     function test_init_fail_with_InvalidAddress() public {
         vm.expectRevert(StUSD.InvalidAddress.selector);
-        new StUSD(address(0));
+        new StUSD(address(0), treasury);
+
+        vm.expectRevert(StUSD.InvalidAddress.selector);
+        new StUSD(address(stableToken), address(0));
+    }
+
+    function test_setMintBps_fail_with_ParameterOutOfBounds() public {
+        vm.expectRevert(StUSD.ParameterOutOfBounds.selector);
+        vm.prank(owner);
+        stUSD.setMintBps(201);
+    }
+
+    function test_setMintBps_fail_with_nonOwner() public {
+        vm.expectRevert(NOT_OWNER_ERROR);
+        vm.prank(nonOwner);
+        stUSD.setMintBps(100);
+    }
+
+    function test_setMintBps_success() public {
+        vm.expectEmit(true, true, true, true);
+        vm.prank(owner);
+        emit MintBpsUpdated(100);
+        stUSD.setMintBps(100);
+
+        assertEq(stUSD.mintBps(), 100);
+    }
+
+    function test_setRedeemBps_fail_with_ParameterOutOfBounds() public {
+        vm.expectRevert(StUSD.ParameterOutOfBounds.selector);
+        vm.prank(owner);
+        stUSD.setRedeemBps(201);
+    }
+
+    function test_setRedeemBps_fail_with_nonOwner() public {
+        vm.expectRevert(NOT_OWNER_ERROR);
+        vm.prank(nonOwner);
+        stUSD.setRedeemBps(100);
+    }
+
+    function test_setRedeemBps_success() public {
+        vm.expectEmit(true, true, true, true);
+        vm.prank(owner);
+        emit RedeemBpsUpdated(100);
+        stUSD.setRedeemBps(100);
+
+        assertEq(stUSD.redeemBps(), 100);
+    }
+
+    function test_setTreasury_fail_with_InvalidAddress() public {
+        vm.expectRevert(StUSD.InvalidAddress.selector);
+        vm.prank(owner);
+        stUSD.setTreasury(address(0));
+    }
+
+    function test_setTreasury_fail_with_nonOwner() public {
+        vm.expectRevert(NOT_OWNER_ERROR);
+        vm.prank(nonOwner);
+        stUSD.setTreasury(makeAddr("newTreasury"));
+    }
+
+    function test_setTreasury_success() public {
+        vm.expectEmit(true, true, true, true);
+        vm.prank(owner);
+        address newTreasury = makeAddr("newTreasury");
+        emit TreasuryUpdated(newTreasury);
+        stUSD.setTreasury(newTreasury);
+
+        assertEq(stUSD.treasury(), newTreasury);
     }
 
     function test_whitelistTBY_fail_with_InvalidAddress() public {
@@ -127,36 +199,49 @@ contract StUSDTest is Test {
     }
 
     function test_deposit_success() public {
-        pool.mint(alice, 1 ether);
+        uint256 amount = 1.1 ether;
+        uint256 fee = (amount * stUSD.mintBps()) / stUSD.BPS();
+        pool.mint(alice, amount);
         whitelistTBY(address(pool), true);
 
         vm.startPrank(alice);
-        pool.approve(address(stUSD), 1 ether);
+        pool.approve(address(stUSD), amount);
         vm.expectEmit(true, true, true, true);
-        emit Deposit(alice, address(pool), 1 ether, 1 ether);
-        stUSD.deposit(address(pool), 1 ether);
+        emit Deposit(alice, address(pool), amount - fee, amount - fee);
+        stUSD.deposit(address(pool), amount);
         vm.stopPrank();
+
+        assertEq(pool.balanceOf(treasury), fee);
+        assertEq(stUSD.balanceOf(alice), amount - fee);
     }
 
     function testFullFlow() public {
-        pool.mint(alice, 1 ether);
-        pool.mint(bob, 2 ether);
+        uint256 aliceAmount = 1 ether;
+        uint256 bobAmount = 2 ether;
+        pool.mint(alice, aliceAmount);
+        pool.mint(bob, bobAmount);
         whitelistTBY(address(pool), true);
 
+        uint256 aliceMintFee = (aliceAmount * stUSD.mintBps()) / stUSD.BPS();
+        uint256 bobMintFee = (bobAmount * stUSD.mintBps()) / stUSD.BPS();
+        uint256 aliceMintAmount = aliceAmount - aliceMintFee;
+        uint256 bobMintAmount = bobAmount - bobMintFee;
+        uint256 totalMintAmount = aliceMintAmount + bobMintAmount;
+
         vm.startPrank(alice);
-        pool.approve(address(stUSD), 1 ether);
+        pool.approve(address(stUSD), aliceAmount);
         vm.expectEmit(true, true, true, true);
-        emit Deposit(alice, address(pool), 1 ether, 1 ether);
-        stUSD.deposit(address(pool), 1 ether);
+        emit Deposit(alice, address(pool), aliceMintAmount, aliceMintAmount);
+        stUSD.deposit(address(pool), aliceAmount);
         vm.stopPrank();
 
         vm.startPrank(bob);
-        pool.approve(address(stUSD), 2 ether);
+        pool.approve(address(stUSD), bobAmount);
         vm.expectEmit(true, true, true, true);
-        emit Deposit(bob, address(pool), 2 ether, 2 ether);
-        stUSD.deposit(address(pool), 2 ether);
-        stUSD.approve(address(wstUSD), 2 ether);
-        wstUSD.wrap(2 ether);
+        emit Deposit(bob, address(pool), bobMintAmount, bobMintAmount);
+        stUSD.deposit(address(pool), bobAmount);
+        stUSD.approve(address(wstUSD), bobMintAmount);
+        wstUSD.wrap(bobMintAmount);
         vm.stopPrank();
 
         assertEq(wstUSD.getWstUSDByStUSD(1 ether), 1 ether);
@@ -174,7 +259,7 @@ contract StUSDTest is Test {
         swap.completeNextSwap();
 
         vm.prank(owner);
-        stUSD.setTotalUsd(3.3 ether);
+        stUSD.setTotalUsd((totalMintAmount * 11) / 10); // 1.1x
 
         assertEq(wstUSD.getWstUSDByStUSD(1.1 ether), 1 ether);
         assertEq(wstUSD.getStUSDByWstUSD(1 ether), 1.1 ether);
@@ -183,13 +268,13 @@ contract StUSDTest is Test {
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit Redeemed(alice, 1 ether, 1.1 ether);
-        stUSD.redeemStUSD(1.1 ether);
+        emit Redeemed(alice, aliceMintAmount, (aliceMintAmount * 11) / 10);
+        stUSD.redeemStUSD((aliceMintAmount * 11) / 10);
         vm.startPrank(bob);
-        wstUSD.approve(address(stUSD), 2 ether);
+        wstUSD.approve(address(stUSD), bobMintAmount);
         vm.expectEmit(true, true, true, true);
-        emit Redeemed(bob, 2 ether, 2.2 ether);
-        stUSD.redeemWstUSD(2 ether);
+        emit Redeemed(bob, bobMintAmount, (bobMintAmount * 11) / 10);
+        stUSD.redeemWstUSD(bobMintAmount);
         vm.stopPrank();
 
         vm.prank(owner);
@@ -197,6 +282,7 @@ contract StUSDTest is Test {
 
         uint256 beforeAliceBalance = stableToken.balanceOf(alice);
         uint256 beforeBobBalance = stableToken.balanceOf(bob);
+        uint256 beforeTreasuryBalance = stableToken.balanceOf(treasury);
 
         vm.prank(alice);
         stUSD.withdraw();
@@ -205,8 +291,25 @@ contract StUSDTest is Test {
 
         uint256 afterAliceBalance = stableToken.balanceOf(alice);
         uint256 afterBobBalance = stableToken.balanceOf(bob);
+        uint256 afterTreasuryBalance = stableToken.balanceOf(treasury);
 
-        assertEq(afterAliceBalance, beforeAliceBalance + 1.1e6);
-        assertEq(afterBobBalance, beforeBobBalance + 2.2e6);
+        uint256 aliceWithdrawAmount = (aliceMintAmount * 11) / 10 / 1e12;
+        uint256 aliceWithdrawFee = (aliceWithdrawAmount * stUSD.redeemBps()) /
+            stUSD.BPS();
+        uint256 bobWithdrawAmount = (bobMintAmount * 11) / 10 / 1e12;
+        uint256 bobWithdrawFee = (bobWithdrawAmount * stUSD.redeemBps()) /
+            stUSD.BPS();
+        assertEq(
+            afterAliceBalance,
+            beforeAliceBalance + aliceWithdrawAmount - aliceWithdrawFee
+        );
+        assertEq(
+            afterBobBalance,
+            beforeBobBalance + bobWithdrawAmount - bobWithdrawFee
+        );
+        assertEq(
+            afterTreasuryBalance,
+            beforeTreasuryBalance + aliceWithdrawFee + bobWithdrawFee
+        );
     }
 }
