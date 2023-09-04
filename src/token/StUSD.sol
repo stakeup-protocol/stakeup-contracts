@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
+import "@openzeppelin-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+import "@openzeppelin-upgradeable/contracts/utils/math/MathUpgradeable.sol";
 
 import "./StUSDBase.sol";
 import "../interfaces/IBloomPool.sol";
 import "../interfaces/IWstUSD.sol";
 
 /// @title Staked USD Contract
-contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
-    using SafeERC20 for IERC20;
-    using SafeERC20 for IWstUSD;
+contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20Upgradeable for IWstUSD;
 
     /************************************/
     /************** Struct **************/
@@ -38,10 +38,10 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     IWstUSD public wstUSD;
 
     /// @dev Underlying token
-    IERC20 public immutable underlyingToken;
+    IERC20Upgradeable public underlyingToken;
 
     /// @dev Underlying token decimals
-    uint8 internal immutable _underlyingDecimals;
+    uint8 internal _underlyingDecimals;
 
     /// @notice Mint fee bps
     uint16 public mintBps;
@@ -134,19 +134,22 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     /// @notice WstUSD already initialized
     error AlreadyInitialized();
 
-    /// @notice Constructor
+    /// @notice Initializer
     /// @param _underlyingToken The underlying token address
     /// @param _treasury Treasury address
-    constructor(address _underlyingToken, address _treasury) {
+    function initialize(address _underlyingToken, address _treasury) external initializer {
         if (_underlyingToken == address(0)) revert InvalidAddress();
         if (_treasury == address(0)) revert InvalidAddress();
 
-        underlyingToken = IERC20(_underlyingToken);
-        _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
+        underlyingToken = IERC20Upgradeable(_underlyingToken);
+        _underlyingDecimals = IERC20MetadataUpgradeable(_underlyingToken).decimals();
         treasury = _treasury;
 
         mintBps = 50; // Default 0.5%
         redeemBps = 50; // Default 0.5%
+
+        __Ownable2Step_init();
+        __ReentrancyGuard_init();
     }
 
     /// @notice Sets WstUSD token address
@@ -172,9 +175,9 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
 
         if (mintFee > 0) {
             _amount -= mintFee;
-            IERC20(_tby).safeTransferFrom(msg.sender, treasury, mintFee);
+            IERC20Upgradeable(_tby).safeTransferFrom(msg.sender, treasury, mintFee);
         }
-        IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20Upgradeable(_tby).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 sharesAmount = getSharesByUsd(_amount);
 
@@ -331,7 +334,7 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     /// @param _proceeds Proceeds in underlying tokens
     function _processRedemptions(uint256 _proceeds) internal returns (uint256) {
         // Compute maximum redemption possible
-        uint256 redemptionAmount = Math.min(_pendingRedemptions, _proceeds);
+        uint256 redemptionAmount = MathUpgradeable.min(_pendingRedemptions, _proceeds);
 
         // Update redemption state
         _pendingRedemptions -= redemptionAmount;
@@ -418,7 +421,7 @@ contract StUSD is StUSDBase, Ownable, ReentrancyGuard {
     ) external onlyOwner whenNotPaused {
         IBloomPool pool = IBloomPool(_tby);
 
-        _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
+        _amount = MathUpgradeable.min(_amount, IERC20Upgradeable(_tby).balanceOf(address(this)));
 
         uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(
             address(this)
