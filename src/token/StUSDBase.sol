@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin-upgradeable/contracts/security/PausableUpgradeable.sol";
+import "@openzeppelin-upgradeable/contracts/token/ERC20/IERC20Upgradeable.sol";
 
 /// @title Staked USD Base Contract
-contract StUSDBase is IERC20, Pausable {
+contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /*************************************/
     /************* Constants *************/
     /*************************************/
