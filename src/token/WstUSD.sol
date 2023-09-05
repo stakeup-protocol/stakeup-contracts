@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 
 import {IStUSD} from "../interfaces/IStUSD.sol";
 
-contract WstUSD is ERC20 {
+contract WstUSD is ERC20Upgradeable {
     /// @notice StUSD token
     IStUSD public stUSD;
 
     /// @param _stUSD address of the StUSD token to wrap
-    constructor(address _stUSD) ERC20("Wrapped staked USD", "wstUSD") {
+    function initialize(address _stUSD) external initializer {
         stUSD = IStUSD(_stUSD);
+
+        __ERC20_init("Wrapped staked USD", "wstUSD");
     }
 
     /// @notice Exchanges stUSD to wstUSD
