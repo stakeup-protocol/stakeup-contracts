@@ -8,5 +8,6 @@ libs = ["lib"]
 remappings = [
     "solmate/=lib/solmate/src/",
     "@openzeppelin/=lib/openzeppelin-contracts/",
+    "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
     "solady/=lib/solady/src/",
 ]

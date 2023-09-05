@@ -3,14 +3,22 @@ pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 
-import {StUSD, IERC20} from "src/token/StUSD.sol";
+import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {StUSD, IERC20Upgradeable} from "src/token/StUSD.sol";
 import {WstUSD} from "src/token/WstUSD.sol";
 import {MockERC20} from "./mock/MockERC20.sol";
 import {MockSwapFacility} from "./mock/MockSwapFacility.sol";
 import {MockBloomPool} from "./mock/MockBloomPool.sol";
 
 contract StUSDTest is Test {
+    ProxyAdmin internal proxyAdmin;
+    TransparentUpgradeableProxy internal stUSDProxy;
+    TransparentUpgradeableProxy internal wstUSDProxy;
+
+    StUSD stUSDImpl;
     StUSD internal stUSD;
+    WstUSD internal wstUSDImpl;
     WstUSD internal wstUSD;
 
     MockERC20 internal stableToken;
@@ -58,14 +66,34 @@ contract StUSDTest is Test {
         vm.label(address(pool), "MockBloomPool");
 
         vm.startPrank(owner);
-        stUSD = new StUSD(address(stableToken), treasury);
+        proxyAdmin = new ProxyAdmin();
+        stUSDImpl = new StUSD();
+        stUSDProxy = new TransparentUpgradeableProxy(
+            address(stUSDImpl),
+            address(proxyAdmin),
+            abi.encodeWithSelector(
+                StUSD.initialize.selector,
+                address(stableToken),
+                treasury
+            )
+        );
+        stUSD = StUSD(address(stUSDProxy));
         vm.label(address(stUSD), "StUSD");
 
         assertEq(stUSD.owner(), owner);
         assertEq(stUSD.treasury(), treasury);
         assertEq(address(stUSD.underlyingToken()), address(stableToken));
 
-        wstUSD = new WstUSD(address(stUSD));
+        wstUSDImpl = new WstUSD();
+        wstUSDProxy = new TransparentUpgradeableProxy(
+            address(wstUSDImpl),
+            address(proxyAdmin),
+            abi.encodeWithSelector(
+                WstUSD.initialize.selector,
+                address(stUSD)
+            )
+        );
+        wstUSD = WstUSD(address(wstUSDProxy));
 
         assertEq(address(wstUSD.stUSD()), address(stUSD));
 
@@ -81,10 +109,26 @@ contract StUSDTest is Test {
 
     function test_init_fail_with_InvalidAddress() public {
         vm.expectRevert(StUSD.InvalidAddress.selector);
-        new StUSD(address(0), treasury);
+        new TransparentUpgradeableProxy(
+            address(stUSDImpl),
+            address(proxyAdmin),
+            abi.encodeWithSelector(
+                StUSD.initialize.selector,
+                address(0),
+                treasury
+            )
+        );
 
         vm.expectRevert(StUSD.InvalidAddress.selector);
-        new StUSD(address(stableToken), address(0));
+        new TransparentUpgradeableProxy(
+            address(stUSDImpl),
+            address(proxyAdmin),
+            abi.encodeWithSelector(
+                StUSD.initialize.selector,
+                address(stableToken),
+                address(0)
+            )
+        );
     }
 
     function test_setMintBps_fail_with_ParameterOutOfBounds() public {
