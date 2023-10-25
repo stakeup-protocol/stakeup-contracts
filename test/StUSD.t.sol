@@ -32,20 +32,14 @@ contract StUSDTest is Test {
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
-    bytes internal constant NOT_OWNER_ERROR =
-        bytes("Ownable: caller is not the owner");
+    bytes internal constant NOT_OWNER_ERROR = bytes("Ownable: caller is not the owner");
 
     // ============== Redefined Events ===============
     event MintBpsUpdated(uint16 mintBps);
     event RedeemBpsUpdated(uint16 redeempBps);
     event TreasuryUpdated(address treasury);
     event TBYWhitelisted(address tby, bool whitelist);
-    event Deposit(
-        address indexed account,
-        address tby,
-        uint256 amount,
-        uint256 shares
-    );
+    event Deposit(address indexed account, address tby, uint256 amount, uint256 shares);
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
 
@@ -338,22 +332,11 @@ contract StUSDTest is Test {
         uint256 afterTreasuryBalance = stableToken.balanceOf(treasury);
 
         uint256 aliceWithdrawAmount = (aliceMintAmount * 11) / 10 / 1e12;
-        uint256 aliceWithdrawFee = (aliceWithdrawAmount * stUSD.redeemBps()) /
-            stUSD.BPS();
+        uint256 aliceWithdrawFee = (aliceWithdrawAmount * stUSD.redeemBps()) / stUSD.BPS();
         uint256 bobWithdrawAmount = (bobMintAmount * 11) / 10 / 1e12;
-        uint256 bobWithdrawFee = (bobWithdrawAmount * stUSD.redeemBps()) /
-            stUSD.BPS();
-        assertEq(
-            afterAliceBalance,
-            beforeAliceBalance + aliceWithdrawAmount - aliceWithdrawFee
-        );
-        assertEq(
-            afterBobBalance,
-            beforeBobBalance + bobWithdrawAmount - bobWithdrawFee
-        );
-        assertEq(
-            afterTreasuryBalance,
-            beforeTreasuryBalance + aliceWithdrawFee + bobWithdrawFee
-        );
+        uint256 bobWithdrawFee = (bobWithdrawAmount * stUSD.redeemBps()) / stUSD.BPS();
+        assertEq(afterAliceBalance, beforeAliceBalance + aliceWithdrawAmount - aliceWithdrawFee);
+        assertEq(afterBobBalance, beforeBobBalance + bobWithdrawAmount - bobWithdrawFee);
+        assertEq(afterTreasuryBalance, beforeTreasuryBalance + aliceWithdrawFee + bobWithdrawFee);
     }
 }
