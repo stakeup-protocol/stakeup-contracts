@@ -10,4 +10,5 @@ remappings = [
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
     "solady/=lib/solady/src/",
+    "@layerzero/=lib/solidity-examples/contracts",
 ]
