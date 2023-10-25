@@ -23,12 +23,7 @@ contract MockBloomPool is MockERC20 {
 
     IMockSwapFacility public immutable swap;
 
-    constructor(
-        address _underlyingToken,
-        address _billToken,
-        address _swap,
-        uint8 _decimals
-    ) MockERC20(_decimals) {
+    constructor(address _underlyingToken, address _billToken, address _swap, uint8 _decimals) MockERC20(_decimals) {
         underlyingToken = _underlyingToken;
         billToken = _billToken;
         swap = IMockSwapFacility(_swap);
@@ -51,7 +46,8 @@ contract MockBloomPool is MockERC20 {
     function withdrawLender(uint256 _amount) external {
         _burn(msg.sender, _amount);
         uint256 exchangeRate = swap.exchangeRate();
-        uint256 amountToSend = _amount * exchangeRate / 1e18 * (10 ** IERC20Metadata(underlyingToken).decimals()) / (10 ** IERC20Metadata(billToken).decimals());
+        uint256 amountToSend = _amount * exchangeRate / 1e18 * (10 ** IERC20Metadata(underlyingToken).decimals())
+            / (10 ** IERC20Metadata(billToken).decimals());
         underlyingToken.safeTransfer(msg.sender, amountToSend);
     }
 }

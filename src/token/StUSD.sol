@@ -16,9 +16,7 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeERC20Upgradeable for IWstUSD;
 
-    /************************************/
-    /************** Struct **************/
-    /************************************/
+    // =================== Struct ====================
 
     /// @notice Redemption state for account
     /// @param pending Pending redemption amount
@@ -30,9 +28,7 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         uint256 redemptionQueueTarget;
     }
 
-    /*************************************/
-    /************** Storage **************/
-    /*************************************/
+    // =================== Storage ===================
 
     /// @notice WstUSD token
     IWstUSD public wstUSD;
@@ -77,9 +73,7 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     /// @dev Remaining underlying token balance
     uint256 internal _remainingBalance;
 
-    /************************************/
-    /************** Events **************/
-    /************************************/
+    // =================== Events ===================
 
     /// @notice Emitted when mintBps is updated
     /// @param mintBps New mint bps value
@@ -109,9 +103,7 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     /// @param amount Amount of underlying tokens withdrawn
     event Withdrawn(address indexed account, uint256 amount);
 
-    /************************************/
-    /************** Errors **************/
-    /************************************/
+    // =================== Errors ===================
 
     /// @notice Invalid address (e.g. zero address)
     error InvalidAddress();
@@ -133,6 +125,8 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
 
     /// @notice WstUSD already initialized
     error AlreadyInitialized();
+
+    // =================== Functions ===================
 
     /// @notice Initializer
     /// @param _underlyingToken The underlying token address
@@ -161,14 +155,10 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         wstUSD = IWstUSD(_wstUSD);
     }
 
-    /***********************************/
-    /************ Functions ************/
-    /***********************************/
-
     /// @notice Deposit TBY and get stUSD minted
     /// @param _tby TBY address
     /// @param _amount TBY amount to deposit
-    function deposit(address _tby, uint256 _amount) external whenNotPaused {
+    function deposit(address _tby, uint256 _amount) external {
         if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
 
         uint256 mintFee = (_amount * mintBps) / BPS;
@@ -195,9 +185,7 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     /// Emits a {Redeemed} event.
     ///
     /// @param _stUSDAmount Amount of stUSD
-    function redeemStUSD(
-        uint256 _stUSDAmount
-    ) external whenNotPaused nonReentrant {
+    function redeemStUSD(uint256 _stUSDAmount) external nonReentrant {
         _redeemStUSD(_stUSDAmount);
     }
 
@@ -208,9 +196,7 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     /// Emits a {Redeemed} event.
     ///
     /// @param _wstUSDAmount Amount of wstUSD
-    function redeemWstUSD(
-        uint256 _wstUSDAmount
-    ) external whenNotPaused nonReentrant {
+    function redeemWstUSD(uint256 _wstUSDAmount) external nonReentrant {
         wstUSD.safeTransferFrom(msg.sender, address(this), _wstUSDAmount);
         uint256 _stUSDAmount = wstUSD.unwrap(_wstUSDAmount);
         _transfer(address(this), msg.sender, _stUSDAmount);
@@ -234,19 +220,15 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     ///
     /// Emits a {Withdrawn} event.
     ///
-    function withdraw() external whenNotPaused nonReentrant {
-        uint256 amount = redemptionAvailable(
-            msg.sender,
-            _processedRedemptionQueue
-        );
+    function withdraw() external nonReentrant {
+        uint256 amount = redemptionAvailable(msg.sender, _processedRedemptionQueue);
 
         if (amount != 0) {
             _withdraw(msg.sender, amount);
 
             _totalWithdrawalBalance -= amount;
 
-            uint256 transferAmount = amount /
-                (10 ** (18 - _underlyingDecimals));
+            uint256 transferAmount = amount / (10 ** (18 - _underlyingDecimals));
             uint256 redeemFee = (transferAmount * redeemBps) / BPS;
             if (redeemFee > 0) {
                 transferAmount -= redeemFee;
@@ -261,9 +243,7 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     /// @notice Get redemption state for account
     /// @param account Account
     /// @return Redemption state
-    function redemptions(
-        address account
-    ) external view returns (Redemption memory) {
+    function redemptions(address account) external view returns (Redemption memory) {
         return _redemptions[account];
     }
 
@@ -271,37 +251,23 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     /// @param account Account
     /// @param processedRedemptionQueue Current value of processed redemption queue
     /// @return Amount available for withdraw
-    function redemptionAvailable(
-        address account,
-        uint256 processedRedemptionQueue
-    ) public view returns (uint256) {
+    function redemptionAvailable(address account, uint256 processedRedemptionQueue) public view returns (uint256) {
         Redemption storage redemption = _redemptions[account];
 
         if (redemption.pending == 0) {
             return 0;
-        } else if (
-            processedRedemptionQueue >=
-            redemption.redemptionQueueTarget + redemption.pending
-        ) {
+        } else if (processedRedemptionQueue >= redemption.redemptionQueueTarget + redemption.pending) {
             return redemption.pending - redemption.withdrawn;
-        } else if (
-            processedRedemptionQueue > redemption.redemptionQueueTarget
-        ) {
-            return
-                processedRedemptionQueue -
-                redemption.redemptionQueueTarget -
-                redemption.withdrawn;
+        } else if (processedRedemptionQueue > redemption.redemptionQueueTarget) {
+            return processedRedemptionQueue - redemption.redemptionQueueTarget - redemption.withdrawn;
         } else {
             return 0;
         }
     }
 
-    function _redeem(
-        address _account,
-        uint256 _shares,
-        uint256 _underlyingAmount,
-        uint256 _redemptionQueueTarget
-    ) internal {
+    function _redeem(address _account, uint256 _shares, uint256 _underlyingAmount, uint256 _redemptionQueueTarget)
+        internal
+    {
         Redemption storage redemption = _redemptions[_account];
 
         if (balanceOf(_account) < _shares) revert InsufficientBalance();
@@ -318,10 +284,7 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     function _withdraw(address _account, uint256 _underlyingAmount) internal {
         Redemption storage redemption = _redemptions[_account];
 
-        if (
-            redemptionAvailable(_account, _processedRedemptionQueue) <
-            _underlyingAmount
-        ) revert InvalidAmount();
+        if (redemptionAvailable(_account, _processedRedemptionQueue) < _underlyingAmount) revert InvalidAmount();
 
         if (redemption.withdrawn + _underlyingAmount == redemption.pending) {
             delete _redemptions[_account];
@@ -361,9 +324,7 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         }
     }
 
-    /*************************************/
-    /********** Owner Functions **********/
-    /*************************************/
+    // ================ Owner Functions ==============
 
     /// @notice Update _totalUsd value
     /// @dev Restricted to owner only
@@ -415,46 +376,28 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     /// @notice Redeem underlying token from TBY
     /// @param _tby TBY address
     /// @param _amount Redeem amount
-    function redeemUnderlying(
-        address _tby,
-        uint256 _amount
-    ) external onlyOwner whenNotPaused {
+    function redeemUnderlying(address _tby, uint256 _amount) external onlyOwner {
         IBloomPool pool = IBloomPool(_tby);
 
         _amount = MathUpgradeable.min(_amount, IERC20Upgradeable(_tby).balanceOf(address(this)));
 
-        uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(
-            address(this)
-        );
+        uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(address(this));
 
         pool.withdrawLender(_amount);
 
-        uint256 withdrawn = underlyingToken.balanceOf(address(this)) -
-            beforeUnderlyingBalance;
+        uint256 withdrawn = underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
 
         _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals));
     }
 
     /// @notice Deposit remaining underlying token to new TBY
     /// @param _tby TBY address
-    function depositUnderlying(address _tby) external onlyOwner whenNotPaused {
+    function depositUnderlying(address _tby) external onlyOwner {
         IBloomPool pool = IBloomPool(_tby);
 
         uint256 amount = _remainingBalance;
         delete _remainingBalance;
 
         pool.depositLender(amount);
-    }
-
-    /// @notice Pause the contract
-    /// @dev Restricted to owner only
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    /// @notice Unpause the contract
-    /// @dev Restricted to owner only
-    function unpause() external onlyOwner {
-        _unpause();
     }
 }

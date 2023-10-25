@@ -6,8 +6,12 @@ import "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import {IStUSD} from "../interfaces/IStUSD.sol";
 
 contract WstUSD is ERC20Upgradeable {
+    // =================== Constants ===================
+
     /// @notice StUSD token
     IStUSD public stUSD;
+
+    // =================== Functions ===================
 
     /// @param _stUSD address of the StUSD token to wrap
     function initialize(address _stUSD) external initializer {
@@ -50,18 +54,14 @@ contract WstUSD is ERC20Upgradeable {
     /// @notice Get amount of wstUSD for a given amount of stUSD
     /// @param _stUSDAmount amount of stUSD
     /// @return Amount of wstUSD for a given stUSD amount
-    function getWstUSDByStUSD(
-        uint256 _stUSDAmount
-    ) external view returns (uint256) {
+    function getWstUSDByStUSD(uint256 _stUSDAmount) external view returns (uint256) {
         return stUSD.getSharesByUsd(_stUSDAmount);
     }
 
     /// @notice Get amount of stUSD for a given amount of wstUSD
     /// @param _wstUSDAmount amount of wstUSD
     /// @return Amount of stUSD for a given wstUSD amount
-    function getStUSDByWstUSD(
-        uint256 _wstUSDAmount
-    ) external view returns (uint256) {
+    function getStUSDByWstUSD(uint256 _wstUSDAmount) external view returns (uint256) {
         return stUSD.getUsdByShares(_wstUSDAmount);
     }
 
