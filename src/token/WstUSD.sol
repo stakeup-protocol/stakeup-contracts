@@ -30,7 +30,7 @@ contract WstUSD is ERC20Upgradeable {
     /// User should first approve _stUSDAmount to the WstUSD contract
     /// @return Amount of wstUSD user receives after wrap
     function wrap(uint256 _stUSDAmount) external returns (uint256) {
-        require(_stUSDAmount > 0, "wstUSD: can't wrap zero stUSD");
+        if (_stUSDAmount == 0) revert ZeroAmount();
         uint256 wstUSDAmount = stUSD.getSharesByUsd(_stUSDAmount);
         _mint(msg.sender, wstUSDAmount);
         stUSD.transferFrom(msg.sender, address(this), _stUSDAmount);
