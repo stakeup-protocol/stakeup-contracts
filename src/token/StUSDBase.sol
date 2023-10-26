@@ -6,15 +6,11 @@ import "@openzeppelin-upgradeable/contracts/token/ERC20/IERC20Upgradeable.sol";
 
 /// @title Staked USD Base Contract
 contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
-    /*************************************/
-    /************* Constants *************/
-    /*************************************/
+    // =================== Constants ===================
 
     uint256 internal constant INFINITE_ALLOWANCE = type(uint256).max;
 
-    /*************************************/
-    /************** Storage **************/
-    /*************************************/
+    // =================== Storage ===================
 
     /// @dev StUSD balances are dynamic and are calculated based on the accounts' shares
     /// and the total amount of USD controlled by the protocol. Account shares aren't
@@ -33,18 +29,12 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// @dev Total amount of Usd
     uint256 internal _totalUsd;
 
-    /************************************/
-    /************** Events **************/
-    /************************************/
+    // =================== Events ===================
 
     /// @notice An executed shares transfer from `sender` to `recipient`.
     ///
     /// @dev emitted in pair with an ERC20-defined `Transfer` event.
-    event TransferShares(
-        address indexed from,
-        address indexed to,
-        uint256 sharesValue
-    );
+    event TransferShares(address indexed from, address indexed to, uint256 sharesValue);
 
     /// @notice An executed `burnShares` request
     ///
@@ -57,10 +47,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// @param postRebaseTokenAmount amount of stUSD the burnt shares corresponded to after the burn
     /// @param sharesAmount amount of burnt shares
     event SharesBurnt(
-        address indexed account,
-        uint256 preRebaseTokenAmount,
-        uint256 postRebaseTokenAmount,
-        uint256 sharesAmount
+        address indexed account, uint256 preRebaseTokenAmount, uint256 postRebaseTokenAmount, uint256 sharesAmount
     );
 
     /// @notice Emitted when user deposits
@@ -68,16 +55,9 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// @param tby TBY address
     /// @param amount TBY deposit amount
     /// @param shares Amount of shares minted to the user
-    event Deposit(
-        address indexed account,
-        address tby,
-        uint256 amount,
-        uint256 shares
-    );
+    event Deposit(address indexed account, address tby, uint256 amount, uint256 shares);
 
-    /***********************************/
-    /************ Functions ************/
-    /***********************************/
+    // =================== Functions ===================
 
     /// @return the name of the token.
     function name() external pure returns (string memory) {
@@ -128,13 +108,9 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     ///
     /// - `_recipient` cannot be the zero address.
     /// - the caller must have a balance of at least `_amount`.
-    /// - the contract must not be paused.
     ///
     /// @dev The `_amount` argument is the amount of tokens, not shares.
-    function transfer(
-        address _recipient,
-        uint256 _amount
-    ) external returns (bool) {
+    function transfer(address _recipient, uint256 _amount) external returns (bool) {
         _transfer(msg.sender, _recipient, _amount);
         return true;
     }
@@ -143,10 +119,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// on behalf of `_owner` through `transferFrom`. This is zero by default.
     ///
     /// @dev This value changes when `approve` or `transferFrom` is called.
-    function allowance(
-        address _owner,
-        address _spender
-    ) external view returns (uint256) {
+    function allowance(address _owner, address _spender) external view returns (uint256) {
         return _allowances[_owner][_spender];
     }
 
@@ -160,10 +133,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// - `_spender` cannot be the zero address.
     ///
     /// @dev The `_amount` argument is the amount of tokens, not shares.
-    function approve(
-        address _spender,
-        uint256 _amount
-    ) external returns (bool) {
+    function approve(address _spender, uint256 _amount) external returns (bool) {
         _approve(msg.sender, _spender, _amount);
         return true;
     }
@@ -183,14 +153,9 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// - `_sender` and `_recipient` cannot be the zero addresses.
     /// - `_sender` must have a balance of at least `_amount`.
     /// - the caller must have allowance for `_sender`'s tokens of at least `_amount`.
-    /// - the contract must not be paused.
     ///
     /// @dev The `_amount` argument is the amount of tokens, not shares.
-    function transferFrom(
-        address _sender,
-        address _recipient,
-        uint256 _amount
-    ) external returns (bool) {
+    function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
         _spendAllowance(_sender, msg.sender, _amount);
         _transfer(_sender, _recipient, _amount);
         return true;
@@ -206,15 +171,8 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// Requirements:
     ///
     /// - `_spender` cannot be the the zero address.
-    function increaseAllowance(
-        address _spender,
-        uint256 _addedValue
-    ) external returns (bool) {
-        _approve(
-            msg.sender,
-            _spender,
-            _allowances[msg.sender][_spender] + _addedValue
-        );
+    function increaseAllowance(address _spender, uint256 _addedValue) external returns (bool) {
+        _approve(msg.sender, _spender, _allowances[msg.sender][_spender] + _addedValue);
         return true;
     }
 
@@ -229,10 +187,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     ///
     /// - `_spender` cannot be the zero address.
     /// - `_spender` must have allowance for the caller of at least `_subtractedValue`.
-    function decreaseAllowance(
-        address _spender,
-        uint256 _subtractedValue
-    ) external returns (bool) {
+    function decreaseAllowance(address _spender, uint256 _subtractedValue) external returns (bool) {
         uint256 currentAllowance = _allowances[msg.sender][_spender];
         require(currentAllowance >= _subtractedValue, "ALLOWANCE_BELOW_ZERO");
         _approve(msg.sender, _spender, currentAllowance - _subtractedValue);
@@ -262,9 +217,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     }
 
     /// @return the amount of Usd that corresponds to `_sharesAmount` token shares.
-    function getUsdByShares(
-        uint256 _sharesAmount
-    ) public view returns (uint256) {
+    function getUsdByShares(uint256 _sharesAmount) public view returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
             return _sharesAmount;
@@ -282,21 +235,12 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     ///
     /// - `_recipient` cannot be the zero address.
     /// - the caller must have at least `_sharesAmount` shares.
-    /// - the contract must not be paused.
     ///
     /// @dev The `_sharesAmount` argument is the amount of shares, not tokens.
-    function transferShares(
-        address _recipient,
-        uint256 _sharesAmount
-    ) external returns (uint256) {
+    function transferShares(address _recipient, uint256 _sharesAmount) external returns (uint256) {
         _transferShares(msg.sender, _recipient, _sharesAmount);
         uint256 tokensAmount = getUsdByShares(_sharesAmount);
-        _emitTransferEvents(
-            msg.sender,
-            _recipient,
-            tokensAmount,
-            _sharesAmount
-        );
+        _emitTransferEvents(msg.sender, _recipient, tokensAmount, _sharesAmount);
         return tokensAmount;
     }
 
@@ -311,14 +255,12 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// - `_sender` and `_recipient` cannot be the zero addresses.
     /// - `_sender` must have at least `_sharesAmount` shares.
     /// - the caller must have allowance for `_sender`'s tokens of at least `getUsdByShares(_sharesAmount)`.
-    /// - the contract must not be paused.
     ///
     /// @dev The `_sharesAmount` argument is the amount of shares, not tokens.
-    function transferSharesFrom(
-        address _sender,
-        address _recipient,
-        uint256 _sharesAmount
-    ) external returns (uint256) {
+    function transferSharesFrom(address _sender, address _recipient, uint256 _sharesAmount)
+        external
+        returns (uint256)
+    {
         uint256 tokensAmount = getUsdByShares(_sharesAmount);
         _spendAllowance(_sender, msg.sender, tokensAmount);
         _transferShares(_sender, _recipient, _sharesAmount);
@@ -342,11 +284,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// @notice Moves `_amount` tokens from `_sender` to `_recipient`.
     /// Emits a `Transfer` event.
     /// Emits a `TransferShares` event.
-    function _transfer(
-        address _sender,
-        address _recipient,
-        uint256 _amount
-    ) internal {
+    function _transfer(address _sender, address _recipient, uint256 _amount) internal {
         uint256 _sharesToTransfer = getSharesByUsd(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
         _emitTransferEvents(_sender, _recipient, _amount, _sharesToTransfer);
@@ -356,17 +294,12 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     ///
     /// Emits an `Approval` event.
     ///
-    /// NB: the method can be invoked even if the protocol paused.
     ///
     /// Requirements:
     ///
     /// - `_owner` cannot be the zero address.
     /// - `_spender` cannot be the zero address.
-    function _approve(
-        address _owner,
-        address _spender,
-        uint256 _amount
-    ) internal {
+    function _approve(address _owner, address _spender, uint256 _amount) internal {
         require(_owner != address(0), "APPROVE_FROM_ZERO_ADDR");
         require(_spender != address(0), "APPROVE_TO_ZERO_ADDR");
 
@@ -380,11 +313,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// Revert if not enough allowance is available.
     ///
     /// Might emit an {Approval} event.
-    function _spendAllowance(
-        address _owner,
-        address _spender,
-        uint256 _amount
-    ) internal {
+    function _spendAllowance(address _owner, address _spender, uint256 _amount) internal {
         uint256 currentAllowance = _allowances[_owner][_spender];
         if (currentAllowance != INFINITE_ALLOWANCE) {
             require(currentAllowance >= _amount, "ALLOWANCE_EXCEEDED");
@@ -409,12 +338,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// - `_sender` cannot be the zero address.
     /// - `_recipient` cannot be the zero address or the `stUSD` token contract itself
     /// - `_sender` must hold at least `_sharesAmount` shares.
-    /// - the contract must not be paused.
-    function _transferShares(
-        address _sender,
-        address _recipient,
-        uint256 _sharesAmount
-    ) internal whenNotPaused {
+    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal {
         require(_sender != address(0), "TRANSFER_FROM_ZERO_ADDR");
         require(_recipient != address(0), "TRANSFER_TO_ZERO_ADDR");
 
@@ -428,16 +352,10 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     /// @notice Creates `_sharesAmount` shares and assigns them to `_recipient`, increasing the total amount of shares.
     /// @dev This doesn't increase the token total supply.
     ///
-    /// NB: The method doesn't check protocol pause relying on the external enforcement.
-    ///
     /// Requirements:
     ///
     /// - `_recipient` cannot be the zero address.
-    /// - the contract must not be paused.
-    function _mintShares(
-        address _recipient,
-        uint256 _sharesAmount
-    ) internal returns (uint256 newTotalShares) {
+    function _mintShares(address _recipient, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
         require(_recipient != address(0), "MINT_TO_ZERO_ADDR");
 
         newTotalShares = _getTotalShares() + _sharesAmount;
@@ -460,11 +378,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     ///
     /// - `_account` cannot be the zero address.
     /// - `_account` must hold at least `_sharesAmount` shares.
-    /// - the contract must not be paused.
-    function _burnShares(
-        address _account,
-        uint256 _sharesAmount
-    ) internal returns (uint256 newTotalShares) {
+    function _burnShares(address _account, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
         require(_account != address(0), "BURN_FROM_ZERO_ADDR");
 
         uint256 accountShares = _shares[_account];
@@ -479,12 +393,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
 
         uint256 postRebaseTokenAmount = getUsdByShares(_sharesAmount);
 
-        emit SharesBurnt(
-            _account,
-            preRebaseTokenAmount,
-            postRebaseTokenAmount,
-            _sharesAmount
-        );
+        emit SharesBurnt(_account, preRebaseTokenAmount, postRebaseTokenAmount, _sharesAmount);
 
         // Notice: we're not emitting a Transfer event to the zero address here since shares burn
         // works by redistributing the amount of tokens corresponding to the burned shares between
@@ -496,12 +405,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
     }
 
     /// @dev Emits {Transfer} and {TransferShares} events
-    function _emitTransferEvents(
-        address _from,
-        address _to,
-        uint _tokenAmount,
-        uint256 _sharesAmount
-    ) internal {
+    function _emitTransferEvents(address _from, address _to, uint256 _tokenAmount, uint256 _sharesAmount) internal {
         emit Transfer(_from, _to, _tokenAmount);
         emit TransferShares(_from, _to, _sharesAmount);
     }

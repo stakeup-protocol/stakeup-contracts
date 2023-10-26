@@ -6,8 +6,12 @@ import "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
 import {IStUSD} from "../interfaces/IStUSD.sol";
 
 contract WstUSD is ERC20Upgradeable {
+    // =================== Constants ===================
+
     /// @notice StUSD token
     IStUSD public stUSD;
+
+    // =================== Functions ===================
 
     /// @param _stUSD address of the StUSD token to wrap
     function initialize(address _stUSD) external initializer {
@@ -26,7 +30,7 @@ contract WstUSD is ERC20Upgradeable {
     /// User should first approve _stUSDAmount to the WstUSD contract
     /// @return Amount of wstUSD user receives after wrap
     function wrap(uint256 _stUSDAmount) external returns (uint256) {
-        require(_stUSDAmount > 0, "wstUSD: can't wrap zero stUSD");
+        if (_stUSDAmount == 0) revert ZeroAmount();
         uint256 wstUSDAmount = stUSD.getSharesByUsd(_stUSDAmount);
         _mint(msg.sender, wstUSDAmount);
         stUSD.transferFrom(msg.sender, address(this), _stUSDAmount);
@@ -50,18 +54,14 @@ contract WstUSD is ERC20Upgradeable {
     /// @notice Get amount of wstUSD for a given amount of stUSD
     /// @param _stUSDAmount amount of stUSD
     /// @return Amount of wstUSD for a given stUSD amount
-    function getWstUSDByStUSD(
-        uint256 _stUSDAmount
-    ) external view returns (uint256) {
+    function getWstUSDByStUSD(uint256 _stUSDAmount) external view returns (uint256) {
         return stUSD.getSharesByUsd(_stUSDAmount);
     }
 
     /// @notice Get amount of stUSD for a given amount of wstUSD
     /// @param _wstUSDAmount amount of wstUSD
     /// @return Amount of stUSD for a given wstUSD amount
-    function getStUSDByWstUSD(
-        uint256 _wstUSDAmount
-    ) external view returns (uint256) {
+    function getStUSDByWstUSD(uint256 _wstUSDAmount) external view returns (uint256) {
         return stUSD.getUsdByShares(_wstUSDAmount);
     }
 
