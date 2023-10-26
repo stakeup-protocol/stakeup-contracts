@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-import {OFTV2} from "@layerzerolabs/solidity-examples/contracts/token/oft/v2/OFTV2.sol";
+import {OFTV2} from "@layerzerolabs/token/oft/v2/OFTV2.sol";
 
 contract StakeupToken is OFTV2 {
     constructor(address _layerZeroEndpoint, address mintToAddress)
