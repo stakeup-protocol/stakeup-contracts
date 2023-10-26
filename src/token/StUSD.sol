@@ -1,27 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "@openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/utils/math/MathUpgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./StUSDBase.sol";
-import "../interfaces/IBloomPool.sol";
-import "../interfaces/IWstUSD.sol";
+import {StUSDBase} from "./StUSDBase.sol";
+
+import {IBloomPool} from "../interfaces/IBloomPool.sol";
+import {IWstUSD} from "../interfaces/IWstUSD.sol";
 
 /// @title Staked USD Contract
-contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeERC20Upgradeable for IWstUSD;
+contract StUSD is StUSDBase, Ownable2Step, ReentrancyGuard {
+    using Math for uint256;
+    using SafeERC20 for IERC20;
+    using SafeERC20 for IWstUSD;
 
     // =================== Struct ====================
 
-    /// @notice Redemption state for account
-    /// @param pending Pending redemption amount
-    /// @param withdrawn Withdrawn redemption amount
-    /// @param redemptionQueueTarget Target in vault's redemption queue
+    /**
+     * @notice Redemption state for account
+     * @param pending Pending redemption amount
+     * @param withdrawn Withdrawn redemption amount
+     * @param redemptionQueueTarget Target in vault's redemption queue
+     */
     struct Redemption {
         uint256 pending;
         uint256 withdrawn;
@@ -75,39 +78,53 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
 
     // =================== Events ===================
 
-    /// @notice Emitted when mintBps is updated
-    /// @param mintBps New mint bps value
+    /**
+     * @notice Emitted when mintBps is updated
+     * @param mintBps New mint bps value
+     */
     event MintBpsUpdated(uint16 mintBps);
 
-    /// @notice Emitted when redeempBps is updated
-    /// @param redeempBps New redeemp bps value
+    /**
+     * @notice Emitted when redeempBps is updated
+     * @param redeempBps New redeemp bps value
+     */
     event RedeemBpsUpdated(uint16 redeempBps);
 
-    /// @notice Emitted when treasury is updated
-    /// @param treasury New treasury address
+    /**
+     * @notice Emitted when treasury is updated
+     * @param treasury New treasury address
+     */
     event TreasuryUpdated(address treasury);
 
-    /// @notice Emitted when new TBY is whitelisted
-    /// @param tby TBY address
-    /// @param whitelist whitelisted or not
+    /**
+     * Emitted when new TBY is whitelisted
+     * @param tby TBY address
+     * @param whitelist whitelist or not
+     */
     event TBYWhitelisted(address tby, bool whitelist);
 
-    /// @notice Emitted when LP tokens are redeemed
-    /// @param account Redeeming account
-    /// @param shares Amount of LP tokens burned
-    /// @param amount Amount of underlying tokens
+    /**
+     * @notice Emitted when LP tokens are redeemed
+     * @param account Redeeming account
+     * @param shares Amount of LP tokens burned
+     * @param amount Amount of underlying tokens
+     */
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
 
-    /// @notice Emitted when redeemed underlying tokens are withdrawn
-    /// @param account Withdrawing account
-    /// @param amount Amount of underlying tokens withdrawn
+    /**
+     * @notice Emitted when redeemed underlying tokens are withdrawn
+     * @param account Withdrawing account
+     * @param amount Amount of underlying tokens withdrawn
+     */
     event Withdrawn(address indexed account, uint256 amount);
 
     // =================== Functions ===================
 
-    /// @notice Initializer
-    /// @param _underlyingToken The underlying token address
-    /// @param _treasury Treasury address
+    /**
+     * 
+     * @param _underlyingToken The underlying token address
+     * @param _treasury Treasury address
+     */
     function initialize(address _underlyingToken, address _treasury) external initializer {
         if (_underlyingToken == address(0)) revert InvalidAddress();
         if (_treasury == address(0)) revert InvalidAddress();
@@ -123,8 +140,10 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         __ReentrancyGuard_init();
     }
 
-    /// @notice Sets WstUSD token address
-    /// @param _wstUSD WstUSD token address
+    /**
+     * Sets WstUSD token address
+     * @param _wstUSD WstUSD token address
+     */
     function setWstUSD(address _wstUSD) external onlyOwner {
         if (_wstUSD == address(0)) revert InvalidAddress();
         if (address(wstUSD) != address(0)) revert AlreadyInitialized();
@@ -132,9 +151,11 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         wstUSD = IWstUSD(_wstUSD);
     }
 
-    /// @notice Deposit TBY and get stUSD minted
-    /// @param _tby TBY address
-    /// @param _amount TBY amount to deposit
+    /**
+     * @notice Deposit TBY and get stUSD minted
+     * @param _tby TBY address
+     * @param _amount TBY amount to deposit
+     */
     function deposit(address _tby, uint256 _amount) external {
         if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
 
@@ -155,24 +176,24 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         emit Deposit(msg.sender, _tby, _amount, sharesAmount);
     }
 
-    /// @notice Redeem stUSD in exchange for underlying tokens. Underlying
-    /// tokens can be withdrawn with the `withdraw()` method, once the
-    /// redemption is processed.
-    ///
-    /// Emits a {Redeemed} event.
-    ///
-    /// @param _stUSDAmount Amount of stUSD
+    /**
+     * @notice Redeem stUSD in exchange for underlying tokens. Underlying
+     * tokens can be withdrawn with the `withdraw()` method, once the
+     * redemption is processed.
+     * @dev Emits a {Redeemed} event.
+     * @param _stUSDAmount Amount of stUSD
+     */
     function redeemStUSD(uint256 _stUSDAmount) external nonReentrant {
         _redeemStUSD(_stUSDAmount);
     }
 
-    /// @notice Redeem wstUSD in exchange for underlying tokens. Underlying
-    /// tokens can be withdrawn with the `withdraw()` method, once the
-    /// redemption is processed.
-    ///
-    /// Emits a {Redeemed} event.
-    ///
-    /// @param _wstUSDAmount Amount of wstUSD
+    /**
+     * @notice Redeem wstUSD in exchange for underlying tokens. Underlying
+     * tokens can be withdrawn with the `withdraw()` method, once the
+     * redemption is processed.
+     * @dev Emits a {Redeemed} event.
+     * @param _wstUSDAmount Amount of wstUSD
+     */
     function redeemWstUSD(uint256 _wstUSDAmount) external nonReentrant {
         wstUSD.safeTransferFrom(msg.sender, address(this), _wstUSDAmount);
         uint256 _stUSDAmount = wstUSD.unwrap(_wstUSDAmount);
@@ -193,10 +214,10 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         emit Redeemed(msg.sender, shares, _stUSDAmount);
     }
 
-    /// @notice Withdraw redeemed underlying tokens
-    ///
-    /// Emits a {Withdrawn} event.
-    ///
+    /**
+     * @notice Withdraw redeemed underlying tokens
+     * @dev Emits a {Withdrawn} event.
+     */
     function withdraw() external nonReentrant {
         uint256 amount = redemptionAvailable(msg.sender, _processedRedemptionQueue);
 
@@ -217,17 +238,21 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         emit Withdrawn(msg.sender, amount);
     }
 
-    /// @notice Get redemption state for account
-    /// @param account Account
-    /// @return Redemption state
+    /**
+     * @notice Get redemption state for account
+     * @param account Account
+     * @return Redemption state
+     */
     function redemptions(address account) external view returns (Redemption memory) {
         return _redemptions[account];
     }
 
-    /// @notice Get amount of redemption available for withdraw for account
-    /// @param account Account
-    /// @param processedRedemptionQueue Current value of processed redemption queue
-    /// @return Amount available for withdraw
+    /**
+     * @notice Get amount of redemption available for withdraw for account
+     * @param account Account
+     * @param processedRedemptionQueue Current value of processed redemption queue
+     * @return Amount available for withdraw
+     */
     function redemptionAvailable(address account, uint256 processedRedemptionQueue) public view returns (uint256) {
         Redemption storage redemption = _redemptions[account];
 
@@ -270,8 +295,10 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         }
     }
 
-    /// @dev Process redemptions
-    /// @param _proceeds Proceeds in underlying tokens
+    /**
+     * @dev Process redemptions
+     * @param _proceeds Proceeds in underlying tokens
+     */
     function _processRedemptions(uint256 _proceeds) internal returns (uint256) {
         // Compute maximum redemption possible
         uint256 redemptionAmount = MathUpgradeable.min(_pendingRedemptions, _proceeds);
@@ -287,9 +314,11 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         return _proceeds - redemptionAmount;
     }
 
-    /// @dev Process new proceeds by applying them to redemptions and undeployed
-    /// cash
-    /// @param _proceeds Proceeds in underlying tokens
+    /**
+     * @dev Process new proceeds by applying them to redemptions and undeployed
+     * cash
+     * @param _proceeds Proceeds in underlying tokens
+     */
     function _processProceeds(uint256 _proceeds) internal {
         // Process junior redemptions
         _proceeds = _processRedemptions(_proceeds);
@@ -303,16 +332,20 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
 
     // ================ Owner Functions ==============
 
-    /// @notice Update _totalUsd value
-    /// @dev Restricted to owner only
-    /// @param _amount new amount
+    /**
+     * @notice Update _totalUsd value
+     * @dev Restricted to owner only
+     * @param _amount new amount
+     */
     function setTotalUsd(uint256 _amount) external onlyOwner {
         _setTotalUsd(_amount);
     }
 
-    /// @notice Set mintBps value
-    /// @dev Restricted to owner only
-    /// @param _mintBps new mintBps value
+    /**
+     * @notice Set mintBps value
+     * @dev Restricted to owner only
+     * @param _mintBps new mintBps value
+     */
     function setMintBps(uint16 _mintBps) external onlyOwner {
         if (_mintBps > MAX_BPS) revert ParameterOutOfBounds();
         mintBps = _mintBps;
@@ -320,9 +353,11 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         emit MintBpsUpdated(_mintBps);
     }
 
-    /// @notice Set redeemBps value
-    /// @dev Restricted to owner only
-    /// @param _redeemBps new redeemBps value
+    /**
+     * @notice Set redeemBps value
+     * @dev Restricted to owner only
+     * @param _redeemBps new redeemBps value
+     */
     function setRedeemBps(uint16 _redeemBps) external onlyOwner {
         if (_redeemBps > MAX_BPS) revert ParameterOutOfBounds();
         redeemBps = _redeemBps;
@@ -330,9 +365,11 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         emit RedeemBpsUpdated(_redeemBps);
     }
 
-    /// @notice Set treasury address
-    /// @dev Restricted to owner only
-    /// @param _treasury new treasury address
+    /**
+     * @notice Set treasury address
+     * @dev Restricted to owner only
+     * @param _treasury new treasury address
+     */
     function setTreasury(address _treasury) external onlyOwner {
         if (_treasury == address(0)) revert InvalidAddress();
         treasury = _treasury;
@@ -340,19 +377,24 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         emit TreasuryUpdated(_treasury);
     }
 
-    /// @notice Whitelist TBY
-    /// @dev Restricted to owner only
-    /// @param _tby TBY address
-    /// @param _whitelist whitelisted or not
+    /**
+     * @notice Whitelist TBY
+     * @dev Restricted to owner only
+     * @param _tby TBY address
+     * @param _whitelist whitelist or not
+     */
     function whitelistTBY(address _tby, bool _whitelist) external onlyOwner {
         if (_tby == address(0)) revert InvalidAddress();
         _whitelisted[_tby] = _whitelist;
         emit TBYWhitelisted(_tby, _whitelist);
     }
 
-    /// @notice Redeem underlying token from TBY
-    /// @param _tby TBY address
-    /// @param _amount Redeem amount
+    /**
+     * @notice Redeem underlying token from TBY
+     * @dev Restricted to owner only
+     * @param _tby TBY address
+     * @param _amount Redeem amount
+     */
     function redeemUnderlying(address _tby, uint256 _amount) external onlyOwner {
         IBloomPool pool = IBloomPool(_tby);
 
@@ -367,8 +409,10 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals));
     }
 
-    /// @notice Deposit remaining underlying token to new TBY
-    /// @param _tby TBY address
+    /**
+     * @notice Deposit remaining underlying token to new TBY
+     * @param _tby TBY address
+     */
     function depositUnderlying(address _tby) external onlyOwner {
         IBloomPool pool = IBloomPool(_tby);
 
