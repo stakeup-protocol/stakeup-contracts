@@ -4,15 +4,8 @@ pragma solidity 0.8.19;
 import "../interfaces/IStUSD.sol";
 
 contract stakeupStaking {
-    /**
-     *
-     */
-    /**
-     * Storage *************
-     */
-    /**
-     *
-     */
+
+    // =================== Storage ===================
 
     // @dev Mapping of user to their stakes
     mapping(address => uint256) public stakes;

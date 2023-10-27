@@ -9,6 +9,6 @@ solc = "0.8.19"
 remappings = [
     "solmate/=lib/solmate/src/",
     "@openzeppelin/=lib/openzeppelin-contracts/",
-    "@openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
     "solady/=lib/solady/src/",
+    "@layerzerolabs/=lib/solidity-examples/contracts",
 ]
