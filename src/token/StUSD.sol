@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -13,7 +12,7 @@ import {IBloomPool} from "../interfaces/IBloomPool.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
 
 /// @title Staked USD Contract
-contract StUSD is StUSDBase, ReentrancyGuard, Ownable2Step {
+contract StUSD is StUSDBase, ReentrancyGuard {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IWstUSD;
@@ -125,22 +124,19 @@ contract StUSD is StUSDBase, ReentrancyGuard, Ownable2Step {
         address _treasury,
         uint16 _mintBps, // Suggested default 0.5%
         uint16 _redeemBps, // Suggeste default 0.5%
-        address _layerZeroEndpoint,
-        address _owner
-    ) 
-        StUSDBase(_layerZeroEndpoint) Ownable2Step()
+        address _layerZeroEndpoint
+    )
+        StUSDBase(_layerZeroEndpoint)
     {
         if (_underlyingToken == address(0)) revert InvalidAddress();
         if (_treasury == address(0)) revert InvalidAddress();
-
+        
         underlyingToken = IERC20(_underlyingToken);
         _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
         treasury = _treasury;
 
         mintBps = _mintBps;
         redeemBps = _redeemBps;
-
-        _transferOwnership(_owner);
     }
 
     /**

@@ -63,8 +63,7 @@ contract StUSDTest is Test {
             treasury,
             50,
             50,
-            layerZeroEndpoint,
-            owner
+            layerZeroEndpoint
         );
         vm.label(address(stUSD), "StUSD");
 
@@ -72,7 +71,7 @@ contract StUSDTest is Test {
         assertEq(stUSD.treasury(), treasury);
         assertEq(address(stUSD.underlyingToken()), address(stableToken));
 
-        wstUSD = WstUSD(address(stUSD));
+        wstUSD = new WstUSD(address(stUSD));
 
         assertEq(address(wstUSD.stUSD()), address(stUSD));
 
