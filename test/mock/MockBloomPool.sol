@@ -11,7 +11,7 @@
 pragma solidity 0.8.19;
 
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IMockSwapFacility} from "./interfaces/IMockSwapFacility.sol";
 import {MockERC20} from "./MockERC20.sol";
 
@@ -51,7 +51,8 @@ contract MockBloomPool is MockERC20 {
     function withdrawLender(uint256 _amount) external {
         _burn(msg.sender, _amount);
         uint256 exchangeRate = swap.exchangeRate();
-        uint256 amountToSend = _amount * exchangeRate / 1e18 * (10 ** IERC20Metadata(underlyingToken).decimals()) / (10 ** IERC20Metadata(billToken).decimals());
+        uint256 amountToSend = _amount * exchangeRate / 1e18 * (10 ** IERC20Metadata(underlyingToken).decimals())
+            / (10 ** IERC20Metadata(billToken).decimals());
         underlyingToken.safeTransfer(msg.sender, amountToSend);
     }
 }
