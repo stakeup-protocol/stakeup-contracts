@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {OFTV2} from "@layerzerolabs/token/oft/v2/OFTV2.sol";
-
 import {IStUSD} from "../interfaces/IStUSD.sol";
 
 /// @title Staked USD Base Contract
@@ -71,7 +70,7 @@ contract StUSDBase is IStUSD, OFTV2 {
     constructor(address _layerZeroEndpoint) 
         OFTV2("Staked USD", "stUSD", 6, _layerZeroEndpoint)
     {
-        // solhint-disable-previous-line no-empty-blocks
+        // solhint-disable-next-line-no-empty-blocks
     }
 
     function circulatingSupply() public view override returns (uint) {
