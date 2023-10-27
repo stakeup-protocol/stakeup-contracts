@@ -11,7 +11,7 @@
 pragma solidity 0.8.19;
 
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IMockSwapFacility} from "./interfaces/IMockSwapFacility.sol";
 import {MockERC20} from "./MockERC20.sol";
 
@@ -23,7 +23,12 @@ contract MockBloomPool is MockERC20 {
 
     IMockSwapFacility public immutable swap;
 
-    constructor(address _underlyingToken, address _billToken, address _swap, uint8 _decimals) MockERC20(_decimals) {
+    constructor(
+        address _underlyingToken,
+        address _billToken,
+        address _swap,
+        uint8 _decimals
+    ) MockERC20(_decimals) {
         underlyingToken = _underlyingToken;
         billToken = _billToken;
         swap = IMockSwapFacility(_swap);
