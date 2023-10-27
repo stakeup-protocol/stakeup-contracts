@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "@openzeppelin-upgradeable/contracts/security/PausableUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/token/ERC20/IERC20Upgradeable.sol";
+import {OFTV2} from "@layerzerolabs/token/oft/v2/OFTV2.sol";
+
+import {IStUSD} from "../interfaces/IStUSD.sol";
 
 /// @title Staked USD Base Contract
-contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
+contract StUSDBase is IStUSD, OFTV2 {
     // =================== Constants ===================
 
     uint256 internal constant INFINITE_ALLOWANCE = type(uint256).max;
@@ -38,9 +39,9 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * @dev emitted in pair with an ERC20-defined `Transfer` event.
      * @param from Address of the sender
      * @param to Address of the recipient
-     * @param sharesValue 
+     * @param sharesAmount Amount of shares transferred 
      */
-    event TransferShares(address indexed from, address indexed to, uint256 sharesValue);
+    event TransferShares(address indexed from, address indexed to, uint256 sharesAmount);
 
     /**
      * @notice An executed `burnShares` request
@@ -67,33 +68,23 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
 
     // =================== Functions ===================
 
-    /// @return the name of the token.
-    function name() external pure returns (string memory) {
-        return "Staked USD";
+    constructor(address _layerZeroEndpoint) 
+        OFTV2("Staked USD", "stUSD", 6, _layerZeroEndpoint)
+    {
+        // solhint-disable-previous-line no-empty-blocks
     }
 
-    /// @return the symbol of the token, usually a shorter version of the
-    /// name.
-    function symbol() external pure returns (string memory) {
-        return "stUSD";
+    function circulatingSupply() public view override returns (uint) {
+        return totalSupply();
     }
 
-    /// @return the number of decimals for getting user representation of a token amount.
-    function decimals() external pure returns (uint8) {
-        return 18;
-    }
-
-    /// @return the amount of tokens in existence.
-    ///
-    /// @dev Always equals to `_getTotalUsd()` since token amount
-    /// is pegged to the total amount of Usd controlled by the protocol.
     /**
      * @notice Get the total supply of stUSD
      * @dev Always equals to `_getTotalUsd()` since token amount
      *  is pegged to the total amount of Usd controlled by the protocol.
      * @return Amounnt of tokens in existence
      */
-    function totalSupply() external view returns (uint256) {
+    function totalSupply() public view override returns (uint256) {
         return _getTotalUsd();
     }
 
@@ -112,7 +103,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * @param _account Account to get balance of
      * @return Amount of tokens owned by the `_account`
      */
-    function balanceOf(address _account) public view returns (uint256) {
+    function balanceOf(address _account) public view override returns (uint256) {
         return getUsdByShares(_sharesOf(_account));
     }
 
@@ -127,7 +118,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * @param _recipient recipient of stUSD tokens
      * @param _amount Amount of tokens being transfered
      */
-    function transfer(address _recipient, uint256 _amount) external returns (bool) {
+    function transfer(address _recipient, uint256 _amount) public override returns (bool) {
         _transfer(msg.sender, _recipient, _amount);
         return true;
     }
@@ -139,7 +130,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * @param _owner Owner of the tokens
      * @param _spender Spender of the tokens
      */
-    function allowance(address _owner, address _spender) external view returns (uint256) {
+    function allowance(address _owner, address _spender) public view override returns (uint256) {
         return _allowances[_owner][_spender];
     }
 
@@ -151,7 +142,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * @param _spender Spender of stUSD tokens
      * @param _amount Amount of stUSD tokens allowed to be spent
      */
-    function approve(address _spender, uint256 _amount) external returns (bool) {
+    function approve(address _spender, uint256 _amount) public override returns (bool) {
         _approve(msg.sender, _spender, _amount);
         return true;
     }
@@ -170,7 +161,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * @param _recipient Destination of stUSD tokens
      * @param _amount Amount of tokens being transfered
      */
-    function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool) {
+    function transferFrom(address _sender, address _recipient, uint256 _amount) public override returns (bool) {
         _spendAllowance(_sender, msg.sender, _amount);
         _transfer(_sender, _recipient, _amount);
         return true;
@@ -184,10 +175,10 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * Emits an `Approval` event indicating the updated allowance.
      * Requirements:
      * - `_spender` cannot be the zero address.
-     * @param _spender 
-     * @param _addedValue 
+     * @param _spender The address which the allowance is increased for
+     * @param _addedValue The additional amount of allowance to be granted
      */
-    function increaseAllowance(address _spender, uint256 _addedValue) external returns (bool) {
+    function increaseAllowance(address _spender, uint256 _addedValue) public override returns (bool) {
         _approve(msg.sender, _spender, _allowances[msg.sender][_spender] + _addedValue);
         return true;
     }
@@ -201,10 +192,10 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * Requirements:
      * - `_spender` cannot be the zero address.
      * - `_spender` must have allowance for the caller of at least `_subtractedValue`.
-     * @param _spender 
-     * @param _subtractedValue 
+     * @param _spender The address which the allowance is decreased for
+     * @param _subtractedValue The amount of allowance to be reduced
      */
-    function decreaseAllowance(address _spender, uint256 _subtractedValue) external returns (bool) {
+    function decreaseAllowance(address _spender, uint256 _subtractedValue) public override returns (bool) {
         uint256 currentAllowance = _allowances[msg.sender][_spender];
         require(currentAllowance >= _subtractedValue, "ALLOWANCE_BELOW_ZERO");
         _approve(msg.sender, _spender, currentAllowance - _subtractedValue);
@@ -232,7 +223,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * @notice Get the amount of shares that corresponds to a given dollar value.
      * @param _usdAmount Amount of Usd
      */
-    function getSharesByUsd(uint256 _usdAmount) public view returns (uint256) {
+    function getSharesByUsd(uint256 _usdAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
             return _usdAmount;
@@ -245,7 +236,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * @notice Get the amount of Usd that corresponds to a given number of token shares.
      * @param _sharesAmount Amount of shares
      */
-    function getUsdByShares(uint256 _sharesAmount) public view returns (uint256) {
+    function getUsdByShares(uint256 _sharesAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
             return _sharesAmount;
@@ -316,7 +307,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * @dev Emits a `Transfer` event.
      * @dev Emits a `TransferShares` event.
      */
-    function _transfer(address _sender, address _recipient, uint256 _amount) internal {
+    function _transfer(address _sender, address _recipient, uint256 _amount) internal override {
         uint256 _sharesToTransfer = getSharesByUsd(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
         _emitTransferEvents(_sender, _recipient, _amount, _sharesToTransfer);
@@ -329,7 +320,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * - `_owner` cannot be the zero address.
      * - `_spender` cannot be the zero address. 
      */
-    function _approve(address _owner, address _spender, uint256 _amount) internal {
+    function _approve(address _owner, address _spender, uint256 _amount) internal override {
         require(_owner != address(0), "APPROVE_FROM_ZERO_ADDR");
         require(_spender != address(0), "APPROVE_TO_ZERO_ADDR");
 
@@ -343,7 +334,7 @@ contract StUSDBase is IERC20Upgradeable, PausableUpgradeable {
      * Revert if not enough allowance is available.
      * Might emit an {Approval} event.
      */
-    function _spendAllowance(address _owner, address _spender, uint256 _amount) internal {
+    function _spendAllowance(address _owner, address _spender, uint256 _amount) internal override {
         uint256 currentAllowance = _allowances[_owner][_spender];
         if (currentAllowance != INFINITE_ALLOWANCE) {
             require(currentAllowance >= _amount, "ALLOWANCE_EXCEEDED");

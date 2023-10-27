@@ -3,22 +3,18 @@ pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 
-import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {StUSD, IERC20Upgradeable} from "src/token/StUSD.sol";
+import {StUSD} from "src/token/StUSD.sol";
 import {WstUSD} from "src/token/WstUSD.sol";
+
+import {IStUSD} from "src/interfaces/IStUSD.sol";
+
 import {MockERC20} from "./mock/MockERC20.sol";
 import {MockSwapFacility} from "./mock/MockSwapFacility.sol";
 import {MockBloomPool} from "./mock/MockBloomPool.sol";
 
 contract StUSDTest is Test {
-    ProxyAdmin internal proxyAdmin;
-    TransparentUpgradeableProxy internal stUSDProxy;
-    TransparentUpgradeableProxy internal wstUSDProxy;
 
-    StUSD stUSDImpl;
     StUSD internal stUSD;
-    WstUSD internal wstUSDImpl;
     WstUSD internal wstUSD;
 
     MockERC20 internal stableToken;
@@ -29,6 +25,7 @@ contract StUSDTest is Test {
     address internal owner = makeAddr("owner");
     address internal nonOwner = makeAddr("nonOwner");
     address internal treasury = makeAddr("treasury");
+    address internal layerZeroEndpoint = makeAddr("layerZeroEndpoint");
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
@@ -60,34 +57,22 @@ contract StUSDTest is Test {
         vm.label(address(pool), "MockBloomPool");
 
         vm.startPrank(owner);
-        proxyAdmin = new ProxyAdmin();
-        stUSDImpl = new StUSD();
-        stUSDProxy = new TransparentUpgradeableProxy(
-            address(stUSDImpl),
-            address(proxyAdmin),
-            abi.encodeWithSelector(
-                StUSD.initialize.selector,
-                address(stableToken),
-                treasury
-            )
+
+        stUSD = new StUSD(
+            address(stableToken),
+            treasury,
+            50,
+            50,
+            layerZeroEndpoint,
+            owner
         );
-        stUSD = StUSD(address(stUSDProxy));
         vm.label(address(stUSD), "StUSD");
 
         assertEq(stUSD.owner(), owner);
         assertEq(stUSD.treasury(), treasury);
         assertEq(address(stUSD.underlyingToken()), address(stableToken));
 
-        wstUSDImpl = new WstUSD();
-        wstUSDProxy = new TransparentUpgradeableProxy(
-            address(wstUSDImpl),
-            address(proxyAdmin),
-            abi.encodeWithSelector(
-                WstUSD.initialize.selector,
-                address(stUSD)
-            )
-        );
-        wstUSD = WstUSD(address(wstUSDProxy));
+        wstUSD = WstUSD(address(stUSD));
 
         assertEq(address(wstUSD.stUSD()), address(stUSD));
 
@@ -101,32 +86,8 @@ contract StUSDTest is Test {
         stUSD.whitelistTBY(tby, whitelist);
     }
 
-    function test_init_fail_with_InvalidAddress() public {
-        vm.expectRevert(StUSD.InvalidAddress.selector);
-        new TransparentUpgradeableProxy(
-            address(stUSDImpl),
-            address(proxyAdmin),
-            abi.encodeWithSelector(
-                StUSD.initialize.selector,
-                address(0),
-                treasury
-            )
-        );
-
-        vm.expectRevert(StUSD.InvalidAddress.selector);
-        new TransparentUpgradeableProxy(
-            address(stUSDImpl),
-            address(proxyAdmin),
-            abi.encodeWithSelector(
-                StUSD.initialize.selector,
-                address(stableToken),
-                address(0)
-            )
-        );
-    }
-
     function test_setMintBps_fail_with_ParameterOutOfBounds() public {
-        vm.expectRevert(StUSD.ParameterOutOfBounds.selector);
+        vm.expectRevert(IStUSD.ParameterOutOfBounds.selector);
         vm.prank(owner);
         stUSD.setMintBps(201);
     }
@@ -147,7 +108,7 @@ contract StUSDTest is Test {
     }
 
     function test_setRedeemBps_fail_with_ParameterOutOfBounds() public {
-        vm.expectRevert(StUSD.ParameterOutOfBounds.selector);
+        vm.expectRevert(IStUSD.ParameterOutOfBounds.selector);
         vm.prank(owner);
         stUSD.setRedeemBps(201);
     }
@@ -168,7 +129,7 @@ contract StUSDTest is Test {
     }
 
     function test_setTreasury_fail_with_InvalidAddress() public {
-        vm.expectRevert(StUSD.InvalidAddress.selector);
+        vm.expectRevert(IStUSD.InvalidAddress.selector);
         vm.prank(owner);
         stUSD.setTreasury(address(0));
     }
@@ -190,7 +151,7 @@ contract StUSDTest is Test {
     }
 
     function test_whitelistTBY_fail_with_InvalidAddress() public {
-        vm.expectRevert(StUSD.InvalidAddress.selector);
+        vm.expectRevert(IStUSD.InvalidAddress.selector);
         vm.prank(owner);
         stUSD.whitelistTBY(address(0), true);
     }
@@ -209,7 +170,7 @@ contract StUSDTest is Test {
     }
 
     function test_deposit_fail_with_TBYNotWhitelisted() public {
-        vm.expectRevert(StUSD.TBYNotWhitelisted.selector);
+        vm.expectRevert(IStUSD.TBYNotWhitelisted.selector);
         vm.prank(alice);
         stUSD.deposit(address(pool), 1 ether);
     }

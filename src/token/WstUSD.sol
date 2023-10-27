@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "@openzeppelin-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IStUSD} from "../interfaces/IStUSD.sol";
+import {IWstUSD} from "../interfaces/IWstUSD.sol";
 
-contract WstUSD is ERC20Upgradeable {
+contract WstUSD is IWstUSD, ERC20 {
+    using SafeERC20 for ERC20;
     // =================== Constants ===================
 
     /// @notice StUSD token
     IStUSD public stUSD;
 
     // =================== Functions ===================
-
-    /// @param _stUSD address of the StUSD token to wrap
-    function initialize(address _stUSD) external initializer {
+    
+    constructor(address _stUSD) ERC20("Wrapped staked USD", "wstUSD") {
         stUSD = IStUSD(_stUSD);
-
-        __ERC20_init("Wrapped staked USD", "wstUSD");
     }
 
     /**
@@ -35,7 +35,7 @@ contract WstUSD is ERC20Upgradeable {
         if (_stUSDAmount == 0) revert ZeroAmount();
         uint256 wstUSDAmount = stUSD.getSharesByUsd(_stUSDAmount);
         _mint(msg.sender, wstUSDAmount);
-        stUSD.transferFrom(msg.sender, address(this), _stUSDAmount);
+        ERC20(address(stUSD)).safeTransferFrom(msg.sender, address(this), _stUSDAmount);
         return wstUSDAmount;
     }
 
@@ -51,7 +51,7 @@ contract WstUSD is ERC20Upgradeable {
         require(_wstUSDAmount > 0, "wstUSD: zero amount unwrap not allowed");
         uint256 stUSDAmount = stUSD.getUsdByShares(_wstUSDAmount);
         _burn(msg.sender, _wstUSDAmount);
-        stUSD.transfer(msg.sender, stUSDAmount);
+        ERC20(address(stUSD)).safeTransfer(msg.sender, stUSDAmount);
         return stUSDAmount;
     }
 

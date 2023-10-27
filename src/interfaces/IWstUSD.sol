@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./IStUSD.sol";
+import {IStUSD} from "./IStUSD.sol";
 
 interface IWstUSD {
     // =================== Errors ===================
