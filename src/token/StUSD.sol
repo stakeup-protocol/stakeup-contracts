@@ -5,6 +5,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {StUSDBase} from "./StUSDBase.sol";
 
@@ -12,7 +13,7 @@ import {IBloomPool} from "../interfaces/IBloomPool.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
 
 /// @title Staked USD Contract
-contract StUSD is StUSDBase, Ownable2Step, ReentrancyGuard {
+contract StUSD is StUSDBase, ReentrancyGuard, Ownable2Step {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IWstUSD;
@@ -37,7 +38,7 @@ contract StUSD is StUSDBase, Ownable2Step, ReentrancyGuard {
     IWstUSD public wstUSD;
 
     /// @dev Underlying token
-    IERC20Upgradeable public underlyingToken;
+    IERC20 public underlyingToken;
 
     /// @dev Underlying token decimals
     uint8 internal _underlyingDecimals;
@@ -119,25 +120,27 @@ contract StUSD is StUSDBase, Ownable2Step, ReentrancyGuard {
     event Withdrawn(address indexed account, uint256 amount);
 
     // =================== Functions ===================
-
-    /**
-     * 
-     * @param _underlyingToken The underlying token address
-     * @param _treasury Treasury address
-     */
-    function initialize(address _underlyingToken, address _treasury) external initializer {
+    constructor(
+        address _underlyingToken,
+        address _treasury,
+        uint16 _mintBps, // Suggested default 0.5%
+        uint16 _redeemBps, // Suggeste default 0.5%
+        address _layerZeroEndpoint,
+        address _owner
+    ) 
+        StUSDBase(_layerZeroEndpoint) Ownable2Step()
+    {
         if (_underlyingToken == address(0)) revert InvalidAddress();
         if (_treasury == address(0)) revert InvalidAddress();
 
-        underlyingToken = IERC20Upgradeable(_underlyingToken);
-        _underlyingDecimals = IERC20MetadataUpgradeable(_underlyingToken).decimals();
+        underlyingToken = IERC20(_underlyingToken);
+        _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
         treasury = _treasury;
 
-        mintBps = 50; // Default 0.5%
-        redeemBps = 50; // Default 0.5%
+        mintBps = _mintBps;
+        redeemBps = _redeemBps;
 
-        __Ownable2Step_init();
-        __ReentrancyGuard_init();
+        _transferOwnership(_owner);
     }
 
     /**
@@ -163,9 +166,9 @@ contract StUSD is StUSDBase, Ownable2Step, ReentrancyGuard {
 
         if (mintFee > 0) {
             _amount -= mintFee;
-            IERC20Upgradeable(_tby).safeTransferFrom(msg.sender, treasury, mintFee);
+            IERC20(_tby).safeTransferFrom(msg.sender, treasury, mintFee);
         }
-        IERC20Upgradeable(_tby).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 sharesAmount = getSharesByUsd(_amount);
 
@@ -195,7 +198,7 @@ contract StUSD is StUSDBase, Ownable2Step, ReentrancyGuard {
      * @param _wstUSDAmount Amount of wstUSD
      */
     function redeemWstUSD(uint256 _wstUSDAmount) external nonReentrant {
-        wstUSD.safeTransferFrom(msg.sender, address(this), _wstUSDAmount);
+        IERC20(address(wstUSD)).safeTransferFrom(msg.sender, address(this), _wstUSDAmount);
         uint256 _stUSDAmount = wstUSD.unwrap(_wstUSDAmount);
         _transfer(address(this), msg.sender, _stUSDAmount);
         _redeemStUSD(_stUSDAmount);
@@ -301,7 +304,7 @@ contract StUSD is StUSDBase, Ownable2Step, ReentrancyGuard {
      */
     function _processRedemptions(uint256 _proceeds) internal returns (uint256) {
         // Compute maximum redemption possible
-        uint256 redemptionAmount = MathUpgradeable.min(_pendingRedemptions, _proceeds);
+        uint256 redemptionAmount = Math.min(_pendingRedemptions, _proceeds);
 
         // Update redemption state
         _pendingRedemptions -= redemptionAmount;
@@ -395,10 +398,11 @@ contract StUSD is StUSDBase, Ownable2Step, ReentrancyGuard {
      * @param _tby TBY address
      * @param _amount Redeem amount
      */
+    // TODO: INVESTIGATE POTENTIAL DONATION ATTACK
     function redeemUnderlying(address _tby, uint256 _amount) external onlyOwner {
         IBloomPool pool = IBloomPool(_tby);
 
-        _amount = MathUpgradeable.min(_amount, IERC20Upgradeable(_tby).balanceOf(address(this)));
+        _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
 
         uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(address(this));
 
