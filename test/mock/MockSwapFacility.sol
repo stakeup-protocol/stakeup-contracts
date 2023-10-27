@@ -51,20 +51,29 @@ contract MockSwapFacility is IMockSwapFacility {
         ISwapRecipient(pswap.to).completeSwap(address(pswap.token), pswap.amount);
     }
 
-    function swap(address inToken, address outToken, uint256 inAmount, bytes32[] calldata) external {
+    function swap(
+        address inToken,
+        address outToken,
+        uint256 inAmount,
+        bytes32[] calldata
+    ) external {
         if (
-            !(
-                (inToken == address(token0) && outToken == address(token1))
-                    || (inToken == address(token1) && outToken == address(token0))
-            )
+            !((inToken == address(token0) && outToken == address(token1)) || 
+                (inToken == address(token1) && outToken == address(token0)))
         ) {
-            revert MockSwapFacility_WrongTokens(inToken, outToken, address(token0), address(token1));
+            revert MockSwapFacility_WrongTokens(
+                inToken,
+                outToken,
+                address(token0),
+                address(token1)
+            );
         }
 
         require(MockERC20(inToken).transferFrom(msg.sender, address(this), inAmount));
 
         uint256 outAmount =
-            inToken == address(token0) ? (inAmount * WAD) / exchangeRate : (inAmount * exchangeRate) / WAD;
+            inToken == address(token0) ? (inAmount * WAD) / exchangeRate : 
+                (inAmount * exchangeRate) / WAD;
 
         pendingSwaps.push(PendingSwap({to: msg.sender, token: MockERC20(outToken), amount: outAmount}));
     }
