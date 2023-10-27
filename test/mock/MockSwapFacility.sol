@@ -18,7 +18,12 @@ import {ISwapRecipient} from "./interfaces/ISwapRecipient.sol";
 contract MockSwapFacility is IMockSwapFacility {
     uint256 internal constant WAD = 1e18;
 
-    error MockSwapFacility_WrongTokens(address inToken, address outToken, address token0, address token1);
+    error MockSwapFacility_WrongTokens(
+        address inToken,
+        address outToken,
+        address token0,
+        address token1
+    );
 
     MockERC20 public immutable token0;
     MockERC20 public immutable token1;
@@ -48,7 +53,10 @@ contract MockSwapFacility is IMockSwapFacility {
         PendingSwap memory pswap = pendingSwaps[totalSwaps - 1];
         pendingSwaps.pop();
         pswap.token.mint(pswap.to, pswap.amount);
-        ISwapRecipient(pswap.to).completeSwap(address(pswap.token), pswap.amount);
+        ISwapRecipient(pswap.to).completeSwap(
+            address(pswap.token),
+            pswap.amount
+        );
     }
 
     function swap(
@@ -75,6 +83,12 @@ contract MockSwapFacility is IMockSwapFacility {
             inToken == address(token0) ? (inAmount * WAD) / exchangeRate : 
                 (inAmount * exchangeRate) / WAD;
 
-        pendingSwaps.push(PendingSwap({to: msg.sender, token: MockERC20(outToken), amount: outAmount}));
+        pendingSwaps.push(
+            PendingSwap({
+                to: msg.sender,
+                token: MockERC20(outToken),
+                amount: outAmount
+            })
+        );
     }
 }
