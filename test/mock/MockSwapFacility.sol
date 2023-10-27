@@ -66,7 +66,7 @@ contract MockSwapFacility is IMockSwapFacility {
         bytes32[] calldata
     ) external {
         if (
-            !((inToken == address(token0) && outToken == address(token1)) || 
+            !((inToken == address(token0) && outToken == address(token1)) ||
                 (inToken == address(token1) && outToken == address(token0)))
         ) {
             revert MockSwapFacility_WrongTokens(
@@ -77,11 +77,13 @@ contract MockSwapFacility is IMockSwapFacility {
             );
         }
 
-        require(MockERC20(inToken).transferFrom(msg.sender, address(this), inAmount));
+        require(
+            MockERC20(inToken).transferFrom(msg.sender, address(this), inAmount)
+        );
 
-        uint256 outAmount =
-            inToken == address(token0) ? (inAmount * WAD) / exchangeRate : 
-                (inAmount * exchangeRate) / WAD;
+        uint256 outAmount = inToken == address(token0)
+            ? (inAmount * WAD) / exchangeRate
+            : (inAmount * exchangeRate) / WAD;
 
         pendingSwaps.push(
             PendingSwap({
