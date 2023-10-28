@@ -8,6 +8,7 @@ import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extens
 
 import {StUSDBase} from "./StUSDBase.sol";
 
+import {IBloomFactory} from "../interfaces/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/IBloomPool.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
 
@@ -39,6 +40,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     /// @dev Underlying token
     IERC20 public underlyingToken;
 
+    IBloomFactory public bloomFactory;
+
     /// @dev Underlying token decimals
     uint8 internal _underlyingDecimals;
 
@@ -52,8 +55,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     uint16 public constant MAX_BPS = 200; // Max 2%
 
+    uint256 public constant AUTO_STAKE_PHASE = 1 days;
+
     /// @notice Treasury address
     address public treasury;
+
+    /// @notice Last autocheck timestamp
+    uint256 public lastAutoStakeCheck;
 
     /// @dev Mapping of TBY to bool
     mapping(address => bool) internal _whitelisted;
@@ -122,6 +130,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     constructor(
         address _underlyingToken,
         address _treasury,
+        address _bloomFactory,
         uint16 _mintBps, // Suggested default 0.5%
         uint16 _redeemBps, // Suggeste default 0.5%
         address _layerZeroEndpoint
@@ -134,6 +143,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         underlyingToken = IERC20(_underlyingToken);
         _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
         treasury = _treasury;
+        bloomFactory = IBloomFactory(_bloomFactory);
 
         mintBps = _mintBps;
         redeemBps = _redeemBps;
@@ -410,15 +420,31 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     }
 
     /**
-     * @notice Deposit remaining underlying token to new TBY
-     * @param _tby TBY address
+     * @notice Invoke the auto stake function if the last created pool is in
+     * the commit state
+     * @dev anyone can call this function for now
      */
-    function depositUnderlying(address _tby) external onlyOwner {
-        IBloomPool pool = IBloomPool(_tby);
+    function poke() external {
+        _autoMintTBY();
+    }
 
-        uint256 amount = _remainingBalance;
-        delete _remainingBalance;
+    /**
+     * @notice Auto stake USDC in the latest Bloom pool
+     * @dev Auto stake feature can only be executed during the last 24 hours of
+     * the newest Bloom Pool's commit phase
+     */
+    function _autoMintTBY() internal {
+        IBloomPool lastCreatedPool = IBloomPool(bloomFactory.getLastCreatedPool());
+        if (lastCreatedPool.state() == IBloomPool.State.Commit && block.timestamp >= lastCreatedPool.COMMIT_PHASE_END() - AUTO_STAKE_PHASE) {
+            uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
+            if (underlyingBalance > 0) {
+                uint256 accountedBalance = _remainingBalance;
+                uint256 unregisteredBalance = underlyingBalance - accountedBalance;
+                delete _remainingBalance;
 
-        pool.depositLender(amount);
+                lastCreatedPool.depositLender(underlyingBalance);
+                _setTotalUsd(_getTotalUsd() + unregisteredBalance);
+            }
+        }
     }
 }
