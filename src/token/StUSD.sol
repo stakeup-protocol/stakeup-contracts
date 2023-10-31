@@ -125,8 +125,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     constructor(
         address _underlyingToken,
         address _treasury,
-        uint16 _mintBps, // Suggested default 0.5%
-        uint16 _redeemBps, // Suggested default 0.5%
+        uint16 _mintBps, // Suggested default 0.10%
+        uint16 _redeemBps, // Suggested default 0.15%
         uint16 _performanceBps, // Suggested default 10% of yield
         address _layerZeroEndpoint
     )
@@ -308,11 +308,12 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     /**
      * @dev Process redemptions
-     * @param _proceeds Proceeds in underlying tokens
+     * @param _redeemableProceeds Proceeds in underlying tokens that can be
+     * used for redemptions
      */
-    function _processRedemptions(uint256 _proceeds) internal returns (uint256) {
+    function _processRedemptions(uint256 _redeemableProceeds) internal returns (uint256) {
         // Compute maximum redemption possible
-        uint256 redemptionAmount = Math.min(_pendingRedemptions, _proceeds);
+        uint256 redemptionAmount = Math.min(_pendingRedemptions, _redeemableProceeds);
 
         // Update redemption state
         _pendingRedemptions -= redemptionAmount;
@@ -322,17 +323,25 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         _totalWithdrawalBalance += redemptionAmount;
 
         // Return amount of proceeds leftover
-        return _proceeds - redemptionAmount;
+        return _redeemableProceeds - redemptionAmount;
     }
 
     /**
      * @dev Process new proceeds by applying them to redemptions and undeployed
      * cash
      * @param _proceeds Proceeds in underlying tokens
+     * @param _yield Yield gained from TBY
      */
-    function _processProceeds(uint256 _proceeds) internal {
+    function _processProceeds(uint256 _proceeds, uint256 _yield) internal {
+        uint256 performanceFee = _yield * performanceBps / BPS;
+        
+        if (performanceFee > 0) {
+            uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
+            _mintShares(treasury, sharesFeeAmount);
+        }
+        
         // Process junior redemptions
-        _proceeds = _processRedemptions(_proceeds);
+        _proceeds = _processRedemptions(_proceeds - performanceFee);
 
         if (_proceeds > 0) {
             _remainingBalance += _proceeds;
@@ -407,6 +416,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @param _amount Redeem amount
      */
     // TODO: INVESTIGATE POTENTIAL DONATION ATTACK
+    // TODO: Potential inaccurancies due to donation attacks
     function redeemUnderlying(address _tby, uint256 _amount) external onlyOwner {
         IBloomPool pool = IBloomPool(_tby);
 
@@ -417,8 +427,10 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         pool.withdrawLender(_amount);
 
         uint256 withdrawn = underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
+        
+        uint256 yieldFromPool = withdrawn - _amount;
 
-        _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals));
+        _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals), yieldFromPool);
     }
 
     /**
