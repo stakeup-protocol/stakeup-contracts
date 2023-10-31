@@ -11,14 +11,20 @@ interface IAllocatedToken {
         uint64 percentShare;
     }
 
+    struct TypeData {
+        AllocationType allocationType;
+        uint64 totalShare;
+        Schedule schedule;
+    }
+
     /**
      * @dev Allocation is a struct that represents a specific allocation of tokens
      * to a group of recipients.
      */
     struct Allocation {
-        Schedule schedule;
-        TokenRecipient[] contributorShares;
-        uint64 percentShare;
+        TypeData data;
+        uint256 amountAvailable;
+        uint256 amountLocked;
     }
 
     /**
@@ -46,6 +52,7 @@ interface IAllocatedToken {
      * @dev operators: 9% of the total supply, linearVesting
      */
     enum AllocationType {
+        nullValue,
         startupContributors,
         investors,
         operators,

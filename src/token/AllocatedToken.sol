@@ -8,8 +8,8 @@ import {OFTV2} from "@layerzerolabs/token/oft/v2/OFTV2.sol";
 import {IAllocatedToken} from "../interfaces/IAllocatedToken.sol";
 
 abstract contract AllocatedToken is IAllocatedToken, OFTV2 {
-    Allocation[] private _allocations;
-
+    mapping(address => Allocation) internal _tokenAllocations;
+    
     uint256 internal constant DECIMAL_SCALING = 1e6;
     uint256 internal constant MAX_SUPPLY = 1_000_000 * DECIMAL_SCALING;
     
@@ -54,19 +54,16 @@ abstract contract AllocatedToken is IAllocatedToken, OFTV2 {
         TokenRecipient[] memory operatorRecipients,
         TokenRecipient[] memory airdropRecipients
     ) internal virtual {
-        Allocation[] memory allocations = new Allocation[](4);
-        allocations[0] = _setAllocations(AllocationType.startupContributors, startupRecipients);
-        allocations[1] = _setAllocations(AllocationType.investors, investorRecipients);
-        allocations[2] = _setAllocations(AllocationType.operators, operatorRecipients);
-        allocations[3] = _setAllocations(AllocationType.airdrop, airdropRecipients);
-
-        _allocations = allocations;
+_setAllocations(AllocationType.startupContributors, startupRecipients);
+        _setAllocations(AllocationType.investors, investorRecipients);
+        _setAllocations(AllocationType.operators, operatorRecipients);
+        _setAllocations(AllocationType.airdrop, airdropRecipients);
     }
 
     function _setAllocations(
         AllocationType allocationType,
         TokenRecipient[] memory recipients
-    ) private returns (Allocation memory) {
+    ) internal {
         Schedule schedule;
         uint64 percentShare;
 
@@ -86,20 +83,28 @@ abstract contract AllocatedToken is IAllocatedToken, OFTV2 {
             revert InvalidAllocationType();
         }
 
-        _mintAllocatedShares(recipients, percentShare);
-
-        return Allocation({
-            schedule: Schedule.linearVesting,
-            contributorShares: recipients,
-            percentShare: percentShare
-        });
+        _mintAllocatedShares(recipients, allocationType, schedule, percentShare);
     }
 
-    function _mintAllocatedShares(TokenRecipient[] memory recipients, uint64 allocationShare) internal {
-        uint256 length = recipients.length;
+    /**
+     * @notice Mints tokens for the given recipients based on their percent share
+     * and sets the necessary state variables for tracking vesting and distribution.
+     * @param recipients A list of TokenRecipients that will be minted tokens
+     * @param allocationShare percentage of total supply that will be minted for 
+     * a given allocationType
+     */
+    function _mintAllocatedShares(
+        TokenRecipient[] memory recipients,
+        AllocationType allocationType,
+        Schedule schedule,
+        uint64 allocationShare
+    ) internal {
         uint256 sharesRemaining = allocationShare;
+        uint256 length = recipients.length;
 
-        for (uint256 i=0; i < length; i++) {
+        if (sharesRemaining != 0) revert SharesNotFullyAllocated();
+
+        for (uint256 i = 0; i < length; ++i) {
             address recipient = recipients[i].recipient;
             uint64 shares = recipients[i].percentShare;
 
@@ -109,6 +114,17 @@ abstract contract AllocatedToken is IAllocatedToken, OFTV2 {
             sharesRemaining -= shares;
 
             uint256 amount = MAX_SUPPLY * shares / DECIMAL_SCALING;
+
+            _tokenAllocations[recipient] = Allocation({
+                data: TypeData({
+                    allocationType: allocationType,
+                    totalShare: allocationShare,
+                    schedule: schedule
+                }),
+                amountAvailable: 0, 
+                amountLocked: amount
+            });
+
             _mint(recipient, amount);
         }
         if (sharesRemaining != 0) revert SharesNotFullyAllocated();
