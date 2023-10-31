@@ -48,6 +48,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     /// @notice Redeem fee bps
     uint16 public redeemBps;
 
+    /// @notice Performance fee bps
+    uint16 public performanceBps;
+
     uint16 public constant BPS = 10000;
 
     uint16 public constant MAX_BPS = 200; // Max 2%
@@ -123,7 +126,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         address _underlyingToken,
         address _treasury,
         uint16 _mintBps, // Suggested default 0.5%
-        uint16 _redeemBps, // Suggeste default 0.5%
+        uint16 _redeemBps, // Suggested default 0.5%
+        uint16 _performanceBps, // Suggested default 10% of yield
         address _layerZeroEndpoint
     )
         StUSDBase(_layerZeroEndpoint)
@@ -158,13 +162,15 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     function deposit(address _tby, uint256 _amount) external {
         if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
 
+        IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
+
         uint256 mintFee = (_amount * mintBps) / BPS;
 
         if (mintFee > 0) {
             _amount -= mintFee;
-            IERC20(_tby).safeTransferFrom(msg.sender, treasury, mintFee);
+            uint256 sharesFeeAmount = getSharesByUsd(mintFee);
+            _mintShares(treasury, sharesFeeAmount);
         }
-        IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
 
         uint256 sharesAmount = getSharesByUsd(_amount);
 
@@ -205,12 +211,12 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         uint256 shares = getSharesByUsd(_stUSDAmount);
 
-        _redeem(msg.sender, shares, _stUSDAmount, _redemptionQueue);
+        uint256 amountRedeemed = _redeem(msg.sender, shares, _stUSDAmount, _redemptionQueue);
 
-        _pendingRedemptions += _stUSDAmount;
-        _redemptionQueue += _stUSDAmount;
+        _pendingRedemptions += amountRedeemed;
+        _redemptionQueue += amountRedeemed;
 
-        emit Redeemed(msg.sender, shares, _stUSDAmount);
+        emit Redeemed(msg.sender, shares, amountRedeemed);
     }
 
     /**
@@ -226,11 +232,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             _totalWithdrawalBalance -= amount;
 
             uint256 transferAmount = amount / (10 ** (18 - _underlyingDecimals));
-            uint256 redeemFee = (transferAmount * redeemBps) / BPS;
-            if (redeemFee > 0) {
-                transferAmount -= redeemFee;
-                underlyingToken.safeTransfer(treasury, redeemFee);
-            }
+
             underlyingToken.safeTransfer(msg.sender, transferAmount);
         }
 
@@ -267,12 +269,20 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     }
 
     function _redeem(address _account, uint256 _shares, uint256 _underlyingAmount, uint256 _redemptionQueueTarget)
-        internal
+        internal returns (uint256 amountRedeemed)
     {
         Redemption storage redemption = _redemptions[_account];
 
         if (balanceOf(_account) < _shares) revert InsufficientBalance();
         if (redemption.pending != 0) revert RedemptionInProgress();
+
+        uint256 redeemFee = (_shares * redeemBps) / BPS;
+        if (redeemFee > 0) {
+            _shares -= redeemFee;
+            uint256 redeemFeeAmount = getUsdByShares(redeemFee);
+            _underlyingAmount -= redeemFeeAmount;
+            transferFrom(_account, treasury, redeemFeeAmount);
+        }
 
         redemption.pending = _underlyingAmount;
         redemption.withdrawn = 0;
@@ -280,6 +290,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         _burnShares(_account, _shares);
         _setTotalUsd(_getTotalUsd() - _underlyingAmount);
+
+        return _underlyingAmount;
     }
 
     function _withdraw(address _account, uint256 _underlyingAmount) internal {
