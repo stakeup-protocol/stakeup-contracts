@@ -60,9 +60,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     /// @notice Treasury address
     address public treasury;
 
-    /// @notice Last autocheck timestamp
-    uint256 public lastAutoStakeCheck;
-
     /// @dev Mapping of TBY to bool
     mapping(address => bool) internal _whitelisted;
 
@@ -125,6 +122,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @param amount Amount of underlying tokens withdrawn
      */
     event Withdrawn(address indexed account, uint256 amount);
+
+    /**
+     * @notice Emitted when USDC is deposited into a Bloom Pool
+     * @param tby TBY address
+     * @param amount Amount of TBY deposited
+     */
+    event TBYAutoMinted(address indexed tby, uint256 amount);
 
     // =================== Functions ===================
     constructor(
@@ -435,15 +439,25 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     function _autoMintTBY() internal {
         IBloomPool lastCreatedPool = IBloomPool(bloomFactory.getLastCreatedPool());
-        if (lastCreatedPool.state() == IBloomPool.State.Commit && block.timestamp >= lastCreatedPool.COMMIT_PHASE_END() - AUTO_STAKE_PHASE) {
+        if (!_whitelisted[address(lastCreatedPool)]) revert TBYNotWhitelisted();
+
+        uint256 last24hoursOfCommitPhase = lastCreatedPool.COMMIT_PHASE_END() - AUTO_STAKE_PHASE;
+
+        if (lastCreatedPool.state() == IBloomPool.State.Commit && block.timestamp >= last24hoursOfCommitPhase) {
             uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
+            
             if (underlyingBalance > 0) {
                 uint256 accountedBalance = _remainingBalance;
                 uint256 unregisteredBalance = underlyingBalance - accountedBalance;
+                
                 delete _remainingBalance;
 
+                underlyingToken.safeApprove(address(lastCreatedPool), underlyingBalance);
                 lastCreatedPool.depositLender(underlyingBalance);
+                
                 _setTotalUsd(_getTotalUsd() + unregisteredBalance);
+
+                emit TBYAutoMinted(address(lastCreatedPool), underlyingBalance);
             }
         }
     }
