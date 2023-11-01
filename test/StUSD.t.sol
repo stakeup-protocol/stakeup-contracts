@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import "forge-std/console2.sol";
 
 import {StUSD} from "src/token/StUSD.sol";
 import {WstUSD} from "src/token/WstUSD.sol";
@@ -10,7 +11,8 @@ import {IStUSD} from "src/interfaces/IStUSD.sol";
 
 import {MockERC20} from "./mock/MockERC20.sol";
 import {MockSwapFacility} from "./mock/MockSwapFacility.sol";
-import {MockBloomPool} from "./mock/MockBloomPool.sol";
+import {MockBloomPool, IBloomPool} from "./mock/MockBloomPool.sol";
+import {MockBloomFactory} from "./mock/MockBloomFactory.sol";
 
 contract StUSDTest is Test {
 
@@ -21,6 +23,7 @@ contract StUSDTest is Test {
     MockERC20 internal billyToken;
     MockSwapFacility internal swap;
     MockBloomPool internal pool;
+    MockBloomFactory internal factory;
 
     address internal owner = makeAddr("owner");
     address internal nonOwner = makeAddr("nonOwner");
@@ -39,6 +42,7 @@ contract StUSDTest is Test {
     event Deposit(address indexed account, address tby, uint256 amount, uint256 shares);
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
+    event TBYAutoMinted(address indexed account, uint256 amount);
 
     function setUp() public {
         stableToken = new MockERC20(6);
@@ -58,9 +62,14 @@ contract StUSDTest is Test {
 
         vm.startPrank(owner);
 
+        factory = new MockBloomFactory();
+        vm.label(address(factory), "MockBloomFactory");
+        factory.setLastCreatedPool(address(pool));
+
         stUSD = new StUSD(
             address(stableToken),
             treasury,
+            address(factory),
             50,
             50,
             layerZeroEndpoint
@@ -211,6 +220,43 @@ contract StUSDTest is Test {
 
         assertEq(pool.balanceOf(treasury), fee);
         assertEq(stUSD.balanceOf(alice), amount - fee);
+    }
+
+    function testAutoMint() public {
+        uint256 amount = 100e6;
+        uint256 startingAliceBalance = 1e6;
+        uint256 aliceDepositFee = (startingAliceBalance * stUSD.mintBps()) / stUSD.BPS();
+        uint256 expectedEndBalanceForAlice = startingAliceBalance - aliceDepositFee + amount;
+        
+        // Setup pool and stUSD
+        whitelistTBY(address(pool), true);
+        pool.mint(alice, startingAliceBalance);
+        pool.setCommitPhaseEnd(block.timestamp + 25 hours);
+        pool.setState(IBloomPool.State.Commit);
+
+        // Initial deposit to give alice some stUSD
+        vm.startPrank(alice);
+        pool.approve(address(stUSD), amount);
+        stUSD.deposit(address(pool), startingAliceBalance);
+        vm.stopPrank();
+
+        // Donate to stUSD
+        stableToken.mint(address(stUSD), amount);
+
+        // Expect nothing to happen if the pool is not in the last 24 hours        
+        stUSD.poke();
+        assertEq(stableToken.balanceOf(address(stUSD)), amount);
+        
+        // fast forward to 1 hour before the end of the commit phase
+        // AutoMint should successfully happen
+        skip(pool.COMMIT_PHASE_END() - 1 hours);
+        vm.expectEmit(true, true, true, true);
+        emit TBYAutoMinted(address(pool), amount);
+        stUSD.poke();
+
+        assertEq(stableToken.balanceOf(address(stUSD)), 0);
+        assertEq(stableToken.balanceOf(address(pool)), amount);
+        assertEq(stUSD.balanceOf(alice), expectedEndBalanceForAlice);
     }
 
     function testFullFlow() public {
