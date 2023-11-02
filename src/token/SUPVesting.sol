@@ -23,7 +23,7 @@ contract SUPVesting is ISUPVesting {
     uint256 private constant CLIFF_DURATION = 365 days;
     uint256 private constant VESTING_DURATION = 3 * 365 days;
 
-    mapping(address => Allocation) private _tokenAllocations;
+    mapping(address => VestedAllocation) private _tokenAllocations;
 
     modifier onlySUP() {
         require(msg.sender == address(_token), "CallerNotSUP");
@@ -35,7 +35,7 @@ contract SUPVesting is ISUPVesting {
     }
 
     function getAvailableTokens(address account) public view returns (uint256) {
-        Allocation memory allocation = _tokenAllocations[account];
+        VestedAllocation memory allocation = _tokenAllocations[account];
         uint256 timeElapsed = block.timestamp - allocation.vestingStartTime;
 
         if (timeElapsed < CLIFF_DURATION) {
@@ -47,7 +47,7 @@ contract SUPVesting is ISUPVesting {
     }
 
     function vestTokens(address account, uint32 amount) external onlySUP {
-        Allocation storage allocation = _tokenAllocations[account];
+        VestedAllocation storage allocation = _tokenAllocations[account];
 
         // If this is the first time vesting for this account, set initial vesting state
         // Otherwise, update the vesting state
@@ -64,7 +64,7 @@ contract SUPVesting is ISUPVesting {
     }
 
     function claimAvailableTokens() external returns (uint256) {
-        Allocation storage allocation = _tokenAllocations[msg.sender];
+        VestedAllocation storage allocation = _tokenAllocations[msg.sender];
         uint32 amount = uint32(getAvailableTokens(msg.sender));
 
         allocation.currentBalance -= amount;
