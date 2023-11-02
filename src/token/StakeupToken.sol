@@ -25,7 +25,7 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
 
     constructor(
         Allocation[] memory allocations,
-        uint256 maxInitialSharesToMint,
+        uint256 initialMintPercentage,
         address layerZeroEndpoint,
         address vestingContract,
         address owner
@@ -33,7 +33,7 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
         Ownable2Step()
         OFTV2("Stakeup Token", "SUP", 6, layerZeroEndpoint)
     {
-        _mintInitialSupply(allocations, vestingContract, maxInitialSharesToMint);
+        _mintInitialSupply(allocations, vestingContract, initialMintPercentage);
         _transferOwnership(owner);
     }
 
@@ -44,10 +44,10 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
     function _mintInitialSupply(
         Allocation[] memory allocations,
         address vestingContract,
-        uint256 maxSharesToMint
+        uint256 initialMintPercentage
     ) internal virtual {
         uint256 maxSupply = MAX_SUPPLY;
-        uint256 sharesRemaining = maxSharesToMint;
+        uint256 sharesRemaining = initialMintPercentage;
         uint256 length = allocations.length;
 
         for (uint256 i = 0; i < length; i++) {

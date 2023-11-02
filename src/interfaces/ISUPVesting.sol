@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 interface ISUPVesting {
     
     /// @dev The max supply of SUP tokens is 1 billion so we can use uint32 for balances
-    struct Allocation {
+    struct VestedAllocation {
         uint32 startingBalance;
         uint32 currentBalance;
         uint256 vestingStartTime;
