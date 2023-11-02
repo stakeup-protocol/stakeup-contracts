@@ -2,90 +2,98 @@
 
 pragma solidity 0.8.19;
 
-import {AllocatedToken} from "./AllocatedToken.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {OFTV2, ERC20} from "@layerzerolabs/token/oft/v2/OFTV2.sol";
+import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-error ExceedsAvailableTokens();
-contract StakeupToken is AllocatedToken {
+import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
+import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 
-    uint256 private _startTime;
-    uint256 private constant CLIFF_DURATION = 365 days;
-    uint256 private constant VESTING_DURATION = 3 * 365 days;
-    uint256 private constant FIVE_YEARS = 5 * 365 days;
+contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
+    address private _vestingContract;
+
+    uint256 internal constant DECIMAL_SCALING = 1e6;
+    uint256 internal constant MAX_SUPPLY = 1_000_000_000 * DECIMAL_SCALING;
+    
+    // Additional reward allocations; Follow a 5-year annual halving schedule
+    uint256 internal constant STUSD_USDC_REWARDS = MAX_SUPPLY * 1e5 / DECIMAL_SCALING; // 10% of total supply
+    uint256 internal constant WSTUSD_WSTETH_REWARDS = MAX_SUPPLY * 5e4 / DECIMAL_SCALING; // 5% of total supply
+    uint256 internal constant WSTUSD_CHAI_REWARDS = MAX_SUPPLY * 3e4 / DECIMAL_SCALING; // 3% of total supply
+    uint256 internal constant WSTUSD_SUP_REWARDS = MAX_SUPPLY * 1e4 / DECIMAL_SCALING; // 2% of total supply
+    uint256 internal constant SUP_LIQUIDITY_REWARDS = MAX_SUPPLY * 1e4 / DECIMAL_SCALING; // 2% of total supply
+    uint256 internal constant REBASE_REWARDS = MAX_SUPPLY * 1e4 / DECIMAL_SCALING; // 1% of total supply
 
     constructor(
-        TokenRecipient[] memory startupRecipients,
-        TokenRecipient[] memory investorRecipients,
-        TokenRecipient[] memory operatorRecipients,
-        TokenRecipient[] memory airdropRecipients,
-        address _layerZeroEndpoint
+        Allocation[] memory allocations,
+        uint256 maxInitialSharesToMint,
+        address layerZeroEndpoint,
+        address vestingContract,
+        address owner
     )
-        AllocatedToken(
-            startupRecipients,
-            investorRecipients,
-            operatorRecipients,
-            airdropRecipients,
-            _layerZeroEndpoint
-        )
+        Ownable2Step()
+        OFTV2("Stakeup Token", "SUP", 6, layerZeroEndpoint)
     {
-        _startTime = block.timestamp;        
+        _mintInitialSupply(allocations, vestingContract, maxInitialSharesToMint);
+        _transferOwnership(owner);
     }
 
-    function getAvailableTokens(address account) public returns (uint256) {
-        Allocation memory allocation = _tokenAllocations[account];
-        uint256 timeElapsed = block.timestamp - _startTime;
-        uint256 balance = balanceOf(account);
+    function mintLpSupply(Allocation memory allocation) external onlyOwner{
+        _mintAndVest(allocation, _vestingContract, MAX_SUPPLY);
+    }
 
-        if (
-            allocation.data.schedule == Schedule.standardMint
-            || allocation.data.allocationType == AllocationType.nullValue
-            || timeElapsed > FIVE_YEARS
-        ) {
-            return balance;
+    function _mintInitialSupply(
+        Allocation[] memory allocations,
+        address vestingContract,
+        uint256 maxSharesToMint
+    ) internal virtual {
+        uint256 maxSupply = MAX_SUPPLY;
+        uint256 sharesRemaining = maxSharesToMint;
+        uint256 length = allocations.length;
+
+        for (uint256 i = 0; i < length; i++) {
+            if (sharesRemaining < allocations[i].percentOfSupply) revert ExceedsAvailableTokens();
+            sharesRemaining -= allocations[i].percentOfSupply;
+            _mintAndVest(allocations[i], vestingContract, maxSupply);
         }
+        if (sharesRemaining > 0) revert SharesNotFullyAllocated();
+    }
 
-        bool isSubjectToCliff = (allocation.data.schedule == Schedule.linearVesting);
+    function _mintAndVest(Allocation memory allocation, address vestingContract, uint256 maxTokenSupply) internal {
+        TokenRecipient[] memory recipients = allocation.recipients;
+        uint256 tokensReserved = maxTokenSupply * allocation.percentOfSupply / DECIMAL_SCALING;
+        uint256 allocationRemaining = tokensReserved;
+        uint256 length = recipients.length;
 
-        if (isSubjectToCliff) {
-            if (timeElapsed < CLIFF_DURATION) {
-                return 0;
-            } else {
-                uint256 month = (VESTING_DURATION - CLIFF_DURATION) / 24;
-                // TODO: FIX MATH
-                uint256 monthsVested = (timeElapsed - CLIFF_DURATION) / month;
-                uint256 amountVested = (allocation.amountAvailable + allocation.amountLocked) * (monthsVested + VESTING_DURATION) / 36;
-                uint256 amountLocked = allocation.amountAvailable + allocation.amountLocked - amountVested;
-                _tokenAllocations[account].amountAvailable = amountVested;
-                _tokenAllocations[account].amountLocked = amountLocked;
-                return balance - amountLocked;
-            }
+        for (uint256 i = 0; i < length; i++) {
+            address recipient = recipients[i].recipient;
+            uint256 amount = tokensReserved * recipients[i].percentOfAllocation / DECIMAL_SCALING;
+
+            if (recipient == address(0)) revert InvalidRecipient();
+            if (amount > allocationRemaining) revert ExceedsAvailableTokens();
+            allocationRemaining -= amount;
+
+            // Set the vesting state for this recipient in the vesting contract
+            ISUPVesting(vestingContract).vestTokens(
+                recipient,
+                uint32(amount)
+            );
+
+            // Mint the tokens to the vesting contract
+            _mint(vestingContract, amount);
         }
-
-        if (allocation.data.schedule == Schedule.annualHalving) {
-            uint256 year = timeElapsed / 365 days;
-            uint256 amountVested = (allocation.amountAvailable + allocation.amountLocked) / (2 ** year);
-            uint256 amountLocked = allocation.amountAvailable + allocation.amountLocked - amountVested;
-            _tokenAllocations[account].amountAvailable = amountVested;
-            _tokenAllocations[account].amountLocked = amountLocked;
-            return balance - amountLocked;
-        }
-
-        return _tokenAllocations[account].amountAvailable;
+        if (allocationRemaining > 0) revert SharesNotFullyAllocated();
     }
 
-    function transfer(address _recipient, uint256 amount) public override returns (bool) {
-        uint256 availableTokens = getAvailableTokens(msg.sender);
-        if (amount <= availableTokens) revert ExceedsAvailableTokens();
-        require(amount <= availableTokens, "StakeupToken: transfer amount exceeds available tokens");
-        _transfer(msg.sender, _recipient, amount);
-        return true;
+    function transferOwnership(address newOwner) public override(Ownable, Ownable2Step) {
+        super.transferOwnership(newOwner);
     }
 
-    function transferFrom(address _sender, address _recipient, uint256 amount) public override returns (bool) {
-        uint256 availableTokens = getAvailableTokens(_sender);
-        if (amount <= availableTokens) revert ExceedsAvailableTokens();
-        _transfer(_sender, _recipient, amount);
-        return true;
+    function _transferOwnership(address newOwner) internal override(Ownable, Ownable2Step) {
+        super._transferOwnership(newOwner);
     }
-    
+
+    function _mint(address account, uint256 amount) internal override(ERC20) {
+        if (totalSupply() + amount > MAX_SUPPLY) revert ExceedsMaxSupply();
+        super._mint(account, amount);
+    }
 }
