@@ -12,7 +12,7 @@ import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
     address private _vestingContract;
 
-    uint256 internal constant DECIMAL_SCALING = 1e6;
+    uint256 internal constant DECIMAL_SCALING = 1e18;
     uint256 internal constant MAX_SUPPLY = 1_000_000_000 * DECIMAL_SCALING;
     
     // Additional reward allocations; Follow a 5-year annual halving schedule
@@ -30,15 +30,19 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
         address vestingContract,
         address owner
     )
-        Ownable2Step()
         OFTV2("Stakeup Token", "SUP", 6, layerZeroEndpoint)
+        Ownable2Step()
     {
+        _vestingContract = vestingContract;
         _mintInitialSupply(allocations, vestingContract, initialMintPercentage);
         _transferOwnership(owner);
     }
 
-    function mintLpSupply(Allocation memory allocation) external onlyOwner{
-        _mintAndVest(allocation, _vestingContract, MAX_SUPPLY);
+    function mintLpSupply(Allocation[] memory allocations) external onlyOwner {
+        uint256 length = allocations.length;
+        for (uint256 i=0; i < length; i++) {
+            _mintAndVest(allocations[i], _vestingContract, MAX_SUPPLY);
+        }
     }
 
     function _mintInitialSupply(
@@ -75,7 +79,7 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
             // Set the vesting state for this recipient in the vesting contract
             ISUPVesting(vestingContract).vestTokens(
                 recipient,
-                uint32(amount)
+                amount
             );
 
             // Mint the tokens to the vesting contract

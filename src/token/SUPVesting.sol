@@ -46,7 +46,7 @@ contract SUPVesting is ISUPVesting {
         }
     }
 
-    function vestTokens(address account, uint32 amount) external onlySUP {
+    function vestTokens(address account, uint256 amount) external onlySUP {
         VestedAllocation storage allocation = _tokenAllocations[account];
 
         // If this is the first time vesting for this account, set initial vesting state
@@ -81,7 +81,7 @@ contract SUPVesting is ISUPVesting {
     function getCurrentBalance(
         address account
     ) external view override returns (uint256) {
-        return uint256(_tokenAllocations[account].currentBalance);
+        return _tokenAllocations[account].currentBalance;
     }
 
     function getSUPToken() external view override returns (address) {
