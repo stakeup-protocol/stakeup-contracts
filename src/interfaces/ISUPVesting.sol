@@ -5,8 +5,8 @@ interface ISUPVesting {
     
     /// @dev The max supply of SUP tokens is 1 billion so we can use uint32 for balances
     struct VestedAllocation {
-        uint32 startingBalance;
-        uint32 currentBalance;
+        uint256 startingBalance;
+        uint256 currentBalance;
         uint256 vestingStartTime;
     }
 
@@ -25,7 +25,7 @@ interface ISUPVesting {
      * @param account The account to track vested tokens for
      * @param amount The amount of tokens to track
      */
-    function vestTokens(address account, uint32 amount) external;
+    function vestTokens(address account, uint256 amount) external;
 
     /**
      * @notice Claim available vested tokens for an account

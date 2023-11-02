@@ -49,9 +49,9 @@ interface IStakeupToken {
      * - wstUSD-wstETH: (mainnet only)
      * - wstUSD-chai: (mainnet only)
      * - wstUSD-SUP: (mainnet only)
-     * @param allocation The allocation of tokens to mint
+     * @param allocations The allocations of tokens to mint
      */
-    function mintLpSupply(Allocation memory allocation) external;
+    function mintLpSupply(Allocation[] memory allocations) external;
 
 }
 
