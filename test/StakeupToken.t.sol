@@ -113,6 +113,40 @@ contract StakeupTokenTest is Test {
 
     }
 
+    function testAirdrop() public {
+        uint64 airdropPercentage = 1e15; // .01%
+        uint256 expectedSupply = 2_000_000e18; // .01 + .01 * 1 billion
+        address airdrop1 = makeAddr("airdrop1");
+        address airdrop2 = makeAddr("airdrop2");
+
+        _deployOneAllocation(initialMintPercentage);
+
+        IStakeupToken.TokenRecipient[] memory airdropRecipients = new IStakeupToken.TokenRecipient[](2);
+        airdropRecipients[0] = IStakeupToken.TokenRecipient({
+            recipient: airdrop1,
+            percentOfAllocation: 5e17 // 50%
+        });
+        airdropRecipients[1] = IStakeupToken.TokenRecipient({
+            recipient: airdrop2,
+            percentOfAllocation: 5e17 // 50%
+        });
+
+        // Fails when caller is not owner
+        vm.expectRevert("Ownable: caller is not the owner");
+        stakeupToken.airdropTokens(airdropRecipients, airdropPercentage);
+
+        // Mint the LP supply
+        vm.startPrank(owner);
+        stakeupToken.airdropTokens(airdropRecipients, airdropPercentage);
+        vm.stopPrank();
+
+        // Check that the LP supply was minted
+        assertEq(stakeupToken.balanceOf(address(vestingContract)), expectedSupply / 2);
+        assertEq(stakeupToken.balanceOf(airdrop1), 500_000e18);
+        assertEq(stakeupToken.balanceOf(airdrop2), 500_000e18);
+        assertEq(stakeupToken.totalSupply(), expectedSupply);
+        assertEq(stakeupToken.circulatingSupply(), expectedSupply);
+    }
 
     function testRevertZeroAddress() public {
         vm.expectRevert(IStakeupToken.InvalidRecipient.selector);
