@@ -59,6 +59,7 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
             tokensRemaining -= amount;
             _mint(recipient, amount);
         }
+        if (tokensRemaining > 0) revert SharesNotFullyAllocated();
     }
 
     function _mintInitialSupply(
