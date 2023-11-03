@@ -45,6 +45,22 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
         }
     }
 
+    function airdropTokens(TokenRecipient[] memory recipients, uint256 percentOfTotalSupply) external onlyOwner {
+        uint256 length = recipients.length;
+        uint256 tokenAllocation = MAX_SUPPLY * percentOfTotalSupply / DECIMAL_SCALING;
+        uint256 tokensRemaining = tokenAllocation;
+
+        for (uint256 i=0; i < length; i++) {
+            address recipient = recipients[i].recipient;
+            uint256 amount = recipients[i].percentOfAllocation * tokenAllocation / DECIMAL_SCALING;
+
+            if (amount > tokensRemaining) revert ExceedsAvailableTokens();
+            
+            tokensRemaining -= amount;
+            _mint(recipient, amount);
+        }
+    }
+
     function _mintInitialSupply(
         Allocation[] memory allocations,
         address vestingContract,
