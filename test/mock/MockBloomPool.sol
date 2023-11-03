@@ -59,6 +59,7 @@ contract MockBloomPool is IBloomPool, MockERC20 {
         uint256 amountToSend = (((_amount * exchangeRate) / 1e18) *
             (10 ** IERC20Metadata(underlyingToken).decimals())) /
             (10 ** IERC20Metadata(billToken).decimals());
+        MockERC20(underlyingToken).mint(address(this), amountToSend);
         underlyingToken.safeTransfer(msg.sender, amountToSend);
     }
 

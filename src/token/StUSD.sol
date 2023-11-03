@@ -17,7 +17,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IWstUSD;
-
+    event Log(string message, uint256 value);
     // =================== Struct ====================
 
     /**
@@ -197,23 +197,25 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
 
-        uint256 mintFee = (_amount * mintBps) / BPS;
-
-        if (mintFee > 0) {
-            _amount -= mintFee;
-            uint256 sharesFeeAmount = getSharesByUsd(mintFee);
-            _mintShares(treasury, sharesFeeAmount);
-        }
-
         if (_tby == address(latestPool)) {
             _lastDepositAmount += _amount;
         }
+        
+        uint256 _amountScaled = _amount * 10 ** (18 - IERC20Metadata(_tby).decimals());
 
-        uint256 sharesAmount = getSharesByUsd(_amount);
+        uint256 sharesFeeAmount;
+        uint256 mintFee = (_amountScaled * mintBps) / BPS;
+
+        if (mintFee > 0) {
+            sharesFeeAmount = getSharesByUsd(mintFee);
+        }
+
+        uint256 sharesAmount = getSharesByUsd(_amountScaled - mintFee);
 
         _mintShares(msg.sender, sharesAmount);
+        _mintShares(treasury, sharesFeeAmount);
 
-        _setTotalUsd(_getTotalUsd() + _amount);
+        _setTotalUsd(_getTotalUsd() + _amountScaled);
 
         emit Deposit(msg.sender, _tby, _amount, sharesAmount);
     }
@@ -247,7 +249,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         if (_stUSDAmount == 0) revert ParameterOutOfBounds();
 
         uint256 shares = getSharesByUsd(_stUSDAmount);
-
+        
         uint256 amountRedeemed = _redeem(msg.sender, shares, _stUSDAmount, _redemptionQueue);
 
         _pendingRedemptions += amountRedeemed;
@@ -310,15 +312,16 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     {
         Redemption storage redemption = _redemptions[_account];
 
-        if (balanceOf(_account) < _shares) revert InsufficientBalance();
         if (redemption.pending != 0) revert RedemptionInProgress();
+        if (balanceOf(_account) < _underlyingAmount) revert InsufficientBalance();
 
         uint256 redeemFee = (_shares * redeemBps) / BPS;
+
         if (redeemFee > 0) {
             _shares -= redeemFee;
             uint256 redeemFeeAmount = getUsdByShares(redeemFee);
             _underlyingAmount -= redeemFeeAmount;
-            transferFrom(_account, treasury, redeemFeeAmount);
+            _transfer(_account, treasury, redeemFeeAmount);
         }
 
         redemption.pending = _underlyingAmount;
