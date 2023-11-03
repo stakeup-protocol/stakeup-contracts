@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import "forge-std/console2.sol";
 
 import {StUSD} from "src/token/StUSD.sol";
 import {WstUSD} from "src/token/WstUSD.sol";
@@ -42,6 +43,7 @@ contract StUSDTest is Test {
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
     event TBYAutoMinted(address indexed account, uint256 amount);
+    event RemainingBalanceAdjusted(uint256 amount);
 
     function setUp() public {
         stableToken = new MockERC20(6);
@@ -223,20 +225,20 @@ contract StUSDTest is Test {
 
     function testAutoMint() public {
         uint256 amount = 100e6;
-        uint256 startingAliceBalance = 1e6;
-        uint256 aliceDepositFee = (startingAliceBalance * stUSD.mintBps()) / stUSD.BPS();
-        uint256 expectedEndBalanceForAlice = startingAliceBalance - aliceDepositFee + amount;
+        uint256 startingTBYAliceBalance = 1e6;
+        uint256 aliceDepositFee = (startingTBYAliceBalance * stUSD.mintBps()) / stUSD.BPS();
+        uint256 expectedEndBalanceForAlice = startingTBYAliceBalance - aliceDepositFee + amount;
         
         // Setup pool and stUSD
         whitelistTBY(address(pool), true);
-        pool.mint(alice, startingAliceBalance);
+        pool.mint(alice, startingTBYAliceBalance);
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         pool.setState(IBloomPool.State.Commit);
 
         // Initial deposit to give alice some stUSD
         vm.startPrank(alice);
         pool.approve(address(stUSD), amount);
-        stUSD.deposit(address(pool), startingAliceBalance);
+        stUSD.deposit(address(pool), startingTBYAliceBalance);
         vm.stopPrank();
 
         // Donate to stUSD
@@ -255,6 +257,30 @@ contract StUSDTest is Test {
 
         assertEq(stableToken.balanceOf(address(stUSD)), 0);
         assertEq(stableToken.balanceOf(address(pool)), amount);
+        assertEq(stUSD.balanceOf(alice), expectedEndBalanceForAlice);
+
+        // fast forward to 1 hour after the end of the commit phase
+        // if some of the deposit does not get matched, remaining balance
+        // should be adjusted
+        skip(2 hours);
+        uint256 unmatchedAmount = 10e6;
+
+        // Send some TBYs & underlying to stUSD to simulate a partial match
+        stableToken.mint(address(stUSD), unmatchedAmount);
+        pool.mint(address(stUSD), amount - unmatchedAmount);
+        uint256 currentstUSDTBYBalance = pool.balanceOf(address(stUSD));
+
+        assertEq(currentstUSDTBYBalance, expectedEndBalanceForAlice - unmatchedAmount);
+
+        uint256 startingRemainingBalance = stUSD.getRemainingBalance();
+        uint256 expectedRemainingBalanceEnd = startingRemainingBalance + unmatchedAmount;
+
+        pool.setState(IBloomPool.State.Holding);
+        vm.expectEmit(true, true, true, true);
+        emit RemainingBalanceAdjusted(unmatchedAmount);
+        stUSD.poke();
+
+        assertEq(stableToken.balanceOf(address(stUSD)), expectedRemainingBalanceEnd);
         assertEq(stUSD.balanceOf(alice), expectedEndBalanceForAlice);
     }
 

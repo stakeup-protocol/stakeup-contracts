@@ -78,6 +78,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     /// @dev Mapping of account to redemption state
     mapping(address => Redemption) internal _redemptions;
 
+    /// @dev Last deposit amount
+    uint256 internal _lastDepositAmount;
+
     /// @dev Remaining underlying token balance
     uint256 internal _remainingBalance;
 
@@ -130,6 +133,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     event TBYAutoMinted(address indexed tby, uint256 amount);
 
+    /**
+     * @notice Emitted when someone corrects the remaining balance
+     * using the poke function
+     * @param amount The updated remaining balance
+     */
+    event RemainingBalanceAdjusted(uint256 amount);
+
     // =================== Functions ===================
     constructor(
         address _underlyingToken,
@@ -154,6 +164,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     }
 
     /**
+     * @notice Get the total amount of underlying tokens in the pool
+     */
+    function getRemainingBalance() external view returns (uint256) {
+        return _remainingBalance;
+    }
+
+    /**
      * Sets WstUSD token address
      * @param _wstUSD WstUSD token address
      */
@@ -171,6 +188,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     function deposit(address _tby, uint256 _amount) external {
         if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
+        IBloomPool latestPool = _getLatestPool();
 
         uint256 mintFee = (_amount * mintBps) / BPS;
 
@@ -179,6 +197,10 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             IERC20(_tby).safeTransferFrom(msg.sender, treasury, mintFee);
         }
         IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
+
+        if (_tby == address(latestPool)) {
+            _lastDepositAmount += _amount;
+        }
 
         uint256 sharesAmount = getSharesByUsd(_amount);
 
@@ -408,7 +430,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @param _tby TBY address
      * @param _amount Redeem amount
      */
-    // TODO: INVESTIGATE POTENTIAL DONATION ATTACK
     function redeemUnderlying(address _tby, uint256 _amount) external onlyOwner {
         IBloomPool pool = IBloomPool(_tby);
 
@@ -424,12 +445,27 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     }
 
     /**
-     * @notice Invoke the auto stake function if the last created pool is in
+     * @notice Invokes the auto stake feature or adjusts the remaining balance
+     * if the most recent deposit did not get fully staked
+     * @dev autoMint feature is invoked if the last created pool is in
      * the commit state
+     * @dev remainingBalance adjustment is invoked if the last created pool is
+     * in any other state than commit and deposits dont get fully staked
      * @dev anyone can call this function for now
      */
     function poke() external {
-        _autoMintTBY();
+        IBloomPool lastCreatedPool = _getLatestPool();
+        if (!_whitelisted[address(lastCreatedPool)]) revert TBYNotWhitelisted();
+
+        IBloomPool.State currentState = lastCreatedPool.state();
+
+        if (_within24HoursOfCommitPhaseEnd(lastCreatedPool, currentState)) {
+            _autoMintTBY(lastCreatedPool);
+        }
+
+        if (_isElegibleForAdjustment(currentState)) {
+            _adjustRemainingBalance(lastCreatedPool);
+        }
     }
 
     /**
@@ -437,28 +473,71 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @dev Auto stake feature can only be executed during the last 24 hours of
      * the newest Bloom Pool's commit phase
      */
-    function _autoMintTBY() internal {
-        IBloomPool lastCreatedPool = IBloomPool(bloomFactory.getLastCreatedPool());
-        if (!_whitelisted[address(lastCreatedPool)]) revert TBYNotWhitelisted();
-
-        uint256 last24hoursOfCommitPhase = lastCreatedPool.COMMIT_PHASE_END() - AUTO_STAKE_PHASE;
-
-        if (lastCreatedPool.state() == IBloomPool.State.Commit && block.timestamp >= last24hoursOfCommitPhase) {
-            uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
+    function _autoMintTBY(IBloomPool pool) internal {
+        uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
+        
+        if (underlyingBalance > 0) {
+            uint256 accountedBalance = _remainingBalance;
+            uint256 unregisteredBalance = underlyingBalance - accountedBalance;
             
-            if (underlyingBalance > 0) {
-                uint256 accountedBalance = _remainingBalance;
-                uint256 unregisteredBalance = underlyingBalance - accountedBalance;
-                
-                delete _remainingBalance;
+            delete _remainingBalance;
 
-                underlyingToken.safeApprove(address(lastCreatedPool), underlyingBalance);
-                lastCreatedPool.depositLender(underlyingBalance);
-                
-                _setTotalUsd(_getTotalUsd() + unregisteredBalance);
+            underlyingToken.safeApprove(address(pool), underlyingBalance);
+            pool.depositLender(underlyingBalance);
 
-                emit TBYAutoMinted(address(lastCreatedPool), underlyingBalance);
+            _lastDepositAmount += underlyingBalance;
+
+            _setTotalUsd(_getTotalUsd() + unregisteredBalance);
+
+            emit TBYAutoMinted(address(pool), underlyingBalance);
+        }
+    }
+
+    function _within24HoursOfCommitPhaseEnd(IBloomPool pool, IBloomPool.State currentState) internal view returns (bool) {
+        uint256 commitPhaseEnd = pool.COMMIT_PHASE_END();
+        uint256 last24hoursOfCommitPhase = pool.COMMIT_PHASE_END() - AUTO_STAKE_PHASE;
+
+        if (currentState == IBloomPool.State.Commit) {
+            uint256 currentTime = block.timestamp;
+            if (currentTime >= last24hoursOfCommitPhase && currentTime < commitPhaseEnd) {
+                return true;
             }
         }
+
+        return false;
+    }
+
+    /**
+     * @notice Check if the pool is elegible for adjustment
+     * @param _state Pool state
+     * @return bool True if the pool is in a state that allows for adjustment
+     */
+    function _isElegibleForAdjustment(IBloomPool.State _state) internal pure returns (bool) {
+        return _state != IBloomPool.State.Commit
+            && _state != IBloomPool.State.FinalWithdraw
+            && _state != IBloomPool.State.EmergencyExit;
+    }
+
+    /**
+     * @notice Adjust the remaining balance to account for the difference between
+     * the last deposit amount and the current balance of TBYs
+     * @param pool The latest Bloom pool
+     */
+    function _adjustRemainingBalance(IBloomPool pool) internal {
+        uint256 tbyBalance = IERC20(address(pool)).balanceOf(address(this));
+
+        if (_lastDepositAmount > tbyBalance) {
+            uint256 depositDifference = _lastDepositAmount - tbyBalance;
+            _remainingBalance += depositDifference;
+            emit RemainingBalanceAdjusted(_remainingBalance);
+        }
+    }
+
+    /**
+     * @notice Gets the latest pool created by the BloomFactory
+     * @return IBloomPool The latest pool
+     */
+    function _getLatestPool() internal view returns (IBloomPool) {
+        return IBloomPool(bloomFactory.getLastCreatedPool());
     }
 }
