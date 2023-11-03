@@ -81,7 +81,7 @@ contract StUSDBase is IStUSD, OFTV2 {
      * @notice Get the total supply of stUSD
      * @dev Always equals to `_getTotalUsd()` since token amount
      *  is pegged to the total amount of Usd controlled by the protocol.
-     * @return Amounnt of tokens in existence
+     * @return Amount of tokens in existence
      */
     function totalSupply() public view override returns (uint256) {
         return _getTotalUsd();
