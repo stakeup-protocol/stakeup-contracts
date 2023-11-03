@@ -520,14 +520,14 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     /**
      * @notice Adjust the remaining balance to account for the difference between
-     * the last deposit amount and the current balance of TBYs
+     * the last deposit amount and the current balance of the latest TBYs
      * @param pool The latest Bloom pool
      */
     function _adjustRemainingBalance(IBloomPool pool) internal {
-        uint256 tbyBalance = IERC20(address(pool)).balanceOf(address(this));
+        uint256 latestTbyBalance = IERC20(address(pool)).balanceOf(address(this));
 
-        if (_lastDepositAmount > tbyBalance) {
-            uint256 depositDifference = _lastDepositAmount - tbyBalance;
+        if (_lastDepositAmount > latestTbyBalance) {
+            uint256 depositDifference = _lastDepositAmount - latestTbyBalance;
             _remainingBalance += depositDifference;
             emit RemainingBalanceAdjusted(_remainingBalance);
         }
