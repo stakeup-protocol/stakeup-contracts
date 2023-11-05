@@ -32,6 +32,15 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         uint256 redemptionQueueTarget;
     }
 
+    /**
+     * @notice Fee type
+     */
+    enum FeeType {
+        Mint,
+        Redeem,
+        Performance
+    }
+
     // =================== Storage ===================
 
     /// @notice WstUSD token
@@ -143,6 +152,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     event RemainingBalanceAdjusted(uint256 amount);
 
+    /**
+     * @notice Emitted when a fee is captured and sent to the treasury
+     * @param feeType Fee type
+     * @param shares Number of stUSD shares sent to the treasury
+     */
+    event FeeCaptured(FeeType feeType, uint256 shares);
+
     // =================== Functions ===================
     constructor(
         address _underlyingToken,
@@ -209,6 +225,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         if (mintFee > 0) {
             sharesFeeAmount = getSharesByUsd(mintFee);
+            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
         }
 
         uint256 sharesAmount = getSharesByUsd(_amountScaled - mintFee);
@@ -323,6 +340,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             uint256 redeemFeeAmount = getUsdByShares(redeemFee);
             _underlyingAmount -= redeemFeeAmount;
             _transfer(_account, treasury, redeemFeeAmount);
+            emit FeeCaptured(FeeType.Redeem, redeemFee);
         }
 
         redemption.pending = _underlyingAmount;
@@ -376,13 +394,14 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     function _processProceeds(uint256 _proceeds, uint256 _yield) internal {
         uint256 scalingFactor = 10 ** (18 - _underlyingDecimals);
         uint256 underlyingGains = _yield * scalingFactor;
-        
+
         uint256 performanceFee = underlyingGains * performanceBps / BPS;
 
         if (performanceFee > 0) {
             uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
 
             _mintShares(treasury, sharesFeeAmount);
+            emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
         }
         
         // Process junior redemptions
