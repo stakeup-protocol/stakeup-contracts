@@ -56,10 +56,11 @@ contract MockBloomPool is IBloomPool, MockERC20 {
     function withdrawLender(uint256 _amount) external {
         _burn(msg.sender, _amount);
         uint256 exchangeRate = swap.exchangeRate();
-        uint256 amountToSend = (((_amount * exchangeRate) / 1e18) *
-            (10 ** IERC20Metadata(underlyingToken).decimals())) /
-            (10 ** IERC20Metadata(billToken).decimals());
-        MockERC20(underlyingToken).mint(address(this), amountToSend);
+        uint256 amountToSend = _amount * exchangeRate / 10 ** IERC20Metadata(billToken).decimals();
+        uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
+        if (amountToSend > underlyingBalance) {
+            MockERC20(underlyingToken).mint(address(this), amountToSend - underlyingBalance);
+        }
         underlyingToken.safeTransfer(msg.sender, amountToSend);
     }
 

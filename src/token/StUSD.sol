@@ -17,7 +17,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IWstUSD;
-    event Log(string message, uint256 value);
+
     // =================== Struct ====================
 
     /**
@@ -201,7 +201,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             _lastDepositAmount += _amount;
         }
         
-        uint256 _amountScaled = _amount * 10 ** (18 - IERC20Metadata(_tby).decimals());
+        // TBYs will always have the same underlying decimals as the underlying token
+        uint256 _amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
 
         uint256 sharesFeeAmount;
         uint256 mintFee = (_amountScaled * mintBps) / BPS;
@@ -373,21 +374,25 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @param _yield Yield gained from TBY
      */
     function _processProceeds(uint256 _proceeds, uint256 _yield) internal {
-        uint256 performanceFee = _yield * performanceBps / BPS;
+        uint256 scalingFactor = 10 ** (18 - _underlyingDecimals);
+        uint256 underlyingGains = _yield * scalingFactor;
         
+        uint256 performanceFee = underlyingGains * performanceBps / BPS;
+
         if (performanceFee > 0) {
             uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
+
             _mintShares(treasury, sharesFeeAmount);
         }
         
         // Process junior redemptions
-        _proceeds = _processRedemptions(_proceeds - performanceFee);
+        _proceeds = _processRedemptions(_proceeds);
 
         if (_proceeds > 0) {
-            _remainingBalance += _proceeds;
-
-            _setTotalUsd(_getTotalUsd() + _proceeds);
+            _remainingBalance += _proceeds / scalingFactor;
         }
+        
+        _setTotalUsd(_getTotalUsd() + underlyingGains);
     }
 
     // ================ Owner Functions ==============
@@ -514,7 +519,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
             _lastDepositAmount += underlyingBalance;
 
-            _setTotalUsd(_getTotalUsd() + unregisteredBalance);
+            uint256 scaledUnregisteredBalance = unregisteredBalance * 10 ** (18 - _underlyingDecimals);
+
+            _setTotalUsd(_getTotalUsd() + scaledUnregisteredBalance);
 
             emit TBYAutoMinted(address(pool), underlyingBalance);
         }
