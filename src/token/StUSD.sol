@@ -32,6 +32,15 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         uint256 redemptionQueueTarget;
     }
 
+    /**
+     * @notice Fee type
+     */
+    enum FeeType {
+        Mint,
+        Redeem,
+        Performance
+    }
+
     // =================== Storage ===================
 
     /// @notice WstUSD token
@@ -50,6 +59,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     /// @notice Redeem fee bps
     uint16 public redeemBps;
+
+    /// @notice Performance fee bps
+    uint16 public performanceBps;
 
     uint16 public constant BPS = 10000;
 
@@ -140,6 +152,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     event RemainingBalanceAdjusted(uint256 amount);
 
+    /**
+     * @notice Emitted when a fee is captured and sent to the treasury
+     * @param feeType Fee type
+     * @param shares Number of stUSD shares sent to the treasury
+     */
+    event FeeCaptured(FeeType feeType, uint256 shares);
+
     // =================== Functions ===================
     constructor(
         address _underlyingToken,
@@ -147,6 +166,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         address _bloomFactory,
         uint16 _mintBps, // Suggested default 0.5%
         uint16 _redeemBps, // Suggeste default 0.5%
+        uint16 _performanceBps, // Suggested default 10% of yield
         address _layerZeroEndpoint
     )
         StUSDBase(_layerZeroEndpoint)
@@ -161,6 +181,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         mintBps = _mintBps;
         redeemBps = _redeemBps;
+        performanceBps = _performanceBps;
     }
 
     /**
@@ -190,23 +211,29 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
         IBloomPool latestPool = _getLatestPool();
 
-        uint256 mintFee = (_amount * mintBps) / BPS;
-
-        if (mintFee > 0) {
-            _amount -= mintFee;
-            IERC20(_tby).safeTransferFrom(msg.sender, treasury, mintFee);
-        }
         IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
 
         if (_tby == address(latestPool)) {
             _lastDepositAmount += _amount;
         }
+        
+        // TBYs will always have the same underlying decimals as the underlying token
+        uint256 _amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
 
-        uint256 sharesAmount = getSharesByUsd(_amount);
+        uint256 sharesFeeAmount;
+        uint256 mintFee = (_amountScaled * mintBps) / BPS;
+
+        if (mintFee > 0) {
+            sharesFeeAmount = getSharesByUsd(mintFee);
+            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
+        }
+
+        uint256 sharesAmount = getSharesByUsd(_amountScaled - mintFee);
 
         _mintShares(msg.sender, sharesAmount);
+        _mintShares(treasury, sharesFeeAmount);
 
-        _setTotalUsd(_getTotalUsd() + _amount);
+        _setTotalUsd(_getTotalUsd() + _amountScaled);
 
         emit Deposit(msg.sender, _tby, _amount, sharesAmount);
     }
@@ -240,13 +267,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         if (_stUSDAmount == 0) revert ParameterOutOfBounds();
 
         uint256 shares = getSharesByUsd(_stUSDAmount);
+        
+        uint256 amountRedeemed = _redeem(msg.sender, shares, _stUSDAmount, _redemptionQueue);
 
-        _redeem(msg.sender, shares, _stUSDAmount, _redemptionQueue);
+        _pendingRedemptions += amountRedeemed;
+        _redemptionQueue += amountRedeemed;
 
-        _pendingRedemptions += _stUSDAmount;
-        _redemptionQueue += _stUSDAmount;
-
-        emit Redeemed(msg.sender, shares, _stUSDAmount);
+        emit Redeemed(msg.sender, shares, amountRedeemed);
     }
 
     /**
@@ -262,11 +289,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             _totalWithdrawalBalance -= amount;
 
             uint256 transferAmount = amount / (10 ** (18 - _underlyingDecimals));
-            uint256 redeemFee = (transferAmount * redeemBps) / BPS;
-            if (redeemFee > 0) {
-                transferAmount -= redeemFee;
-                underlyingToken.safeTransfer(treasury, redeemFee);
-            }
+
             underlyingToken.safeTransfer(msg.sender, transferAmount);
         }
 
@@ -303,12 +326,22 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     }
 
     function _redeem(address _account, uint256 _shares, uint256 _underlyingAmount, uint256 _redemptionQueueTarget)
-        internal
+        internal returns (uint256 amountRedeemed)
     {
         Redemption storage redemption = _redemptions[_account];
 
-        if (balanceOf(_account) < _shares) revert InsufficientBalance();
         if (redemption.pending != 0) revert RedemptionInProgress();
+        if (balanceOf(_account) < _underlyingAmount) revert InsufficientBalance();
+
+        uint256 redeemFee = (_shares * redeemBps) / BPS;
+
+        if (redeemFee > 0) {
+            _shares -= redeemFee;
+            uint256 redeemFeeAmount = getUsdByShares(redeemFee);
+            _underlyingAmount -= redeemFeeAmount;
+            _transfer(_account, treasury, redeemFeeAmount);
+            emit FeeCaptured(FeeType.Redeem, redeemFee);
+        }
 
         redemption.pending = _underlyingAmount;
         redemption.withdrawn = 0;
@@ -316,6 +349,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         _burnShares(_account, _shares);
         _setTotalUsd(_getTotalUsd() - _underlyingAmount);
+
+        return _underlyingAmount;
     }
 
     function _withdraw(address _account, uint256 _underlyingAmount) internal {
@@ -332,11 +367,12 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     /**
      * @dev Process redemptions
-     * @param _proceeds Proceeds in underlying tokens
+     * @param _redeemableProceeds Proceeds in underlying tokens that can be
+     * used for redemptions
      */
-    function _processRedemptions(uint256 _proceeds) internal returns (uint256) {
+    function _processRedemptions(uint256 _redeemableProceeds) internal returns (uint256) {
         // Compute maximum redemption possible
-        uint256 redemptionAmount = Math.min(_pendingRedemptions, _proceeds);
+        uint256 redemptionAmount = Math.min(_pendingRedemptions, _redeemableProceeds);
 
         // Update redemption state
         _pendingRedemptions -= redemptionAmount;
@@ -346,23 +382,36 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         _totalWithdrawalBalance += redemptionAmount;
 
         // Return amount of proceeds leftover
-        return _proceeds - redemptionAmount;
+        return _redeemableProceeds - redemptionAmount;
     }
 
     /**
      * @dev Process new proceeds by applying them to redemptions and undeployed
      * cash
      * @param _proceeds Proceeds in underlying tokens
+     * @param _yield Yield gained from TBY
      */
-    function _processProceeds(uint256 _proceeds) internal {
+    function _processProceeds(uint256 _proceeds, uint256 _yield) internal {
+        uint256 scalingFactor = 10 ** (18 - _underlyingDecimals);
+        uint256 underlyingGains = _yield * scalingFactor;
+
+        uint256 performanceFee = underlyingGains * performanceBps / BPS;
+
+        if (performanceFee > 0) {
+            uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
+
+            _mintShares(treasury, sharesFeeAmount);
+            emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
+        }
+        
         // Process junior redemptions
         _proceeds = _processRedemptions(_proceeds);
 
         if (_proceeds > 0) {
-            _remainingBalance += _proceeds;
-
-            _setTotalUsd(_getTotalUsd() + _proceeds);
+            _remainingBalance += _proceeds / scalingFactor;
         }
+        
+        _setTotalUsd(_getTotalUsd() + underlyingGains);
     }
 
     // ================ Owner Functions ==============
@@ -440,8 +489,10 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         pool.withdrawLender(_amount);
 
         uint256 withdrawn = underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
+        
+        uint256 yieldFromPool = withdrawn - _amount;
 
-        _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals));
+        _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals), yieldFromPool);
     }
 
     /**
@@ -487,7 +538,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
             _lastDepositAmount += underlyingBalance;
 
-            _setTotalUsd(_getTotalUsd() + unregisteredBalance);
+            uint256 scaledUnregisteredBalance = unregisteredBalance * 10 ** (18 - _underlyingDecimals);
+
+            _setTotalUsd(_getTotalUsd() + scaledUnregisteredBalance);
 
             emit TBYAutoMinted(address(pool), underlyingBalance);
         }
