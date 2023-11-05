@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
-import "forge-std/console2.sol";
 
 import {StUSD} from "src/token/StUSD.sol";
 import {WstUSD} from "src/token/WstUSD.sol";
@@ -340,7 +339,7 @@ contract StUSDTest is Test {
         /// ##############################################
 
 
-        // ####### Set the stSUD up for a 10% yield #######
+        // ####### Set the stUSD up for a 10% yield #######
         stableToken.mint(address(pool), 3_300000);
         swap.setRate(1e18);
         pool.initiatePreHoldSwap();
@@ -351,6 +350,7 @@ contract StUSDTest is Test {
         swap.completeNextSwap();
         // ###############################################
 
+        // ####### Redeem state Tests ####################
         uint256 aliceShares = stUSD.sharesOf(alice);
         uint256 aliceAmountReceived = stUSD.getUsdByShares(aliceShares) * .995e18 / 1e18;
         
@@ -370,6 +370,9 @@ contract StUSDTest is Test {
         stUSD.redeemWstUSD(bobMintedShares);
         vm.stopPrank();
 
+        // ###############################################
+
+        // ####### Verify performance fee #################
         uint256 treasuryShares = stUSD.sharesOf(treasury);
         uint256 performanceFeeInShares = stUSD.getSharesByUsd(expectedPerformanceFee);
 
@@ -382,7 +385,9 @@ contract StUSDTest is Test {
 
         assertEq(wstUSD.stUsdPerToken(), usdPerShares);
         assertEq(wstUSD.tokensPerStUsd(), sharesPerUsd);  
+        // ###############################################
 
+        // ############ Withdraw to underlying ############
         vm.startPrank(alice);
         stUSD.withdraw();
         assertEq(stUSD.sharesOf(alice), 0);
@@ -396,7 +401,6 @@ contract StUSDTest is Test {
         vm.stopPrank();
 
         assertEq(stUSD.sharesOf(treasury), treasuryShares + performanceFeeInShares);
-        console2.log("Treasury usd balance: %s", stUSD.balanceOf(treasury) / 1e12);
-        console2.log(stUSD.getTotalUsd() / 1e12);
+        // ###############################################
     }
 }
