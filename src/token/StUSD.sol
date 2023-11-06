@@ -176,17 +176,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     }
 
     /**
-     * Sets WstUSD token address
-     * @param _wstUSD WstUSD token address
-     */
-    function setWstUSD(address _wstUSD) external onlyOwner {
-        if (_wstUSD == address(0)) revert InvalidAddress();
-        if (address(wstUSD) != address(0)) revert AlreadyInitialized();
-
-        wstUSD = IWstUSD(_wstUSD);
-    }
-
-    /**
      * @notice Deposit TBY and get stUSD minted
      * @param _tby TBY address
      * @param _amount TBY amount to deposit
