@@ -59,11 +59,11 @@ contract StUSDBase is IStUSD, OFTV2 {
     /**
      * @notice Emitted when user deposits
      * @param account User address
-     * @param tby TBY address
-     * @param amount TBY deposit amount
+     * @param token Address of the token being deposited
+     * @param amount Amount of tokens deposited
      * @param shares Amount of shares minted to the user
      */
-    event Deposit(address indexed account, address tby, uint256 amount, uint256 shares);
+    event Deposit(address indexed account, address token, uint256 amount, uint256 shares);
 
     // =================== Functions ===================
 
