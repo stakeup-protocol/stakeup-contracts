@@ -12,6 +12,7 @@ import {MockERC20} from "./mock/MockERC20.sol";
 import {MockSwapFacility} from "./mock/MockSwapFacility.sol";
 import {MockBloomPool, IBloomPool} from "./mock/MockBloomPool.sol";
 import {MockBloomFactory} from "./mock/MockBloomFactory.sol";
+import {MockRegistry} from "./mock/MockRegistry.sol";
 
 contract StUSDTest is Test {
 
@@ -23,6 +24,7 @@ contract StUSDTest is Test {
     MockSwapFacility internal swap;
     MockBloomPool internal pool;
     MockBloomFactory internal factory;
+    MockRegistry internal registry;
 
     address internal owner = makeAddr("owner");
     address internal nonOwner = makeAddr("nonOwner");
@@ -42,7 +44,6 @@ contract StUSDTest is Test {
     event MintBpsUpdated(uint16 mintBps);
     event RedeemBpsUpdated(uint16 redeempBps);
     event TreasuryUpdated(address treasury);
-    event TBYWhitelisted(address tby, bool whitelist);
     event Deposit(address indexed account, address tby, uint256 amount, uint256 shares);
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
@@ -71,10 +72,13 @@ contract StUSDTest is Test {
         vm.label(address(factory), "MockBloomFactory");
         factory.setLastCreatedPool(address(pool));
 
+        registry = new MockRegistry(address(pool));
+
         stUSD = new StUSD(
             address(stableToken),
             treasury,
             address(factory),
+            address(registry),
             mintBps,
             redeemBps,
             performanceFeeBps,
@@ -93,11 +97,6 @@ contract StUSDTest is Test {
         stUSD.setWstUSD(address(wstUSD));
 
         vm.stopPrank();
-    }
-
-    function whitelistTBY(address tby, bool whitelist) public {
-        vm.prank(owner);
-        stUSD.whitelistTBY(tby, whitelist);
     }
 
     function test_setMintBps_fail_with_ParameterOutOfBounds() public {
@@ -164,34 +163,17 @@ contract StUSDTest is Test {
         assertEq(stUSD.treasury(), newTreasury);
     }
 
-    function test_whitelistTBY_fail_with_InvalidAddress() public {
-        vm.expectRevert(IStUSD.InvalidAddress.selector);
-        vm.prank(owner);
-        stUSD.whitelistTBY(address(0), true);
-    }
 
-    function test_whitelistTBY_fail_with_nonOwner() public {
-        vm.expectRevert(NOT_OWNER_ERROR);
-        vm.prank(nonOwner);
-        stUSD.whitelistTBY(address(pool), true);
-    }
-
-    function test_whitelistTBY_success() public {
-        vm.expectEmit(true, true, true, true);
-        vm.prank(owner);
-        emit TBYWhitelisted(address(pool), true);
-        stUSD.whitelistTBY(address(pool), true);
-    }
-
-    function test_deposit_fail_with_TBYNotWhitelisted() public {
-        vm.expectRevert(IStUSD.TBYNotWhitelisted.selector);
+    function test_deposit_fail_with_TBYNotActive() public {
+        registry.setTokenInfos(false);
+        vm.expectRevert(IStUSD.TBYNotActive.selector);
         vm.prank(alice);
         stUSD.deposit(address(pool), 1 ether);
     }
 
     function test_deposit_fail_with_InsufficientBalance() public {
         pool.mint(alice, 0.5 ether);
-        whitelistTBY(address(pool), true);
+        registry.setTokenInfos(true);
 
         vm.startPrank(alice);
         pool.approve(address(stUSD), 1 ether);
@@ -202,7 +184,7 @@ contract StUSDTest is Test {
 
     function test_deposit_fail_with_InsufficientAllowance() public {
         pool.mint(alice, 1 ether);
-        whitelistTBY(address(pool), true);
+        registry.setTokenInfos(true);
 
         vm.startPrank(alice);
         pool.approve(address(stUSD), 0.5 ether);
@@ -216,7 +198,7 @@ contract StUSDTest is Test {
         uint256 amountStUSD = 1.1e18;
         uint256 fee = 0.0055e18; // 0.5% of mint
         pool.mint(alice, amountTBY);
-        whitelistTBY(address(pool), true);
+        registry.setTokenInfos(true);
 
         vm.startPrank(alice);
         pool.approve(address(stUSD), amountTBY);
@@ -237,7 +219,7 @@ contract StUSDTest is Test {
         uint256 expectedEndSharesAlice = stUSDMintAmount - aliceDepositFee;
         
         // Setup pool and stUSD
-        whitelistTBY(address(pool), true);
+        registry.setTokenInfos(true);
         pool.mint(alice, startingTBYAliceBalance);
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         pool.setState(IBloomPool.State.Commit);
@@ -295,7 +277,7 @@ contract StUSDTest is Test {
         uint256 bobAmount = 2e6;
         pool.mint(alice, 1e6);
         pool.mint(bob, 2e6);
-        whitelistTBY(address(pool), true);
+        registry.setTokenInfos(true);
 
         /// ########## High Level Initial Share Math ##########
         uint256 aliceMintedShares = .995e18;

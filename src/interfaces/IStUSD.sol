@@ -19,8 +19,8 @@ interface IStUSD {
     /// @notice Invalid amount
     error InvalidAmount();
 
-    /// @notice TBY not whitelisted
-    error TBYNotWhitelisted();
+    /// @notice TBY not active
+    error TBYNotActive();
 
     /// @notice WstUSD already initialized
     error AlreadyInitialized();
