@@ -226,16 +226,19 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         } else {
             _remainingBalance += _amount;
         }
-
-        uint256 amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
         
-        uint256 sharesFeeAmount;
+        uint256 amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
+
+        uint256 sharesFeeAmount;        
         uint256 mintFee = (amountScaled * mintBps) / BPS;
+
         if (mintFee > 0) {
             sharesFeeAmount = getSharesByUsd(mintFee);
             emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
         }
+
         uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
+
         _mintShares(msg.sender, sharesAmount);
         _mintShares(treasury, sharesFeeAmount);
 
