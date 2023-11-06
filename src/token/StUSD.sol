@@ -10,6 +10,7 @@ import {StUSDBase} from "./StUSDBase.sol";
 
 import {IBloomFactory} from "../interfaces/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/IBloomPool.sol";
+import {IExchangeRateRegistry} from "../interfaces/IExchangeRateRegistry.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
 
 /// @title Staked USD Contract
@@ -51,17 +52,19 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     IBloomFactory public bloomFactory;
 
+    IExchangeRateRegistry public registry;
+
     /// @dev Underlying token decimals
     uint8 internal _underlyingDecimals;
 
     /// @notice Mint fee bps
-    uint16 public mintBps;
+    uint16 public immutable mintBps;
 
     /// @notice Redeem fee bps
-    uint16 public redeemBps;
+    uint16 public immutable redeemBps;
 
     /// @notice Performance fee bps
-    uint16 public performanceBps;
+    uint16 public immutable performanceBps;
 
     uint16 public constant BPS = 10000;
 
@@ -71,9 +74,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     /// @notice Treasury address
     address public treasury;
-
-    /// @dev Mapping of TBY to bool
-    mapping(address => bool) internal _whitelisted;
 
     /// @dev Total withdrawal balance
     uint256 internal _totalWithdrawalBalance;
@@ -117,13 +117,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     event TreasuryUpdated(address treasury);
 
     /**
-     * Emitted when new TBY is whitelisted
-     * @param tby TBY address
-     * @param whitelist whitelist or not
-     */
-    event TBYWhitelisted(address tby, bool whitelist);
-
-    /**
      * @notice Emitted when LP tokens are redeemed
      * @param account Redeeming account
      * @param shares Amount of LP tokens burned
@@ -164,6 +157,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         address _underlyingToken,
         address _treasury,
         address _bloomFactory,
+        address _registry,
         uint16 _mintBps, // Suggested default 0.5%
         uint16 _redeemBps, // Suggeste default 0.5%
         uint16 _performanceBps, // Suggested default 10% of yield
@@ -178,6 +172,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
         treasury = _treasury;
         bloomFactory = IBloomFactory(_bloomFactory);
+        registry = IExchangeRateRegistry(_registry);
 
         mintBps = _mintBps;
         redeemBps = _redeemBps;
@@ -208,7 +203,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @param _amount TBY amount to deposit
      */
     function deposit(address _tby, uint256 _amount) external {
-        if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
+        if (!registry.tokenInfos(_tby).active) revert TBYNotActive();
         IBloomPool latestPool = _getLatestPool();
 
         IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
@@ -462,18 +457,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     }
 
     /**
-     * @notice Whitelist TBY
-     * @dev Restricted to owner only
-     * @param _tby TBY address
-     * @param _whitelist whitelist or not
-     */
-    function whitelistTBY(address _tby, bool _whitelist) external onlyOwner {
-        if (_tby == address(0)) revert InvalidAddress();
-        _whitelisted[_tby] = _whitelist;
-        emit TBYWhitelisted(_tby, _whitelist);
-    }
-
-    /**
      * @notice Redeem underlying token from TBY
      * @dev Restricted to owner only
      * @param _tby TBY address
@@ -506,7 +489,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     function poke() external {
         IBloomPool lastCreatedPool = _getLatestPool();
-        if (!_whitelisted[address(lastCreatedPool)]) revert TBYNotWhitelisted();
 
         IBloomPool.State currentState = lastCreatedPool.state();
 
