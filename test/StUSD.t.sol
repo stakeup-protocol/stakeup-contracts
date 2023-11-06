@@ -27,7 +27,6 @@ contract StUSDTest is Test {
     MockRegistry internal registry;
 
     address internal owner = makeAddr("owner");
-    address internal nonOwner = makeAddr("nonOwner");
     address internal treasury = makeAddr("treasury");
     address internal layerZeroEndpoint = makeAddr("layerZeroEndpoint");
     address internal alice = makeAddr("alice");
@@ -41,9 +40,6 @@ contract StUSDTest is Test {
     bytes internal constant NOT_OWNER_ERROR = bytes("Ownable: caller is not the owner");
 
     // ============== Redefined Events ===============
-    event MintBpsUpdated(uint16 mintBps);
-    event RedeemBpsUpdated(uint16 redeempBps);
-    event TreasuryUpdated(address treasury);
     event Deposit(address indexed account, address tby, uint256 amount, uint256 shares);
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
@@ -88,7 +84,11 @@ contract StUSDTest is Test {
 
         assertEq(stUSD.owner(), owner);
         assertEq(stUSD.treasury(), treasury);
+        //assertEq(stUSD.registry(), registry);
         assertEq(address(stUSD.underlyingToken()), address(stableToken));
+        assertEq(stUSD.mintBps(), mintBps);
+        assertEq(stUSD.redeemBps(), redeemBps);
+        assertEq(stUSD.performanceBps(), performanceFeeBps);
 
         wstUSD = new WstUSD(address(stUSD));
 
@@ -98,71 +98,6 @@ contract StUSDTest is Test {
 
         vm.stopPrank();
     }
-
-    function test_setMintBps_fail_with_ParameterOutOfBounds() public {
-        vm.expectRevert(IStUSD.ParameterOutOfBounds.selector);
-        vm.prank(owner);
-        stUSD.setMintBps(201);
-    }
-
-    function test_setMintBps_fail_with_nonOwner() public {
-        vm.expectRevert(NOT_OWNER_ERROR);
-        vm.prank(nonOwner);
-        stUSD.setMintBps(100);
-    }
-
-    function test_setMintBps_success() public {
-        vm.expectEmit(true, true, true, true);
-        vm.prank(owner);
-        emit MintBpsUpdated(100);
-        stUSD.setMintBps(100);
-
-        assertEq(stUSD.mintBps(), 100);
-    }
-
-    function test_setRedeemBps_fail_with_ParameterOutOfBounds() public {
-        vm.expectRevert(IStUSD.ParameterOutOfBounds.selector);
-        vm.prank(owner);
-        stUSD.setRedeemBps(201);
-    }
-
-    function test_setRedeemBps_fail_with_nonOwner() public {
-        vm.expectRevert(NOT_OWNER_ERROR);
-        vm.prank(nonOwner);
-        stUSD.setRedeemBps(100);
-    }
-
-    function test_setRedeemBps_success() public {
-        vm.expectEmit(true, true, true, true);
-        vm.prank(owner);
-        emit RedeemBpsUpdated(100);
-        stUSD.setRedeemBps(100);
-
-        assertEq(stUSD.redeemBps(), 100);
-    }
-
-    function test_setTreasury_fail_with_InvalidAddress() public {
-        vm.expectRevert(IStUSD.InvalidAddress.selector);
-        vm.prank(owner);
-        stUSD.setTreasury(address(0));
-    }
-
-    function test_setTreasury_fail_with_nonOwner() public {
-        vm.expectRevert(NOT_OWNER_ERROR);
-        vm.prank(nonOwner);
-        stUSD.setTreasury(makeAddr("newTreasury"));
-    }
-
-    function test_setTreasury_success() public {
-        vm.expectEmit(true, true, true, true);
-        vm.prank(owner);
-        address newTreasury = makeAddr("newTreasury");
-        emit TreasuryUpdated(newTreasury);
-        stUSD.setTreasury(newTreasury);
-
-        assertEq(stUSD.treasury(), newTreasury);
-    }
-
 
     function test_deposit_fail_with_TBYNotActive() public {
         registry.setTokenInfos(false);
@@ -358,9 +293,7 @@ contract StUSDTest is Test {
         uint256 treasuryShares = stUSD.sharesOf(treasury);
         uint256 performanceFeeInShares = stUSD.getSharesByUsd(expectedPerformanceFee);
 
-        vm.startPrank(owner);
         stUSD.redeemUnderlying(address(pool), totalTBY);
-        vm.stopPrank();
 
         uint256 sharesPerUsd = stUSD.getTotalShares() * 1e18 / stUSD.getTotalUsd();
         uint256 usdPerShares = stUSD.getTotalUsd() * 1e18 / stUSD.getTotalShares();
