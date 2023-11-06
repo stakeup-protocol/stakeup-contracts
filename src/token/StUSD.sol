@@ -73,7 +73,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     uint256 public constant AUTO_STAKE_PHASE = 1 days;
 
     /// @notice Treasury address
-    address public treasury;
+    address public immutable treasury;
 
     /// @dev Total withdrawal balance
     uint256 internal _totalWithdrawalBalance;
@@ -97,24 +97,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     uint256 internal _remainingBalance;
 
     // =================== Events ===================
-
-    /**
-     * @notice Emitted when mintBps is updated
-     * @param mintBps New mint bps value
-     */
-    event MintBpsUpdated(uint16 mintBps);
-
-    /**
-     * @notice Emitted when redeempBps is updated
-     * @param redeempBps New redeemp bps value
-     */
-    event RedeemBpsUpdated(uint16 redeempBps);
-
-    /**
-     * @notice Emitted when treasury is updated
-     * @param treasury New treasury address
-     */
-    event TreasuryUpdated(address treasury);
 
     /**
      * @notice Emitted when LP tokens are redeemed
@@ -167,6 +149,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     {
         if (_underlyingToken == address(0)) revert InvalidAddress();
         if (_treasury == address(0)) revert InvalidAddress();
+        if (_bloomFactory == address(0)) revert InvalidAddress();
+        if (_registry == address(0)) revert InvalidAddress();
+        if (_mintBps > MAX_BPS || _redeemBps > MAX_BPS) revert ParameterOutOfBounds();
         
         underlyingToken = IERC20(_underlyingToken);
         _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
@@ -409,60 +394,12 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         _setTotalUsd(_getTotalUsd() + underlyingGains);
     }
 
-    // ================ Owner Functions ==============
-
-    /**
-     * @notice Update _totalUsd value
-     * @dev Restricted to owner only
-     * @param _amount new amount
-     */
-    function setTotalUsd(uint256 _amount) external onlyOwner {
-        _setTotalUsd(_amount);
-    }
-
-    /**
-     * @notice Set mintBps value
-     * @dev Restricted to owner only
-     * @param _mintBps new mintBps value
-     */
-    function setMintBps(uint16 _mintBps) external onlyOwner {
-        if (_mintBps > MAX_BPS) revert ParameterOutOfBounds();
-        mintBps = _mintBps;
-
-        emit MintBpsUpdated(_mintBps);
-    }
-
-    /**
-     * @notice Set redeemBps value
-     * @dev Restricted to owner only
-     * @param _redeemBps new redeemBps value
-     */
-    function setRedeemBps(uint16 _redeemBps) external onlyOwner {
-        if (_redeemBps > MAX_BPS) revert ParameterOutOfBounds();
-        redeemBps = _redeemBps;
-
-        emit RedeemBpsUpdated(_redeemBps);
-    }
-
-    /**
-     * @notice Set treasury address
-     * @dev Restricted to owner only
-     * @param _treasury new treasury address
-     */
-    function setTreasury(address _treasury) external onlyOwner {
-        if (_treasury == address(0)) revert InvalidAddress();
-        treasury = _treasury;
-
-        emit TreasuryUpdated(_treasury);
-    }
-
     /**
      * @notice Redeem underlying token from TBY
-     * @dev Restricted to owner only
      * @param _tby TBY address
      * @param _amount Redeem amount
      */
-    function redeemUnderlying(address _tby, uint256 _amount) external onlyOwner {
+    function redeemUnderlying(address _tby, uint256 _amount) external {
         IBloomPool pool = IBloomPool(_tby);
 
         _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
