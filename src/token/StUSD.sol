@@ -180,7 +180,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @param _tby TBY address
      * @param _amount TBY amount to deposit
      */
-    function depositTBY(address _tby, uint256 _amount) external {
+    function depositTby(address _tby, uint256 _amount) external {
         if (!registry.tokenInfos(_tby).active) revert TBYNotActive();
         IBloomPool latestPool = _getLatestPool();
 

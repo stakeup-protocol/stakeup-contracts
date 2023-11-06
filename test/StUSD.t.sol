@@ -107,7 +107,7 @@ contract StUSDTest is Test {
         registry.setTokenInfos(false);
         vm.expectRevert(IStUSD.TBYNotActive.selector);
         vm.prank(alice);
-        stUSD.depositTBY(address(pool), 1 ether);
+        stUSD.depositTby(address(pool), 1 ether);
     }
 
     function test_deposit_fail_with_InsufficientBalance() public {
@@ -117,7 +117,7 @@ contract StUSDTest is Test {
         vm.startPrank(alice);
         pool.approve(address(stUSD), 1 ether);
         vm.expectRevert(bytes("ERC20: transfer amount exceeds balance"));
-        stUSD.depositTBY(address(pool), 1 ether);
+        stUSD.depositTby(address(pool), 1 ether);
         vm.stopPrank();
     }
 
@@ -128,7 +128,7 @@ contract StUSDTest is Test {
         vm.startPrank(alice);
         pool.approve(address(stUSD), 0.5 ether);
         vm.expectRevert(bytes("ERC20: insufficient allowance"));
-        stUSD.depositTBY(address(pool), 1 ether);
+        stUSD.depositTby(address(pool), 1 ether);
         vm.stopPrank();
     }
 
@@ -143,7 +143,7 @@ contract StUSDTest is Test {
         pool.approve(address(stUSD), amountTBY);
         vm.expectEmit(true, true, true, true);
         emit Deposit(alice, address(pool), amountTBY, amountStUSD - fee);
-        stUSD.depositTBY(address(pool), amountTBY);
+        stUSD.depositTby(address(pool), amountTBY);
         vm.stopPrank();
 
         assertEq(stUSD.balanceOf(alice), amountStUSD - fee);
@@ -199,7 +199,7 @@ contract StUSDTest is Test {
         // Initial deposit to give alice some stUSD
         vm.startPrank(alice);
         pool.approve(address(stUSD), amount);
-        stUSD.depositTBY(address(pool), startingTBYAliceBalance);
+        stUSD.depositTby(address(pool), startingTBYAliceBalance);
         vm.stopPrank();
 
         // Donate to stUSD
@@ -267,14 +267,14 @@ contract StUSDTest is Test {
         pool.approve(address(stUSD), aliceAmount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(alice, address(pool), aliceAmount, aliceMintedShares);
-        stUSD.depositTBY(address(pool), aliceAmount);
+        stUSD.depositTby(address(pool), aliceAmount);
         vm.stopPrank();
 
         vm.startPrank(bob);
         pool.approve(address(stUSD), bobAmount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(bob, address(pool), bobAmount, bobMintedShares);
-        stUSD.depositTBY(address(pool), bobAmount);
+        stUSD.depositTby(address(pool), bobAmount);
         stUSD.approve(address(wstUSD), bobMintedShares);
         wstUSD.wrap(bobMintedShares);
         vm.stopPrank();
