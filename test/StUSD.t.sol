@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import {LibRLP} from "solady/utils/LibRLP.sol";
 
 import {StUSD} from "src/token/StUSD.sol";
 import {WstUSD} from "src/token/WstUSD.sol";
@@ -12,6 +13,7 @@ import {MockERC20} from "./mock/MockERC20.sol";
 import {MockSwapFacility} from "./mock/MockSwapFacility.sol";
 import {MockBloomPool, IBloomPool} from "./mock/MockBloomPool.sol";
 import {MockBloomFactory} from "./mock/MockBloomFactory.sol";
+import {MockRegistry} from "./mock/MockRegistry.sol";
 
 contract StUSDTest is Test {
 
@@ -23,9 +25,9 @@ contract StUSDTest is Test {
     MockSwapFacility internal swap;
     MockBloomPool internal pool;
     MockBloomFactory internal factory;
+    MockRegistry internal registry;
 
     address internal owner = makeAddr("owner");
-    address internal nonOwner = makeAddr("nonOwner");
     address internal treasury = makeAddr("treasury");
     address internal layerZeroEndpoint = makeAddr("layerZeroEndpoint");
     address internal alice = makeAddr("alice");
@@ -39,10 +41,6 @@ contract StUSDTest is Test {
     bytes internal constant NOT_OWNER_ERROR = bytes("Ownable: caller is not the owner");
 
     // ============== Redefined Events ===============
-    event MintBpsUpdated(uint16 mintBps);
-    event RedeemBpsUpdated(uint16 redeempBps);
-    event TreasuryUpdated(address treasury);
-    event TBYWhitelisted(address tby, bool whitelist);
     event Deposit(address indexed account, address tby, uint256 amount, uint256 shares);
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
     event Withdrawn(address indexed account, uint256 amount);
@@ -71,127 +69,50 @@ contract StUSDTest is Test {
         vm.label(address(factory), "MockBloomFactory");
         factory.setLastCreatedPool(address(pool));
 
+        registry = new MockRegistry(address(pool));
+
+        address expectedWrapperAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
+
         stUSD = new StUSD(
             address(stableToken),
             treasury,
             address(factory),
+            address(registry),
             mintBps,
             redeemBps,
             performanceFeeBps,
-            layerZeroEndpoint
+            layerZeroEndpoint,
+            expectedWrapperAddress
         );
         vm.label(address(stUSD), "StUSD");
 
         assertEq(stUSD.owner(), owner);
         assertEq(stUSD.treasury(), treasury);
+        //assertEq(stUSD.registry(), registry);
         assertEq(address(stUSD.underlyingToken()), address(stableToken));
+        assertEq(stUSD.mintBps(), mintBps);
+        assertEq(stUSD.redeemBps(), redeemBps);
+        assertEq(stUSD.performanceBps(), performanceFeeBps);
 
         wstUSD = new WstUSD(address(stUSD));
+        vm.label(address(wstUSD), "WstUSD");
 
+        assertEq(address(wstUSD), expectedWrapperAddress);
         assertEq(address(wstUSD.stUSD()), address(stUSD));
-
-        stUSD.setWstUSD(address(wstUSD));
 
         vm.stopPrank();
     }
 
-    function whitelistTBY(address tby, bool whitelist) public {
-        vm.prank(owner);
-        stUSD.whitelistTBY(tby, whitelist);
-    }
-
-    function test_setMintBps_fail_with_ParameterOutOfBounds() public {
-        vm.expectRevert(IStUSD.ParameterOutOfBounds.selector);
-        vm.prank(owner);
-        stUSD.setMintBps(201);
-    }
-
-    function test_setMintBps_fail_with_nonOwner() public {
-        vm.expectRevert(NOT_OWNER_ERROR);
-        vm.prank(nonOwner);
-        stUSD.setMintBps(100);
-    }
-
-    function test_setMintBps_success() public {
-        vm.expectEmit(true, true, true, true);
-        vm.prank(owner);
-        emit MintBpsUpdated(100);
-        stUSD.setMintBps(100);
-
-        assertEq(stUSD.mintBps(), 100);
-    }
-
-    function test_setRedeemBps_fail_with_ParameterOutOfBounds() public {
-        vm.expectRevert(IStUSD.ParameterOutOfBounds.selector);
-        vm.prank(owner);
-        stUSD.setRedeemBps(201);
-    }
-
-    function test_setRedeemBps_fail_with_nonOwner() public {
-        vm.expectRevert(NOT_OWNER_ERROR);
-        vm.prank(nonOwner);
-        stUSD.setRedeemBps(100);
-    }
-
-    function test_setRedeemBps_success() public {
-        vm.expectEmit(true, true, true, true);
-        vm.prank(owner);
-        emit RedeemBpsUpdated(100);
-        stUSD.setRedeemBps(100);
-
-        assertEq(stUSD.redeemBps(), 100);
-    }
-
-    function test_setTreasury_fail_with_InvalidAddress() public {
-        vm.expectRevert(IStUSD.InvalidAddress.selector);
-        vm.prank(owner);
-        stUSD.setTreasury(address(0));
-    }
-
-    function test_setTreasury_fail_with_nonOwner() public {
-        vm.expectRevert(NOT_OWNER_ERROR);
-        vm.prank(nonOwner);
-        stUSD.setTreasury(makeAddr("newTreasury"));
-    }
-
-    function test_setTreasury_success() public {
-        vm.expectEmit(true, true, true, true);
-        vm.prank(owner);
-        address newTreasury = makeAddr("newTreasury");
-        emit TreasuryUpdated(newTreasury);
-        stUSD.setTreasury(newTreasury);
-
-        assertEq(stUSD.treasury(), newTreasury);
-    }
-
-    function test_whitelistTBY_fail_with_InvalidAddress() public {
-        vm.expectRevert(IStUSD.InvalidAddress.selector);
-        vm.prank(owner);
-        stUSD.whitelistTBY(address(0), true);
-    }
-
-    function test_whitelistTBY_fail_with_nonOwner() public {
-        vm.expectRevert(NOT_OWNER_ERROR);
-        vm.prank(nonOwner);
-        stUSD.whitelistTBY(address(pool), true);
-    }
-
-    function test_whitelistTBY_success() public {
-        vm.expectEmit(true, true, true, true);
-        vm.prank(owner);
-        emit TBYWhitelisted(address(pool), true);
-        stUSD.whitelistTBY(address(pool), true);
-    }
-
-    function test_deposit_fail_with_TBYNotWhitelisted() public {
-        vm.expectRevert(IStUSD.TBYNotWhitelisted.selector);
+    function test_deposit_fail_with_TBYNotActive() public {
+        registry.setTokenInfos(false);
+        vm.expectRevert(IStUSD.TBYNotActive.selector);
         vm.prank(alice);
         stUSD.deposit(address(pool), 1 ether);
     }
 
     function test_deposit_fail_with_InsufficientBalance() public {
         pool.mint(alice, 0.5 ether);
-        whitelistTBY(address(pool), true);
+        registry.setTokenInfos(true);
 
         vm.startPrank(alice);
         pool.approve(address(stUSD), 1 ether);
@@ -202,7 +123,7 @@ contract StUSDTest is Test {
 
     function test_deposit_fail_with_InsufficientAllowance() public {
         pool.mint(alice, 1 ether);
-        whitelistTBY(address(pool), true);
+        registry.setTokenInfos(true);
 
         vm.startPrank(alice);
         pool.approve(address(stUSD), 0.5 ether);
@@ -216,7 +137,7 @@ contract StUSDTest is Test {
         uint256 amountStUSD = 1.1e18;
         uint256 fee = 0.0055e18; // 0.5% of mint
         pool.mint(alice, amountTBY);
-        whitelistTBY(address(pool), true);
+        registry.setTokenInfos(true);
 
         vm.startPrank(alice);
         pool.approve(address(stUSD), amountTBY);
@@ -237,7 +158,7 @@ contract StUSDTest is Test {
         uint256 expectedEndSharesAlice = stUSDMintAmount - aliceDepositFee;
         
         // Setup pool and stUSD
-        whitelistTBY(address(pool), true);
+        registry.setTokenInfos(true);
         pool.mint(alice, startingTBYAliceBalance);
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         pool.setState(IBloomPool.State.Commit);
@@ -295,7 +216,7 @@ contract StUSDTest is Test {
         uint256 bobAmount = 2e6;
         pool.mint(alice, 1e6);
         pool.mint(bob, 2e6);
-        whitelistTBY(address(pool), true);
+        registry.setTokenInfos(true);
 
         /// ########## High Level Initial Share Math ##########
         uint256 aliceMintedShares = .995e18;
@@ -376,9 +297,7 @@ contract StUSDTest is Test {
         uint256 treasuryShares = stUSD.sharesOf(treasury);
         uint256 performanceFeeInShares = stUSD.getSharesByUsd(expectedPerformanceFee);
 
-        vm.startPrank(owner);
         stUSD.redeemUnderlying(address(pool), totalTBY);
-        vm.stopPrank();
 
         uint256 sharesPerUsd = stUSD.getTotalShares() * 1e18 / stUSD.getTotalUsd();
         uint256 usdPerShares = stUSD.getTotalUsd() * 1e18 / stUSD.getTotalShares();
