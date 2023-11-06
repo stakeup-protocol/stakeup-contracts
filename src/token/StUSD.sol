@@ -143,11 +143,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         uint16 _mintBps, // Suggested default 0.5%
         uint16 _redeemBps, // Suggeste default 0.5%
         uint16 _performanceBps, // Suggested default 10% of yield
-        address _layerZeroEndpoint
+        address _layerZeroEndpoint,
+        address _wstUSD
     )
         StUSDBase(_layerZeroEndpoint)
     {
         if (_underlyingToken == address(0)) revert InvalidAddress();
+        if (_wstUSD == address(0)) revert InvalidAddress();
         if (_treasury == address(0)) revert InvalidAddress();
         if (_bloomFactory == address(0)) revert InvalidAddress();
         if (_registry == address(0)) revert InvalidAddress();
@@ -162,6 +164,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         mintBps = _mintBps;
         redeemBps = _redeemBps;
         performanceBps = _performanceBps;
+
+        wstUSD = IWstUSD(_wstUSD);
     }
 
     /**
