@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import {LibRLP} from "solady/utils/LibRLP.sol";
 
 import {StUSD} from "src/token/StUSD.sol";
 import {WstUSD} from "src/token/WstUSD.sol";
@@ -70,6 +71,8 @@ contract StUSDTest is Test {
 
         registry = new MockRegistry(address(pool));
 
+        address expectedWrapperAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
+
         stUSD = new StUSD(
             address(stableToken),
             treasury,
@@ -78,7 +81,8 @@ contract StUSDTest is Test {
             mintBps,
             redeemBps,
             performanceFeeBps,
-            layerZeroEndpoint
+            layerZeroEndpoint,
+            expectedWrapperAddress
         );
         vm.label(address(stUSD), "StUSD");
 
@@ -91,10 +95,10 @@ contract StUSDTest is Test {
         assertEq(stUSD.performanceBps(), performanceFeeBps);
 
         wstUSD = new WstUSD(address(stUSD));
+        vm.label(address(wstUSD), "WstUSD");
 
+        assertEq(address(wstUSD), expectedWrapperAddress);
         assertEq(address(wstUSD.stUSD()), address(stUSD));
-
-        stUSD.setWstUSD(address(wstUSD));
 
         vm.stopPrank();
     }
