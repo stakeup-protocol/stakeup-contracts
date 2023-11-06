@@ -107,7 +107,7 @@ contract StUSDTest is Test {
         registry.setTokenInfos(false);
         vm.expectRevert(IStUSD.TBYNotActive.selector);
         vm.prank(alice);
-        stUSD.deposit(address(pool), 1 ether);
+        stUSD.depositTby(address(pool), 1 ether);
     }
 
     function test_deposit_fail_with_InsufficientBalance() public {
@@ -117,7 +117,7 @@ contract StUSDTest is Test {
         vm.startPrank(alice);
         pool.approve(address(stUSD), 1 ether);
         vm.expectRevert(bytes("ERC20: transfer amount exceeds balance"));
-        stUSD.deposit(address(pool), 1 ether);
+        stUSD.depositTby(address(pool), 1 ether);
         vm.stopPrank();
     }
 
@@ -128,11 +128,11 @@ contract StUSDTest is Test {
         vm.startPrank(alice);
         pool.approve(address(stUSD), 0.5 ether);
         vm.expectRevert(bytes("ERC20: insufficient allowance"));
-        stUSD.deposit(address(pool), 1 ether);
+        stUSD.depositTby(address(pool), 1 ether);
         vm.stopPrank();
     }
 
-    function test_deposit_success() public {
+    function test_depositTBY_success() public {
         uint256 amountTBY = 1.1e6;
         uint256 amountStUSD = 1.1e18;
         uint256 fee = 0.0055e18; // 0.5% of mint
@@ -143,11 +143,44 @@ contract StUSDTest is Test {
         pool.approve(address(stUSD), amountTBY);
         vm.expectEmit(true, true, true, true);
         emit Deposit(alice, address(pool), amountTBY, amountStUSD - fee);
-        stUSD.deposit(address(pool), amountTBY);
+        stUSD.depositTby(address(pool), amountTBY);
         vm.stopPrank();
 
         assertEq(stUSD.balanceOf(alice), amountStUSD - fee);
         assertEq(stUSD.balanceOf(treasury), fee);
+    }
+
+    function test_depositUnderlying_success() public {
+        uint256 amount = 1.1e6;
+        uint256 amountStUSD = 1.1e18;
+        uint256 fee = 0.0055e18; // 0.5% of mint
+        stableToken.mint(address(alice), amount);
+        registry.setTokenInfos(true);
+
+        // Deposit when a BloomPool is not in the commit stage
+        vm.startPrank(alice);
+        stableToken.approve(address(stUSD), amount);
+        vm.expectEmit(true, true, true, true);
+        emit Deposit(alice, address(stableToken), amount, amountStUSD - fee);
+        stUSD.depostUnderlying(amount);
+        vm.stopPrank();
+
+        assertEq(stUSD.balanceOf(alice), amountStUSD - fee);
+
+        // Deposit when a BloomPool is in the commit stage
+        stableToken.mint(bob, amount);
+        pool.setState(IBloomPool.State.Commit);
+
+        vm.startPrank(bob);
+        stableToken.approve(address(stUSD), amount);
+        vm.expectEmit(true, true, true, true);
+        emit Deposit(bob, address(stableToken), amount, amountStUSD - fee);
+        stUSD.depostUnderlying(amount);
+        vm.stopPrank();
+
+        assertEq(stUSD.balanceOf(bob), amountStUSD - fee);
+
+        assertEq(stUSD.balanceOf(treasury), fee * 2);
     }
 
     function testAutoMint() public {
@@ -166,7 +199,7 @@ contract StUSDTest is Test {
         // Initial deposit to give alice some stUSD
         vm.startPrank(alice);
         pool.approve(address(stUSD), amount);
-        stUSD.deposit(address(pool), startingTBYAliceBalance);
+        stUSD.depositTby(address(pool), startingTBYAliceBalance);
         vm.stopPrank();
 
         // Donate to stUSD
@@ -234,14 +267,14 @@ contract StUSDTest is Test {
         pool.approve(address(stUSD), aliceAmount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(alice, address(pool), aliceAmount, aliceMintedShares);
-        stUSD.deposit(address(pool), aliceAmount);
+        stUSD.depositTby(address(pool), aliceAmount);
         vm.stopPrank();
 
         vm.startPrank(bob);
         pool.approve(address(stUSD), bobAmount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(bob, address(pool), bobAmount, bobMintedShares);
-        stUSD.deposit(address(pool), bobAmount);
+        stUSD.depositTby(address(pool), bobAmount);
         stUSD.approve(address(wstUSD), bobMintedShares);
         wstUSD.wrap(bobMintedShares);
         vm.stopPrank();

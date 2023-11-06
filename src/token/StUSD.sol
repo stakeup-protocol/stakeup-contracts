@@ -180,7 +180,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @param _tby TBY address
      * @param _amount TBY amount to deposit
      */
-    function deposit(address _tby, uint256 _amount) external {
+    function depositTby(address _tby, uint256 _amount) external {
         if (!registry.tokenInfos(_tby).active) revert TBYNotActive();
         IBloomPool latestPool = _getLatestPool();
 
@@ -191,24 +191,60 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         }
         
         // TBYs will always have the same underlying decimals as the underlying token
-        uint256 _amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
+        uint256 amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
 
         uint256 sharesFeeAmount;
-        uint256 mintFee = (_amountScaled * mintBps) / BPS;
+        uint256 mintFee = (amountScaled * mintBps) / BPS;
 
         if (mintFee > 0) {
             sharesFeeAmount = getSharesByUsd(mintFee);
             emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
         }
 
-        uint256 sharesAmount = getSharesByUsd(_amountScaled - mintFee);
+        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
 
         _mintShares(msg.sender, sharesAmount);
         _mintShares(treasury, sharesFeeAmount);
 
-        _setTotalUsd(_getTotalUsd() + _amountScaled);
+        _setTotalUsd(_getTotalUsd() + amountScaled);
 
         emit Deposit(msg.sender, _tby, _amount, sharesAmount);
+    }
+    
+    /**
+     * @notice Deposit underlying tokens and get stUSD minted
+     * @param _amount Amount of underlying tokens to deposit
+     */
+    function depostUnderlying(uint256 _amount) external {
+        underlyingToken.safeTransferFrom(msg.sender, address(this), _amount);
+        IBloomPool latestPool = _getLatestPool();
+
+        if (latestPool.state() == IBloomPool.State.Commit) {
+            _lastDepositAmount += _amount;
+            underlyingToken.safeApprove(address(latestPool), _amount);
+            latestPool.depositLender(_amount);
+        } else {
+            _remainingBalance += _amount;
+        }
+        
+        uint256 amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
+
+        uint256 sharesFeeAmount;        
+        uint256 mintFee = (amountScaled * mintBps) / BPS;
+
+        if (mintFee > 0) {
+            sharesFeeAmount = getSharesByUsd(mintFee);
+            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
+        }
+
+        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
+
+        _mintShares(msg.sender, sharesAmount);
+        _mintShares(treasury, sharesFeeAmount);
+
+        _setTotalUsd(_getTotalUsd() + amountScaled);
+
+        emit Deposit(msg.sender, address(underlyingToken), _amount, sharesAmount);
     }
 
     /**
