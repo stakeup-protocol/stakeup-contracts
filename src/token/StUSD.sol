@@ -10,6 +10,7 @@ import {StUSDBase} from "./StUSDBase.sol";
 
 import {IBloomFactory} from "../interfaces/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/IBloomPool.sol";
+import {IExchangeRateRegistry} from "../interfaces/IExchangeRateRegistry.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
 
 /// @title Staked USD Contract
@@ -51,17 +52,19 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     IBloomFactory public bloomFactory;
 
+    IExchangeRateRegistry public registry;
+
     /// @dev Underlying token decimals
     uint8 internal _underlyingDecimals;
 
     /// @notice Mint fee bps
-    uint16 public mintBps;
+    uint16 public immutable mintBps;
 
     /// @notice Redeem fee bps
-    uint16 public redeemBps;
+    uint16 public immutable redeemBps;
 
     /// @notice Performance fee bps
-    uint16 public performanceBps;
+    uint16 public immutable performanceBps;
 
     uint16 public constant BPS = 10000;
 
@@ -70,10 +73,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     uint256 public constant AUTO_STAKE_PHASE = 1 days;
 
     /// @notice Treasury address
-    address public treasury;
-
-    /// @dev Mapping of TBY to bool
-    mapping(address => bool) internal _whitelisted;
+    address public immutable treasury;
 
     /// @dev Total withdrawal balance
     uint256 internal _totalWithdrawalBalance;
@@ -97,31 +97,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     uint256 internal _remainingBalance;
 
     // =================== Events ===================
-
-    /**
-     * @notice Emitted when mintBps is updated
-     * @param mintBps New mint bps value
-     */
-    event MintBpsUpdated(uint16 mintBps);
-
-    /**
-     * @notice Emitted when redeempBps is updated
-     * @param redeempBps New redeemp bps value
-     */
-    event RedeemBpsUpdated(uint16 redeempBps);
-
-    /**
-     * @notice Emitted when treasury is updated
-     * @param treasury New treasury address
-     */
-    event TreasuryUpdated(address treasury);
-
-    /**
-     * Emitted when new TBY is whitelisted
-     * @param tby TBY address
-     * @param whitelist whitelist or not
-     */
-    event TBYWhitelisted(address tby, bool whitelist);
 
     /**
      * @notice Emitted when LP tokens are redeemed
@@ -164,24 +139,33 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         address _underlyingToken,
         address _treasury,
         address _bloomFactory,
+        address _registry,
         uint16 _mintBps, // Suggested default 0.5%
         uint16 _redeemBps, // Suggeste default 0.5%
         uint16 _performanceBps, // Suggested default 10% of yield
-        address _layerZeroEndpoint
+        address _layerZeroEndpoint,
+        address _wstUSD
     )
         StUSDBase(_layerZeroEndpoint)
     {
         if (_underlyingToken == address(0)) revert InvalidAddress();
+        if (_wstUSD == address(0)) revert InvalidAddress();
         if (_treasury == address(0)) revert InvalidAddress();
+        if (_bloomFactory == address(0)) revert InvalidAddress();
+        if (_registry == address(0)) revert InvalidAddress();
+        if (_mintBps > MAX_BPS || _redeemBps > MAX_BPS) revert ParameterOutOfBounds();
         
         underlyingToken = IERC20(_underlyingToken);
         _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
         treasury = _treasury;
         bloomFactory = IBloomFactory(_bloomFactory);
+        registry = IExchangeRateRegistry(_registry);
 
         mintBps = _mintBps;
         redeemBps = _redeemBps;
         performanceBps = _performanceBps;
+
+        wstUSD = IWstUSD(_wstUSD);
     }
 
     /**
@@ -192,23 +176,12 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     }
 
     /**
-     * Sets WstUSD token address
-     * @param _wstUSD WstUSD token address
-     */
-    function setWstUSD(address _wstUSD) external onlyOwner {
-        if (_wstUSD == address(0)) revert InvalidAddress();
-        if (address(wstUSD) != address(0)) revert AlreadyInitialized();
-
-        wstUSD = IWstUSD(_wstUSD);
-    }
-
-    /**
      * @notice Deposit TBY and get stUSD minted
      * @param _tby TBY address
      * @param _amount TBY amount to deposit
      */
     function deposit(address _tby, uint256 _amount) external {
-        if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
+        if (!registry.tokenInfos(_tby).active) revert TBYNotActive();
         IBloomPool latestPool = _getLatestPool();
 
         IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
@@ -414,72 +387,12 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         _setTotalUsd(_getTotalUsd() + underlyingGains);
     }
 
-    // ================ Owner Functions ==============
-
-    /**
-     * @notice Update _totalUsd value
-     * @dev Restricted to owner only
-     * @param _amount new amount
-     */
-    function setTotalUsd(uint256 _amount) external onlyOwner {
-        _setTotalUsd(_amount);
-    }
-
-    /**
-     * @notice Set mintBps value
-     * @dev Restricted to owner only
-     * @param _mintBps new mintBps value
-     */
-    function setMintBps(uint16 _mintBps) external onlyOwner {
-        if (_mintBps > MAX_BPS) revert ParameterOutOfBounds();
-        mintBps = _mintBps;
-
-        emit MintBpsUpdated(_mintBps);
-    }
-
-    /**
-     * @notice Set redeemBps value
-     * @dev Restricted to owner only
-     * @param _redeemBps new redeemBps value
-     */
-    function setRedeemBps(uint16 _redeemBps) external onlyOwner {
-        if (_redeemBps > MAX_BPS) revert ParameterOutOfBounds();
-        redeemBps = _redeemBps;
-
-        emit RedeemBpsUpdated(_redeemBps);
-    }
-
-    /**
-     * @notice Set treasury address
-     * @dev Restricted to owner only
-     * @param _treasury new treasury address
-     */
-    function setTreasury(address _treasury) external onlyOwner {
-        if (_treasury == address(0)) revert InvalidAddress();
-        treasury = _treasury;
-
-        emit TreasuryUpdated(_treasury);
-    }
-
-    /**
-     * @notice Whitelist TBY
-     * @dev Restricted to owner only
-     * @param _tby TBY address
-     * @param _whitelist whitelist or not
-     */
-    function whitelistTBY(address _tby, bool _whitelist) external onlyOwner {
-        if (_tby == address(0)) revert InvalidAddress();
-        _whitelisted[_tby] = _whitelist;
-        emit TBYWhitelisted(_tby, _whitelist);
-    }
-
     /**
      * @notice Redeem underlying token from TBY
-     * @dev Restricted to owner only
      * @param _tby TBY address
      * @param _amount Redeem amount
      */
-    function redeemUnderlying(address _tby, uint256 _amount) external onlyOwner {
+    function redeemUnderlying(address _tby, uint256 _amount) external {
         IBloomPool pool = IBloomPool(_tby);
 
         _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
@@ -506,7 +419,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     function poke() external {
         IBloomPool lastCreatedPool = _getLatestPool();
-        if (!_whitelisted[address(lastCreatedPool)]) revert TBYNotWhitelisted();
 
         IBloomPool.State currentState = lastCreatedPool.state();
 
