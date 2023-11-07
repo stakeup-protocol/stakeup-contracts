@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
@@ -21,16 +20,15 @@ import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
  *      is updated frequently enough to keep up with the changing amount of STAKEUP staked.
  */
 contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     // =================== Storage ===================
     
     // @notice The STAKEUP token
-    IStakeupToken public stakeupToken;
+    IStakeupToken public immutable stakeupToken;
 
     // @notice The stUSD token
-    IStUSD public stUSD;
+    IStUSD public immutable stUSD;
 
     // @dev Mapping of users to their staking data
     mapping(address => StakingData) public stakingData;
@@ -42,7 +40,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     uint256 public totalStakeUpStaked;
 
     // @dev Duration of a reward period
-    uint256 rewardDuration = 1 weeks;
+    uint256 constant REWARD_DURATION = 1 weeks;
 
     // =================== Structs ====================
     /**
@@ -100,7 +98,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         stUSD = IStUSD(_stUSD);
 
         rewardData = RewardData({
-            periodFinished: uint32(rewardDuration),
+            periodFinished: uint32(block.timestamp + REWARD_DURATION),
             lastUpdate: uint32(block.timestamp),
             rewardRate: 0,
             rewardPerTokenStaked: 0,
@@ -220,8 +218,8 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         if (block.timestamp >= rewards.periodFinished) {
             rewards.availableRewards += rewards.pendingRewards;
             rewards.pendingRewards = 0;
-            rewards.periodFinished = uint32(block.timestamp + rewardDuration);
-            rewards.rewardRate = uint96(rewards.availableRewards / rewardDuration);
+            rewards.periodFinished = uint32(block.timestamp + REWARD_DURATION);
+            rewards.rewardRate = uint96(rewards.availableRewards / REWARD_DURATION);
         }
         
         rewardData.lastUpdate = uint32(block.timestamp);
@@ -247,16 +245,16 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         uint256 timeElapsed = _lastTimeRewardApplicable(rewardData.periodFinished) - rewardData.lastUpdate;
 
         return 
-            uint256(rewardData.rewardPerTokenStaked).add(
-                timeElapsed.mul(1e18).div(totalStakeUpStaked)
+            uint256(rewardData.rewardPerTokenStaked) + (
+                timeElapsed * 1e18 / totalStakeUpStaked
             );
     }
 
     function _earned(address account) internal view returns (uint256) {
         StakingData storage userStakingData = stakingData[account];
         return 
-            uint256(userStakingData.amountStaked).mul(
-                _rewardPerToken().sub(uint256(userStakingData.rewardsPerTokenPaid))
-            ).div(1e18).add(userStakingData.rewardsAccrued);
+            uint256(userStakingData.amountStaked) * (
+                _rewardPerToken() - uint256(userStakingData.rewardsPerTokenPaid)
+            ) / 1e18 + uint256(userStakingData.rewardsAccrued);
     }
 }
