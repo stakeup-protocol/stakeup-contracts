@@ -1,130 +1,228 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "../interfaces/IStUSD.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract stakeupStaking {
+import {IStUSD} from "../interfaces/IStUSD.sol";
+import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
+import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+
+/**
+ * @title StakeupStaking
+ * @notice Allows users to stake their STAKEUP tokens to earn stUSD rewards.
+ *         Tokens can be staked for any amount of time and can be unstaked at any time.
+ *         The rewards tracking system is based on the methods used by Convex Finance & 
+ *         Aura Finance but have been modified to fit the needs of the StakeUp Protocol.
+ * @dev There will be one week reward periods. This is to ensure that the reward rate
+ *      is updated frequently enough to keep up with the changing amount of STAKEUP staked.
+ */
+contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
+    using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     // =================== Storage ===================
-
-    // @dev Mapping of user to their stakes
-    mapping(address => uint256) public stakes;
-
-    // @dev Mapping of F_STUSD, taken at the point at which their latest deposit was made
-    mapping(address => Snapshot) public snapshots;
-
-    // @notice Total amount of STAKEUP staked
-    uint256 public totalStakeUpStaked;
-
-    // @notice Running sum of STAKEUP fees per-StakeUP-staked
-    uint256 public F_STUSD;
-
-    // @notice The total amount of STAKEUP fees accrued
-    struct Snapshot {
-        uint256 F_STUSD_Snapshot;
-    }
+    
+    // @notice The STAKEUP token
+    IStakeupToken public stakeupToken;
 
     // @notice The stUSD token
     IStUSD public stUSD;
 
+    // @dev Mapping of users to their staking data
+    mapping(address => StakingData) public stakingData;
+
+    // @dev Data pertaining to the current reward period
+    RewardData public rewardData;
+
+    // @notice Total amount of STAKEUP staked
+    uint256 public totalStakeUpStaked;
+
+    // @dev Duration of a reward period
+    uint256 rewardDuration = 1 weeks;
+
+    // =================== Structs ====================
     /**
-     *
+     * @notice Data structure containing information pertaining to a user's stake
+     * @param amountStaked The amount of STAKEUP tokens currently staked
+     * @param rewardsAccrued The amount of stUSD rewards that have accrued to the stake
      */
+    struct StakingData {
+        uint128 amountStaked;
+        uint128 rewardsPerTokenPaid;
+        uint128 rewardsAccrued;
+    }
+
     /**
-     * Functions **********
+     * @notice Data structure containing information pertaining to a reward period
+     * @param periodFinished The end time of the reward period
+     * @param lastUpdate The last time the staking rewards were updated
+     * @param rewardRate The amount of stUSD rewards per second for the reward period
+     * @param rewardPerTokenStaked The amount of stUSD rewards per STAKEUP staked
+     * @param availableRewards The amount of stUSD rewards available for the reward period
+     * @param pendingRewards The amount of stUSD rewards that have not been claimed
      */
+    struct RewardData {
+        uint32 periodFinished;
+        uint32 lastUpdate;
+        uint96 rewardRate;
+        uint96 rewardPerTokenStaked;
+        uint128 availableRewards;
+        uint128 pendingRewards;
+    }
+
+    // =================== Events ====================
+
     /**
-     *
+     * @notice Emitted when a user's stakes their Stakeup Token
+     * @param user Address of the user who has staked their STAKEUP
+     * @param amount Amount of STAKEUP staked
      */
+    event StakeupStaked(address indexed user, uint256 amount);
 
-    // If caller has a pre-existing stake, send any accumulated stUSD gains to the caller.
-    function stake(uint256 _StakeupAmount) external override {
-        _requireNonZeroAmount(_StakeupAmount);
+    /**
+     * @notice Emitted when a user's stakes their Stakeup Token
+     * @param user Address of the user who is unstaking their STAKEUP
+     * @param amount Amount of STAKEUP unstaked
+     */
+    event StakeupUnstaked(address indexed user, uint256 amount);
 
-        uint256 STUSDGain;
-        // Grab any accumulated stUSD gains from the current stake
-        if (currentStake != 0) {
-            STUSDGain = _getPendingSTUSDGain(msg.sender);
+    constructor(
+        address _stakeupToken,
+        address _stUSD
+    ) {
+        stakeupToken = IStakeupToken(_stakeupToken);
+        stUSD = IStUSD(_stUSD);
+
+        rewardData = RewardData({
+            periodFinished: uint32(rewardDuration),
+            lastUpdate: uint32(block.timestamp),
+            rewardRate: 0,
+            rewardPerTokenStaked: 0,
+            availableRewards: 0,
+            pendingRewards: 0
+        });
+    }
+    /**
+     * @notice Updates the rewards accrued for a user and global reward state
+     * @param account Address of the user who is getting their rewards updated
+     */
+    modifier updateReward(address account) {
+        {
+            StakingData storage userStakingData = stakingData[account];
+            RewardData storage rewards = rewardData;
+            
+            uint256 newRewardPerTokenStaked = _rewardPerToken();
+            rewards.rewardPerTokenStaked = uint96(newRewardPerTokenStaked);
+            rewards.lastUpdate = uint32(_lastTimeRewardApplicable(rewards.periodFinished));
+
+            if (account != address(0)) {
+                userStakingData.rewardsPerTokenPaid = uint128(newRewardPerTokenStaked);
+                userStakingData.rewardsAccrued = uint128(_earned(account));
+            }
         }
+        _;
+    }
 
-        _updateUserSnapshots(msg.sender);
+    // ================== functions ==================
 
-        uint256 newStake = currentStake.add(_StakeupAmount);
+    /**
+     * @notice Stake Stakeup Token's to earn stUSD rewards
+     * @param stakeupAmount Amount of STAKEUP to stake
+     */
+    function stake(uint256 stakeupAmount) external override nonReentrant updateReward(msg.sender) {
+        StakingData storage userStakingData = stakingData[msg.sender];
 
-        // Increase user's stake and total STAKEUP staked
-        stakes[msg.sender] = newStake;
-        totalStakeUpStaked = totalStakeUpStaked.add(_StakeupAmount);
-        emit totalStakeUpStakedUpdated(totalStakeUpStaked);
+        if (stakeupAmount == 0) revert ZeroTokensStaked();
 
-        // Transfer STAKEUP from the caller to this contract
-        stakeupToken.sendToStakeupStaking(msg.sender, _StakeupAmount);
+        userStakingData.amountStaked += uint128(stakeupAmount);
+        totalStakeUpStaked += stakeupAmount;
 
-        emit StakeChanged(msg.sender, newStake);
-        emit StakingGainsWithdrawn(msg.sender, STUSDGain);
+        IERC20(address(stakeupToken)).safeTransferFrom(msg.sender, address(this), stakeupAmount);
+        
+        emit StakeupStaked(msg.sender, stakeupAmount);
+    }
 
-        // Send accumulated stUSD gains to the caller
-        if (currentStake != 0) {
-            stUSD.transfer(msg.sender, STUSDGain);
+    /**
+     * @notice Unstakes the user's STAKEUP and sends it back to them, along with their accumulated stUSD gains
+     * @param stakeupAmount Amount of STAKEUP to unstake
+     * @param harvestAmount Amount of stUSD to harvest and send to the user
+     */
+    function unstake(uint256 stakeupAmount, uint256 harvestAmount) external override nonReentrant updateReward(msg.sender) {
+        StakingData storage userStakingData = stakingData[msg.sender];
+
+        if (userStakingData.amountStaked == 0) revert UserHasNoStaked();
+        
+        stakeupAmount = Math.min(stakeupAmount, userStakingData.amountStaked);
+        harvestAmount = Math.min(harvestAmount, userStakingData.rewardsAccrued);
+
+        userStakingData.amountStaked -= uint128(stakeupAmount);
+        totalStakeUpStaked -= stakeupAmount;
+        
+        userStakingData.rewardsAccrued -= uint128(harvestAmount);
+
+        IERC20(address(stakeupToken)).safeTransfer(msg.sender, stakeupAmount);
+        IERC20(address(stUSD)).safeTransfer(msg.sender, harvestAmount);
+
+        emit StakeupUnstaked(msg.sender, stakeupAmount);
+    }
+
+    /**
+     * @notice Claim all stUSD rewards accrued by the user
+     */
+    function harvest() external {
+        harvest(type(uint256).max);
+    }
+
+    /**
+     * @notice Claim a specific amount of stUSD rewards
+     * @param amount Amount of rewards to claim
+     */
+    function harvest(uint256 amount) public nonReentrant updateReward(msg.sender) {
+        StakingData storage userStakingData = stakingData[msg.sender];
+
+        if (userStakingData.amountStaked == 0) revert UserHasNoStaked();
+        if (userStakingData.rewardsAccrued == 0) revert NoRewardsToClaim();
+
+        amount = Math.min(amount, userStakingData.rewardsAccrued);
+
+        userStakingData.rewardsAccrued -= uint128(amount);
+
+        IERC20(address(stUSD)).safeTransfer(msg.sender, amount);
+    }
+
+    /**
+     * @notice How much stUSD rewards a user has earned
+     * @param account Address of the user to query rewards for
+     * @return Amount of stUSD rewards earned
+     */
+    function claimableRewards(address account) external view returns (uint256) {
+        return _earned(account);
+    }
+
+    function _lastTimeRewardApplicable(uint32 periodFinished) internal view returns (uint32) {
+        return uint32(Math.min(block.timestamp, periodFinished));
+    }
+
+    function _rewardPerToken() internal view returns (uint256) {
+        if (totalStakeUpStaked == 0) {
+            return rewardData.rewardPerTokenStaked;
         }
+        uint256 timeElapsed = _lastTimeRewardApplicable(rewardData.periodFinished) - rewardData.lastUpdate;
+
+        return 
+            uint256(rewardData.rewardPerTokenStaked).add(
+                timeElapsed.mul(1e18).div(totalStakeUpStaked)
+            );
     }
 
-    // Unstake the STAKEUP and send it back to the caller, along with their accumulated stUSD gains.
-    // If requested amount > stake, send their entire stake.
-    function unstake(uint256 _StakeupAmount) external override {
-        uint256 currentStake = stakes[msg.sender];
-        _requireUserHasStake(currentStake);
-
-        // Grab any accumulated stUSD gains from the current stake
-        uint256 STUSDGain = _getPendingSTUSDGain(msg.sender);
-
-        _updateUserSnapshots(msg.sender);
-
-        if (_Stakeupamount > 0) {
-            uint256 stakeupToWithdraw = Math.min(_StakeupAmount, currentStake);
-
-            uint256 newStake = currentStake.sub(stakeupToWithdraw);
-
-            // Decrease user's stake and total STAKEUP staked
-            stakes[msg.sender] = newStake;
-            totalStakeUpStaked = totalStakeUpStaked.sub(stakeupToWithdraw);
-            emit totalStakeUpStakedUpdated(totalStakeUpStaked);
-
-            // Transfer unstaked STAKEUP to the caller
-            stakeupToken.transfer(msg.sender, stakeupToWithdraw);
-            emit StakeChanged(msg.sender, newStake);
-        }
-
-        emit StakingGainsWithdrawn(msg.sender, STUSDGain);
-
-        // Send accumulated stUSD gains to the caller
-        stUSD.transfer(msg.sender, STUSDGain);
-    }
-
-    // Pending reward functions
-    function getPendingSTUSDGain(address _user) external view override returns (uint256) {
-        return _getPendingSTUSDGain(_user);
-    }
-
-    function _getPendingSTUSDGain(address _user) internal view returns (uint256) {
-        uint256 F_STUSD_Snapshot = snapshots[_user].F_STUSD_Snapshot;
-        uint256 STUSDGain = stakes[_user].mul(F_STUSD.sub(F_STUSD_Snapshot)).div(1e18);
-        return STUSDGain;
-    }
-
-    function _updateUserSnapshots(address _user) internal {
-        snapshots[_user].F_STUSD_Snapshot = F_STUSD;
-        emit StakerSnapshotsUpdated(_user, F_STUSD);
-    }
-
-    function _requireUserHasStake(uint256 currentStake) internal pure {
-        if (currentStake == 0) {
-            revert("User has no stake");
-        }
-    }
-
-    function _requireNonZeroAmount(uint256 amount) internal pure {
-        if (amount == 0) {
-            revert("Amount must be greater than 0");
-        }
+    function _earned(address account) internal view returns (uint256) {
+        StakingData storage userStakingData = stakingData[account];
+        return 
+            uint256(userStakingData.amountStaked).mul(
+                _rewardPerToken().sub(uint256(userStakingData.rewardsPerTokenPaid))
+            ).div(1e18).add(userStakingData.rewardsAccrued);
     }
 }
