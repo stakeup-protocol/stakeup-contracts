@@ -9,6 +9,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {IStUSD} from "../interfaces/IStUSD.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 
 /**
  * @title StakeupStaking
@@ -46,6 +47,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     // =================== Structs ====================
     /**
      * @notice Data structure containing information pertaining to a user's stake
+     * @dev All rewards are denominated in stUSD shares due to the token's rebasing nature
      * @param amountStaked The amount of STAKEUP tokens currently staked
      * @param rewardsAccrued The amount of stUSD rewards that have accrued to the stake
      */
@@ -57,6 +59,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
 
     /**
      * @notice Data structure containing information pertaining to a reward period
+     * @dev All rewards are denominated in stUSD shares due to the token's rebasing nature
      * @param periodFinished The end time of the reward period
      * @param lastUpdate The last time the staking rewards were updated
      * @param rewardRate The amount of stUSD rewards per second for the reward period
@@ -126,6 +129,11 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         _;
     }
 
+    modifier onlyReward() {
+        if (msg.sender != address(stUSD)) revert OnlyRewardToken();
+        _;
+    }
+
     // ================== functions ==================
 
     /**
@@ -148,23 +156,25 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     /**
      * @notice Unstakes the user's STAKEUP and sends it back to them, along with their accumulated stUSD gains
      * @param stakeupAmount Amount of STAKEUP to unstake
-     * @param harvestAmount Amount of stUSD to harvest and send to the user
+     * @param harvestShares Number of stUSD shares to claim
      */
-    function unstake(uint256 stakeupAmount, uint256 harvestAmount) external override nonReentrant updateReward(msg.sender) {
+    function unstake(uint256 stakeupAmount, uint256 harvestShares) external override nonReentrant updateReward(msg.sender) {
         StakingData storage userStakingData = stakingData[msg.sender];
 
         if (userStakingData.amountStaked == 0) revert UserHasNoStaked();
         
         stakeupAmount = Math.min(stakeupAmount, userStakingData.amountStaked);
-        harvestAmount = Math.min(harvestAmount, userStakingData.rewardsAccrued);
+        harvestShares = Math.min(harvestShares, userStakingData.rewardsAccrued);
 
         userStakingData.amountStaked -= uint128(stakeupAmount);
         totalStakeUpStaked -= stakeupAmount;
         
-        userStakingData.rewardsAccrued -= uint128(harvestAmount);
+        userStakingData.rewardsAccrued -= uint128(harvestShares);
 
         IERC20(address(stakeupToken)).safeTransfer(msg.sender, stakeupAmount);
-        IERC20(address(stUSD)).safeTransfer(msg.sender, harvestAmount);
+        
+        uint256 amount = stUSD.getUsdByShares(harvestShares);
+        IERC20(address(stUSD)).safeTransfer(msg.sender, amount);
 
         emit StakeupUnstaked(msg.sender, stakeupAmount);
     }
@@ -178,19 +188,43 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
 
     /**
      * @notice Claim a specific amount of stUSD rewards
-     * @param amount Amount of rewards to claim
+     * @param shares Shares of stUSD to claim
      */
-    function harvest(uint256 amount) public nonReentrant updateReward(msg.sender) {
+    function harvest(uint256 shares) public nonReentrant updateReward(msg.sender) {
         StakingData storage userStakingData = stakingData[msg.sender];
 
         if (userStakingData.amountStaked == 0) revert UserHasNoStaked();
         if (userStakingData.rewardsAccrued == 0) revert NoRewardsToClaim();
 
-        amount = Math.min(amount, userStakingData.rewardsAccrued);
+        shares = Math.min(shares, userStakingData.rewardsAccrued);
 
-        userStakingData.rewardsAccrued -= uint128(amount);
+        userStakingData.rewardsAccrued -= uint128(shares);
 
-        IERC20(address(stUSD)).safeTransfer(msg.sender, amount);
+        uint256 amount = stUSD.getUsdByShares(shares);
+        IERC20(address(stUSD)).safeTransfer(msg.sender, amount);    
+    }
+
+    /**
+     * @notice Adds stUSD rewards to the next period's reward pool
+     * @param shares Amount of shares of stUSD to add to the reward pool
+     */
+    function processFees(uint256 shares) external nonReentrant onlyReward updateReward(address(0)) {
+        if (shares == 0) revert NoFeesToProcess();
+        
+        RewardData storage rewards = rewardData;
+
+        rewards.pendingRewards += uint128(shares);
+
+        // If the current reward period has ended, update the reward rate
+        // and add the leftover rewards to the next period's reward pool
+        if (block.timestamp >= rewards.periodFinished) {
+            rewards.availableRewards += rewards.pendingRewards;
+            rewards.pendingRewards = 0;
+            rewards.periodFinished = uint32(block.timestamp + rewardDuration);
+            rewards.rewardRate = uint96(rewards.availableRewards / rewardDuration);
+        }
+        
+        rewardData.lastUpdate = uint32(block.timestamp);
     }
 
     /**
@@ -198,7 +232,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
      * @param account Address of the user to query rewards for
      * @return Amount of stUSD rewards earned
      */
-    function claimableRewards(address account) external view returns (uint256) {
+    function claimableRewards(address account) external view override returns (uint256) {
         return _earned(account);
     }
 

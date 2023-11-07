@@ -13,6 +13,11 @@ interface IStakeupStaking {
     // @notice User has no rewards to claim
     error NoRewardsToClaim();
 
+    // @notice Only the reward token can call this function
+    error OnlyRewardToken();
+
+    // @notice No Fees were sent to the contract
+    error NoFeesToProcess();
     // --- Events --
 
     // event stakeupAddressSet(address _stakeupAddress);
@@ -22,6 +27,7 @@ interface IStakeupStaking {
     // event StakingGainsWithdrawn(address indexed staker, uint256 STUSDGain);
     // event F_STUSDUpdated(uint256 _F_STUSD);
     // event StakerSnapshotsUpdated(address _staker, uint256 _F_STUSD);
+    function processFees(uint256 amount) external;
 
     function stake(uint256 stakeupAmount) external;
 
@@ -30,4 +36,7 @@ interface IStakeupStaking {
     function harvest() external;
 
     function harvest(uint256 amount) external;
+
+    function claimableRewards(address account) external view returns (uint256);
+
 }

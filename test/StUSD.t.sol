@@ -14,6 +14,7 @@ import {MockSwapFacility} from "./mock/MockSwapFacility.sol";
 import {MockBloomPool, IBloomPool} from "./mock/MockBloomPool.sol";
 import {MockBloomFactory} from "./mock/MockBloomFactory.sol";
 import {MockRegistry} from "./mock/MockRegistry.sol";
+import {MockStakeupStaking} from "./mock/MockStakeupStaking.sol";
 
 contract StUSDTest is Test {
 
@@ -26,9 +27,9 @@ contract StUSDTest is Test {
     MockBloomPool internal pool;
     MockBloomFactory internal factory;
     MockRegistry internal registry;
+    MockStakeupStaking internal staking;
 
     address internal owner = makeAddr("owner");
-    address internal treasury = makeAddr("treasury");
     address internal layerZeroEndpoint = makeAddr("layerZeroEndpoint");
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
@@ -71,11 +72,12 @@ contract StUSDTest is Test {
 
         registry = new MockRegistry(address(pool));
 
+        staking = new MockStakeupStaking();
         address expectedWrapperAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
 
         stUSD = new StUSD(
             address(stableToken),
-            treasury,
+            address(staking),
             address(factory),
             address(registry),
             mintBps,
@@ -87,8 +89,6 @@ contract StUSDTest is Test {
         vm.label(address(stUSD), "StUSD");
 
         assertEq(stUSD.owner(), owner);
-        assertEq(stUSD.treasury(), treasury);
-        //assertEq(stUSD.registry(), registry);
         assertEq(address(stUSD.underlyingToken()), address(stableToken));
         assertEq(stUSD.mintBps(), mintBps);
         assertEq(stUSD.redeemBps(), redeemBps);
@@ -147,7 +147,7 @@ contract StUSDTest is Test {
         vm.stopPrank();
 
         assertEq(stUSD.balanceOf(alice), amountStUSD - fee);
-        assertEq(stUSD.balanceOf(treasury), fee);
+        assertEq(stUSD.balanceOf(address(staking)), fee);
     }
 
     function test_depositUnderlying_success() public {
@@ -180,7 +180,7 @@ contract StUSDTest is Test {
 
         assertEq(stUSD.balanceOf(bob), amountStUSD - fee);
 
-        assertEq(stUSD.balanceOf(treasury), fee * 2);
+        assertEq(stUSD.balanceOf(address(staking)), fee * 2);
     }
 
     function testAutoMint() public {
@@ -282,7 +282,7 @@ contract StUSDTest is Test {
         // Verify state after deposits
         assertEq(stUSD.balanceOf(alice), aliceMintedShares);
         assertEq(wstUSD.balanceOf(bob), bobMintedShares);
-        assertEq(stUSD.balanceOf(treasury), mintedTreasuryShares);
+        assertEq(stUSD.balanceOf(address(staking)), mintedTreasuryShares);
         assertEq(stUSD.totalSupply(), totalMintedShares);
         assertEq(stUSD.getTotalShares(), totalMintedShares);
 
@@ -327,7 +327,7 @@ contract StUSDTest is Test {
         // ###############################################
 
         // ####### Verify performance fee #################
-        uint256 treasuryShares = stUSD.sharesOf(treasury);
+        uint256 treasuryShares = stUSD.sharesOf(address(staking));
         uint256 performanceFeeInShares = stUSD.getSharesByUsd(expectedPerformanceFee);
 
         stUSD.redeemUnderlying(address(pool), totalTBY);
@@ -352,7 +352,7 @@ contract StUSDTest is Test {
         assertEq(stableToken.balanceOf(bob), bobAmountReceived / 1e12);
         vm.stopPrank();
 
-        assertEq(stUSD.sharesOf(treasury), treasuryShares + performanceFeeInShares);
+        assertEq(stUSD.sharesOf(address(staking)), treasuryShares + performanceFeeInShares);
         // ###############################################
     }
 }
