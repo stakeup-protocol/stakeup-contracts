@@ -1,31 +1,46 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "@openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/utils/math/MathUpgradeable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import "./StUSDBase.sol";
-import "../interfaces/IBloomPool.sol";
-import "../interfaces/IWstUSD.sol";
+import {StUSDBase} from "./StUSDBase.sol";
+
+import {IBloomFactory} from "../interfaces/IBloomFactory.sol";
+import {IBloomPool} from "../interfaces/IBloomPool.sol";
+import {IExchangeRateRegistry} from "../interfaces/IExchangeRateRegistry.sol";
+import {IWstUSD} from "../interfaces/IWstUSD.sol";
+import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
 /// @title Staked USD Contract
-contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeERC20Upgradeable for IWstUSD;
+contract StUSD is StUSDBase, ReentrancyGuard {
+    using Math for uint256;
+    using SafeERC20 for IERC20;
+    using SafeERC20 for IWstUSD;
 
     // =================== Struct ====================
 
-    /// @notice Redemption state for account
-    /// @param pending Pending redemption amount
-    /// @param withdrawn Withdrawn redemption amount
-    /// @param redemptionQueueTarget Target in vault's redemption queue
+    /**
+     * @notice Redemption state for account
+     * @param pending Pending redemption amount
+     * @param withdrawn Withdrawn redemption amount
+     * @param redemptionQueueTarget Target in vault's redemption queue
+     */
     struct Redemption {
         uint256 pending;
         uint256 withdrawn;
         uint256 redemptionQueueTarget;
+    }
+
+    /**
+     * @notice Fee type
+     */
+    enum FeeType {
+        Mint,
+        Redeem,
+        Performance
     }
 
     // =================== Storage ===================
@@ -34,26 +49,31 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     IWstUSD public wstUSD;
 
     /// @dev Underlying token
-    IERC20Upgradeable public underlyingToken;
+    IERC20 public underlyingToken;
+
+    IBloomFactory public bloomFactory;
+
+    IExchangeRateRegistry public registry;
+
+    IStakeupStaking public stakeupStaking;
 
     /// @dev Underlying token decimals
     uint8 internal _underlyingDecimals;
 
     /// @notice Mint fee bps
-    uint16 public mintBps;
+    uint16 public immutable mintBps;
 
     /// @notice Redeem fee bps
-    uint16 public redeemBps;
+    uint16 public immutable redeemBps;
+
+    /// @notice Performance fee bps
+    uint16 public immutable performanceBps;
 
     uint16 public constant BPS = 10000;
 
     uint16 public constant MAX_BPS = 200; // Max 2%
 
-    /// @notice Treasury address
-    address public treasury;
-
-    /// @dev Mapping of TBY to bool
-    mapping(address => bool) internal _whitelisted;
+    uint256 public constant AUTO_STAKE_PHASE = 1 days;
 
     /// @dev Total withdrawal balance
     uint256 internal _totalWithdrawalBalance;
@@ -70,111 +90,189 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     /// @dev Mapping of account to redemption state
     mapping(address => Redemption) internal _redemptions;
 
+    /// @dev Last deposit amount
+    uint256 internal _lastDepositAmount;
+
     /// @dev Remaining underlying token balance
     uint256 internal _remainingBalance;
 
     // =================== Events ===================
 
-    /// @notice Emitted when mintBps is updated
-    /// @param mintBps New mint bps value
-    event MintBpsUpdated(uint16 mintBps);
-
-    /// @notice Emitted when redeempBps is updated
-    /// @param redeempBps New redeemp bps value
-    event RedeemBpsUpdated(uint16 redeempBps);
-
-    /// @notice Emitted when treasury is updated
-    /// @param treasury New treasury address
-    event TreasuryUpdated(address treasury);
-
-    /// @notice Emitted when new TBY is whitelisted
-    /// @param tby TBY address
-    /// @param whitelist whitelisted or not
-    event TBYWhitelisted(address tby, bool whitelist);
-
-    /// @notice Emitted when LP tokens are redeemed
-    /// @param account Redeeming account
-    /// @param shares Amount of LP tokens burned
-    /// @param amount Amount of underlying tokens
+    /**
+     * @notice Emitted when LP tokens are redeemed
+     * @param account Redeeming account
+     * @param shares Amount of LP tokens burned
+     * @param amount Amount of underlying tokens
+     */
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
 
-    /// @notice Emitted when redeemed underlying tokens are withdrawn
-    /// @param account Withdrawing account
-    /// @param amount Amount of underlying tokens withdrawn
+    /**
+     * @notice Emitted when redeemed underlying tokens are withdrawn
+     * @param account Withdrawing account
+     * @param amount Amount of underlying tokens withdrawn
+     */
     event Withdrawn(address indexed account, uint256 amount);
 
+    /**
+     * @notice Emitted when USDC is deposited into a Bloom Pool
+     * @param tby TBY address
+     * @param amount Amount of TBY deposited
+     */
+    event TBYAutoMinted(address indexed tby, uint256 amount);
+
+    /**
+     * @notice Emitted when someone corrects the remaining balance
+     * using the poke function
+     * @param amount The updated remaining balance
+     */
+    event RemainingBalanceAdjusted(uint256 amount);
+
+    /**
+     * @notice Emitted when a fee is captured and sent to the Stakeup Staking
+     * @param feeType Fee type
+     * @param shares Number of stUSD shares sent to the Stakeup Staking
+     */
+    event FeeCaptured(FeeType feeType, uint256 shares);
+
     // =================== Functions ===================
-
-    /// @notice Initializer
-    /// @param _underlyingToken The underlying token address
-    /// @param _treasury Treasury address
-    function initialize(address _underlyingToken, address _treasury) external initializer {
+    constructor(
+        address _underlyingToken,
+        address _stakeupStaking,
+        address _bloomFactory,
+        address _registry,
+        uint16 _mintBps, // Suggested default 0.5%
+        uint16 _redeemBps, // Suggeste default 0.5%
+        uint16 _performanceBps, // Suggested default 10% of yield
+        address _layerZeroEndpoint,
+        address _wstUSD
+    )
+        StUSDBase(_layerZeroEndpoint)
+    {
         if (_underlyingToken == address(0)) revert InvalidAddress();
-        if (_treasury == address(0)) revert InvalidAddress();
-
-        underlyingToken = IERC20Upgradeable(_underlyingToken);
-        _underlyingDecimals = IERC20MetadataUpgradeable(_underlyingToken).decimals();
-        treasury = _treasury;
-
-        mintBps = 50; // Default 0.5%
-        redeemBps = 50; // Default 0.5%
-
-        __Ownable2Step_init();
-        __ReentrancyGuard_init();
-    }
-
-    /// @notice Sets WstUSD token address
-    /// @param _wstUSD WstUSD token address
-    function setWstUSD(address _wstUSD) external onlyOwner {
         if (_wstUSD == address(0)) revert InvalidAddress();
-        if (address(wstUSD) != address(0)) revert AlreadyInitialized();
+        if (_bloomFactory == address(0)) revert InvalidAddress();
+        if (_registry == address(0)) revert InvalidAddress();
+        if (_stakeupStaking == address(0)) revert InvalidAddress();
+        if (_mintBps > MAX_BPS || _redeemBps > MAX_BPS) revert ParameterOutOfBounds();
+        
+        underlyingToken = IERC20(_underlyingToken);
+        _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
+        bloomFactory = IBloomFactory(_bloomFactory);
+        registry = IExchangeRateRegistry(_registry);
+        stakeupStaking = IStakeupStaking(_stakeupStaking);
+
+        mintBps = _mintBps;
+        redeemBps = _redeemBps;
+        performanceBps = _performanceBps;
 
         wstUSD = IWstUSD(_wstUSD);
     }
 
-    /// @notice Deposit TBY and get stUSD minted
-    /// @param _tby TBY address
-    /// @param _amount TBY amount to deposit
-    function deposit(address _tby, uint256 _amount) external {
-        if (!_whitelisted[_tby]) revert TBYNotWhitelisted();
+    /**
+     * @notice Get the total amount of underlying tokens in the pool
+     */
+    function getRemainingBalance() external view returns (uint256) {
+        return _remainingBalance;
+    }
 
-        uint256 mintFee = (_amount * mintBps) / BPS;
+    /**
+     * @notice Deposit TBY and get stUSD minted
+     * @param _tby TBY address
+     * @param _amount TBY amount to deposit
+     */
+    function depositTby(address _tby, uint256 _amount) external {
+        if (!registry.tokenInfos(_tby).active) revert TBYNotActive();
+        IBloomPool latestPool = _getLatestPool();
+
+        IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
+
+        if (_tby == address(latestPool)) {
+            _lastDepositAmount += _amount;
+        }
+        
+        // TBYs will always have the same underlying decimals as the underlying token
+        uint256 amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
+
+        uint256 sharesFeeAmount;
+        uint256 mintFee = (amountScaled * mintBps) / BPS;
 
         if (mintFee > 0) {
-            _amount -= mintFee;
-            IERC20Upgradeable(_tby).safeTransferFrom(msg.sender, treasury, mintFee);
-        }
-        IERC20Upgradeable(_tby).safeTransferFrom(msg.sender, address(this), _amount);
+            sharesFeeAmount = getSharesByUsd(mintFee);
 
-        uint256 sharesAmount = getSharesByUsd(_amount);
+            stakeupStaking.processFees(sharesFeeAmount);
+
+            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
+        }
+
+        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
 
         _mintShares(msg.sender, sharesAmount);
+        _mintShares(address(stakeupStaking), sharesFeeAmount);
 
-        _setTotalUsd(_getTotalUsd() + _amount);
+        _setTotalUsd(_getTotalUsd() + amountScaled);
 
         emit Deposit(msg.sender, _tby, _amount, sharesAmount);
     }
+    
+    /**
+     * @notice Deposit underlying tokens and get stUSD minted
+     * @param _amount Amount of underlying tokens to deposit
+     */
+    function depostUnderlying(uint256 _amount) external {
+        underlyingToken.safeTransferFrom(msg.sender, address(this), _amount);
+        IBloomPool latestPool = _getLatestPool();
 
-    /// @notice Redeem stUSD in exchange for underlying tokens. Underlying
-    /// tokens can be withdrawn with the `withdraw()` method, once the
-    /// redemption is processed.
-    ///
-    /// Emits a {Redeemed} event.
-    ///
-    /// @param _stUSDAmount Amount of stUSD
+        if (latestPool.state() == IBloomPool.State.Commit) {
+            _lastDepositAmount += _amount;
+            underlyingToken.safeApprove(address(latestPool), _amount);
+            latestPool.depositLender(_amount);
+        } else {
+            _remainingBalance += _amount;
+        }
+        
+        uint256 amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
+
+        uint256 sharesFeeAmount;        
+        uint256 mintFee = (amountScaled * mintBps) / BPS;
+
+        if (mintFee > 0) {
+            sharesFeeAmount = getSharesByUsd(mintFee);
+
+            stakeupStaking.processFees(sharesFeeAmount);
+
+            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
+        }
+
+        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
+
+        _mintShares(msg.sender, sharesAmount);
+        _mintShares(address(stakeupStaking), sharesFeeAmount);
+
+        _setTotalUsd(_getTotalUsd() + amountScaled);
+
+        emit Deposit(msg.sender, address(underlyingToken), _amount, sharesAmount);
+    }
+
+    /**
+     * @notice Redeem stUSD in exchange for underlying tokens. Underlying
+     * tokens can be withdrawn with the `withdraw()` method, once the
+     * redemption is processed.
+     * @dev Emits a {Redeemed} event.
+     * @param _stUSDAmount Amount of stUSD
+     */
     function redeemStUSD(uint256 _stUSDAmount) external nonReentrant {
         _redeemStUSD(_stUSDAmount);
     }
 
-    /// @notice Redeem wstUSD in exchange for underlying tokens. Underlying
-    /// tokens can be withdrawn with the `withdraw()` method, once the
-    /// redemption is processed.
-    ///
-    /// Emits a {Redeemed} event.
-    ///
-    /// @param _wstUSDAmount Amount of wstUSD
+    /**
+     * @notice Redeem wstUSD in exchange for underlying tokens. Underlying
+     * tokens can be withdrawn with the `withdraw()` method, once the
+     * redemption is processed.
+     * @dev Emits a {Redeemed} event.
+     * @param _wstUSDAmount Amount of wstUSD
+     */
     function redeemWstUSD(uint256 _wstUSDAmount) external nonReentrant {
-        wstUSD.safeTransferFrom(msg.sender, address(this), _wstUSDAmount);
+        IERC20(address(wstUSD)).safeTransferFrom(msg.sender, address(this), _wstUSDAmount);
         uint256 _stUSDAmount = wstUSD.unwrap(_wstUSDAmount);
         _transfer(address(this), msg.sender, _stUSDAmount);
         _redeemStUSD(_stUSDAmount);
@@ -184,19 +282,19 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         if (_stUSDAmount == 0) revert ParameterOutOfBounds();
 
         uint256 shares = getSharesByUsd(_stUSDAmount);
+        
+        uint256 amountRedeemed = _redeem(msg.sender, shares, _stUSDAmount, _redemptionQueue);
 
-        _redeem(msg.sender, shares, _stUSDAmount, _redemptionQueue);
+        _pendingRedemptions += amountRedeemed;
+        _redemptionQueue += amountRedeemed;
 
-        _pendingRedemptions += _stUSDAmount;
-        _redemptionQueue += _stUSDAmount;
-
-        emit Redeemed(msg.sender, shares, _stUSDAmount);
+        emit Redeemed(msg.sender, shares, amountRedeemed);
     }
 
-    /// @notice Withdraw redeemed underlying tokens
-    ///
-    /// Emits a {Withdrawn} event.
-    ///
+    /**
+     * @notice Withdraw redeemed underlying tokens
+     * @dev Emits a {Withdrawn} event.
+     */
     function withdraw() external nonReentrant {
         uint256 amount = redemptionAvailable(msg.sender, _processedRedemptionQueue);
 
@@ -206,28 +304,28 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
             _totalWithdrawalBalance -= amount;
 
             uint256 transferAmount = amount / (10 ** (18 - _underlyingDecimals));
-            uint256 redeemFee = (transferAmount * redeemBps) / BPS;
-            if (redeemFee > 0) {
-                transferAmount -= redeemFee;
-                underlyingToken.safeTransfer(treasury, redeemFee);
-            }
+
             underlyingToken.safeTransfer(msg.sender, transferAmount);
         }
 
         emit Withdrawn(msg.sender, amount);
     }
 
-    /// @notice Get redemption state for account
-    /// @param account Account
-    /// @return Redemption state
+    /**
+     * @notice Get redemption state for account
+     * @param account Account
+     * @return Redemption state
+     */
     function redemptions(address account) external view returns (Redemption memory) {
         return _redemptions[account];
     }
 
-    /// @notice Get amount of redemption available for withdraw for account
-    /// @param account Account
-    /// @param processedRedemptionQueue Current value of processed redemption queue
-    /// @return Amount available for withdraw
+    /**
+     * @notice Get amount of redemption available for withdraw for account
+     * @param account Account
+     * @param processedRedemptionQueue Current value of processed redemption queue
+     * @return Amount available for withdraw
+     */
     function redemptionAvailable(address account, uint256 processedRedemptionQueue) public view returns (uint256) {
         Redemption storage redemption = _redemptions[account];
 
@@ -243,12 +341,26 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
     }
 
     function _redeem(address _account, uint256 _shares, uint256 _underlyingAmount, uint256 _redemptionQueueTarget)
-        internal
+        internal returns (uint256 amountRedeemed)
     {
         Redemption storage redemption = _redemptions[_account];
 
-        if (balanceOf(_account) < _shares) revert InsufficientBalance();
         if (redemption.pending != 0) revert RedemptionInProgress();
+        if (balanceOf(_account) < _underlyingAmount) revert InsufficientBalance();
+
+        uint256 redeemFee = (_shares * redeemBps) / BPS;
+
+        if (redeemFee > 0) {
+            _shares -= redeemFee;
+            uint256 redeemFeeAmount = getUsdByShares(redeemFee);
+            _underlyingAmount -= redeemFeeAmount;
+
+            _transfer(_account, address(stakeupStaking), redeemFeeAmount);
+            
+            stakeupStaking.processFees(redeemFee);
+
+            emit FeeCaptured(FeeType.Redeem, redeemFee);
+        }
 
         redemption.pending = _underlyingAmount;
         redemption.withdrawn = 0;
@@ -256,6 +368,8 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
 
         _burnShares(_account, _shares);
         _setTotalUsd(_getTotalUsd() - _underlyingAmount);
+
+        return _underlyingAmount;
     }
 
     function _withdraw(address _account, uint256 _underlyingAmount) internal {
@@ -270,11 +384,14 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         }
     }
 
-    /// @dev Process redemptions
-    /// @param _proceeds Proceeds in underlying tokens
-    function _processRedemptions(uint256 _proceeds) internal returns (uint256) {
+    /**
+     * @dev Process redemptions
+     * @param _redeemableProceeds Proceeds in underlying tokens that can be
+     * used for redemptions
+     */
+    function _processRedemptions(uint256 _redeemableProceeds) internal returns (uint256) {
         // Compute maximum redemption possible
-        uint256 redemptionAmount = MathUpgradeable.min(_pendingRedemptions, _proceeds);
+        uint256 redemptionAmount = Math.min(_pendingRedemptions, _redeemableProceeds);
 
         // Update redemption state
         _pendingRedemptions -= redemptionAmount;
@@ -284,97 +401,157 @@ contract StUSD is StUSDBase, Ownable2StepUpgradeable, ReentrancyGuardUpgradeable
         _totalWithdrawalBalance += redemptionAmount;
 
         // Return amount of proceeds leftover
-        return _proceeds - redemptionAmount;
+        return _redeemableProceeds - redemptionAmount;
     }
 
-    /// @dev Process new proceeds by applying them to redemptions and undeployed
-    /// cash
-    /// @param _proceeds Proceeds in underlying tokens
-    function _processProceeds(uint256 _proceeds) internal {
+    /**
+     * @dev Process new proceeds by applying them to redemptions and undeployed
+     * cash
+     * @param _proceeds Proceeds in underlying tokens
+     * @param _yield Yield gained from TBY
+     */
+    function _processProceeds(uint256 _proceeds, uint256 _yield) internal {
+        uint256 scalingFactor = 10 ** (18 - _underlyingDecimals);
+        uint256 underlyingGains = _yield * scalingFactor;
+
+        uint256 performanceFee = underlyingGains * performanceBps / BPS;
+
+        if (performanceFee > 0) {
+            uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
+
+            _mintShares(address(stakeupStaking), sharesFeeAmount);
+            
+            stakeupStaking.processFees(sharesFeeAmount);
+
+            emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
+        }
+        
         // Process junior redemptions
         _proceeds = _processRedemptions(_proceeds);
 
         if (_proceeds > 0) {
-            _remainingBalance += _proceeds;
-
-            _setTotalUsd(_getTotalUsd() + _proceeds);
+            _remainingBalance += _proceeds / scalingFactor;
         }
+        
+        _setTotalUsd(_getTotalUsd() + underlyingGains);
     }
 
-    // ================ Owner Functions ==============
-
-    /// @notice Update _totalUsd value
-    /// @dev Restricted to owner only
-    /// @param _amount new amount
-    function setTotalUsd(uint256 _amount) external onlyOwner {
-        _setTotalUsd(_amount);
-    }
-
-    /// @notice Set mintBps value
-    /// @dev Restricted to owner only
-    /// @param _mintBps new mintBps value
-    function setMintBps(uint16 _mintBps) external onlyOwner {
-        if (_mintBps > MAX_BPS) revert ParameterOutOfBounds();
-        mintBps = _mintBps;
-
-        emit MintBpsUpdated(_mintBps);
-    }
-
-    /// @notice Set redeemBps value
-    /// @dev Restricted to owner only
-    /// @param _redeemBps new redeemBps value
-    function setRedeemBps(uint16 _redeemBps) external onlyOwner {
-        if (_redeemBps > MAX_BPS) revert ParameterOutOfBounds();
-        redeemBps = _redeemBps;
-
-        emit RedeemBpsUpdated(_redeemBps);
-    }
-
-    /// @notice Set treasury address
-    /// @dev Restricted to owner only
-    /// @param _treasury new treasury address
-    function setTreasury(address _treasury) external onlyOwner {
-        if (_treasury == address(0)) revert InvalidAddress();
-        treasury = _treasury;
-
-        emit TreasuryUpdated(_treasury);
-    }
-
-    /// @notice Whitelist TBY
-    /// @dev Restricted to owner only
-    /// @param _tby TBY address
-    /// @param _whitelist whitelisted or not
-    function whitelistTBY(address _tby, bool _whitelist) external onlyOwner {
-        if (_tby == address(0)) revert InvalidAddress();
-        _whitelisted[_tby] = _whitelist;
-        emit TBYWhitelisted(_tby, _whitelist);
-    }
-
-    /// @notice Redeem underlying token from TBY
-    /// @param _tby TBY address
-    /// @param _amount Redeem amount
-    function redeemUnderlying(address _tby, uint256 _amount) external onlyOwner {
+    /**
+     * @notice Redeem underlying token from TBY
+     * @param _tby TBY address
+     * @param _amount Redeem amount
+     */
+    function redeemUnderlying(address _tby, uint256 _amount) external {
         IBloomPool pool = IBloomPool(_tby);
 
-        _amount = MathUpgradeable.min(_amount, IERC20Upgradeable(_tby).balanceOf(address(this)));
+        _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
 
         uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(address(this));
 
         pool.withdrawLender(_amount);
 
         uint256 withdrawn = underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
+        
+        uint256 yieldFromPool = withdrawn - _amount;
 
-        _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals));
+        _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals), yieldFromPool);
     }
 
-    /// @notice Deposit remaining underlying token to new TBY
-    /// @param _tby TBY address
-    function depositUnderlying(address _tby) external onlyOwner {
-        IBloomPool pool = IBloomPool(_tby);
+    /**
+     * @notice Invokes the auto stake feature or adjusts the remaining balance
+     * if the most recent deposit did not get fully staked
+     * @dev autoMint feature is invoked if the last created pool is in
+     * the commit state
+     * @dev remainingBalance adjustment is invoked if the last created pool is
+     * in any other state than commit and deposits dont get fully staked
+     * @dev anyone can call this function for now
+     */
+    function poke() external {
+        IBloomPool lastCreatedPool = _getLatestPool();
 
-        uint256 amount = _remainingBalance;
-        delete _remainingBalance;
+        IBloomPool.State currentState = lastCreatedPool.state();
 
-        pool.depositLender(amount);
+        if (_within24HoursOfCommitPhaseEnd(lastCreatedPool, currentState)) {
+            _autoMintTBY(lastCreatedPool);
+        }
+
+        if (_isElegibleForAdjustment(currentState)) {
+            _adjustRemainingBalance(lastCreatedPool);
+        }
+    }
+
+    /**
+     * @notice Auto stake USDC in the latest Bloom pool
+     * @dev Auto stake feature can only be executed during the last 24 hours of
+     * the newest Bloom Pool's commit phase
+     */
+    function _autoMintTBY(IBloomPool pool) internal {
+        uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
+        
+        if (underlyingBalance > 0) {
+            uint256 accountedBalance = _remainingBalance;
+            uint256 unregisteredBalance = underlyingBalance - accountedBalance;
+            
+            delete _remainingBalance;
+
+            underlyingToken.safeApprove(address(pool), underlyingBalance);
+            pool.depositLender(underlyingBalance);
+
+            _lastDepositAmount += underlyingBalance;
+
+            uint256 scaledUnregisteredBalance = unregisteredBalance * 10 ** (18 - _underlyingDecimals);
+
+            _setTotalUsd(_getTotalUsd() + scaledUnregisteredBalance);
+
+            emit TBYAutoMinted(address(pool), underlyingBalance);
+        }
+    }
+
+    function _within24HoursOfCommitPhaseEnd(IBloomPool pool, IBloomPool.State currentState) internal view returns (bool) {
+        uint256 commitPhaseEnd = pool.COMMIT_PHASE_END();
+        uint256 last24hoursOfCommitPhase = pool.COMMIT_PHASE_END() - AUTO_STAKE_PHASE;
+
+        if (currentState == IBloomPool.State.Commit) {
+            uint256 currentTime = block.timestamp;
+            if (currentTime >= last24hoursOfCommitPhase && currentTime < commitPhaseEnd) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @notice Check if the pool is elegible for adjustment
+     * @param _state Pool state
+     * @return bool True if the pool is in a state that allows for adjustment
+     */
+    function _isElegibleForAdjustment(IBloomPool.State _state) internal pure returns (bool) {
+        return _state != IBloomPool.State.Commit
+            && _state != IBloomPool.State.FinalWithdraw
+            && _state != IBloomPool.State.EmergencyExit;
+    }
+
+    /**
+     * @notice Adjust the remaining balance to account for the difference between
+     * the last deposit amount and the current balance of the latest TBYs
+     * @param pool The latest Bloom pool
+     */
+    function _adjustRemainingBalance(IBloomPool pool) internal {
+        uint256 latestTbyBalance = IERC20(address(pool)).balanceOf(address(this));
+
+        if (_lastDepositAmount > latestTbyBalance) {
+            uint256 depositDifference = _lastDepositAmount - latestTbyBalance;
+            _remainingBalance += depositDifference;
+            emit RemainingBalanceAdjusted(_remainingBalance);
+        }
+    }
+
+    /**
+     * @notice Gets the latest pool created by the BloomFactory
+     * @return IBloomPool The latest pool
+     */
+    function _getLatestPool() internal view returns (IBloomPool) {
+        return IBloomPool(bloomFactory.getLastCreatedPool());
     }
 }

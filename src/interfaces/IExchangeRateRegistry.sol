@@ -8,15 +8,25 @@
 ╚═════╝░╚══════╝░╚════╝░░╚════╝░╚═╝░░░░░╚═╝
 */
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.19;
 
-interface IMockSwapFacility {
-    function swap(
-        address inToken,
-        address outToken,
-        uint256 inAmount,
-        bytes32[] calldata proof
-    ) external;
+interface IExchangeRateRegistry {
+    /**
+     * @notice Returns the current information for the given TBY token
+     * @param registered True if the token is registered
+     * @param active True if the token is active
+     * @param createdAt The timestamp at which the token was registered
+     */
+    struct TokenInfo {
+        bool registered;
+        bool active;
+        uint256 createdAt;
+    }
 
-    function exchangeRate() external view returns (uint256);
+    /**
+     * @notice Retrieves the current information for the given TBY token
+     * @param token The address of the TBY token to query
+     */
+    function tokenInfos(address token) external view returns (TokenInfo memory);
+
 }

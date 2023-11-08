@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "@openzeppelin-upgradeable/contracts/token/ERC20/IERC20Upgradeable.sol";
-
-interface IStUSD is IERC20Upgradeable {
+interface IStUSD {
     // =================== Errors ===================
 
     /// @notice Invalid address (e.g. zero address)
@@ -21,8 +19,8 @@ interface IStUSD is IERC20Upgradeable {
     /// @notice Invalid amount
     error InvalidAmount();
 
-    /// @notice TBY not whitelisted
-    error TBYNotWhitelisted();
+    /// @notice TBY not active
+    error TBYNotActive();
 
     /// @notice WstUSD already initialized
     error AlreadyInitialized();
