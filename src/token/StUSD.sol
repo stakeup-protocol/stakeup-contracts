@@ -128,9 +128,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     event RemainingBalanceAdjusted(uint256 amount);
 
     /**
-     * @notice Emitted when a fee is captured and sent to the treasury
+     * @notice Emitted when a fee is captured and sent to the Stakeup Staking
      * @param feeType Fee type
-     * @param shares Number of stUSD shares sent to the treasury
+     * @param shares Number of stUSD shares sent to the Stakeup Staking
      */
     event FeeCaptured(FeeType feeType, uint256 shares);
 
