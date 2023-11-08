@@ -21,7 +21,7 @@ import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
  */
 contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     using SafeERC20 for IERC20;
-
+    event Log(string message, uint256 val);
     // =================== Storage ===================
 
     // @notice The STAKEUP token
@@ -53,9 +53,9 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
      * @param rewardsAccrued The amount of stUSD rewards that have accrued to the stake
      */
     struct StakingData {
-        uint128 amountStaked;
-        uint128 rewardsPerTokenPaid;
-        uint128 rewardsAccrued;
+        uint256 amountStaked;
+        uint256 rewardsPerTokenPaid;
+        uint256 rewardsAccrued;
     }
 
     /**
@@ -93,6 +93,13 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
      */
     event StakeupUnstaked(address indexed user, uint256 amount);
 
+    /**
+     * @notice Emitted when a user claims their stUSD rewards
+     * @param user Address of the user who is claiming their rewards
+     * @param shares Shares of stUSD claimed
+     */
+    event RewardsHarvested(address indexed user, uint256 shares);
+
     constructor(
         address _stakeupToken,
         address _supVestingContract,
@@ -118,7 +125,6 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
      */
     modifier updateReward(address account) {
         {
-            StakingData storage userStakingData = stakingData[account];
             RewardData storage rewards = rewardData;
 
             uint256 newRewardPerTokenStaked = _rewardPerToken();
@@ -128,12 +134,8 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
             );
 
             if (account != address(0)) {
-                userStakingData.rewardsPerTokenPaid = uint128(
-                    newRewardPerTokenStaked
-                );
-                userStakingData.rewardsAccrued = uint128(
-                    _rewardsEarned(account)
-                );
+                stakingData[account].rewardsAccrued = _rewardsEarned(account);
+                stakingData[account].rewardsPerTokenPaid = newRewardPerTokenStaked;
             }
         }
         _;
@@ -241,7 +243,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
             rewards.pendingRewards = 0;
             rewards.periodFinished = uint32(block.timestamp + REWARD_DURATION);
             rewards.rewardRate = uint96(
-                rewards.availableRewards / REWARD_DURATION
+                uint256(rewards.availableRewards) / REWARD_DURATION
             );
         }
 
@@ -266,6 +268,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         uint256 amount = stUSD.getUsdByShares(shares);
         userStakingData.rewardsAccrued -= uint128(shares);
         IERC20(address(stUSD)).safeTransfer(msg.sender, amount);
+        emit RewardsHarvested(msg.sender, shares);
     }
 
     function _lastTimeRewardApplicable(
@@ -281,13 +284,13 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         if (totalStakupLocked == 0) {
             return rewardData.rewardPerTokenStaked;
         }
-        uint256 timeElapsed = _lastTimeRewardApplicable(
+        uint256 timeElapsed = uint256(_lastTimeRewardApplicable(
             rewardData.periodFinished
-        ) - rewardData.lastUpdate;
+        )) - rewardData.lastUpdate;
 
         return
             uint256(rewardData.rewardPerTokenStaked) +
-            ((timeElapsed * 1e18) / totalStakupLocked);
+            ((timeElapsed * uint256(rewardData.rewardRate) * 1e18) / totalStakupLocked);
     }
 
     function _rewardsEarned(address account) internal view returns (uint256) {
@@ -295,7 +298,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         uint256 amountEligibleForRewards = uint256(
             userStakingData.amountStaked
         ) + _supLockedInVesting(account);
-
+        
         return
             (amountEligibleForRewards *
                 (_rewardPerToken() -
