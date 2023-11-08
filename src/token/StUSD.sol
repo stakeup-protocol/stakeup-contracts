@@ -12,6 +12,7 @@ import {IBloomFactory} from "../interfaces/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/IBloomPool.sol";
 import {IExchangeRateRegistry} from "../interfaces/IExchangeRateRegistry.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
+import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
 /// @title Staked USD Contract
 contract StUSD is StUSDBase, ReentrancyGuard {
@@ -54,6 +55,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     IExchangeRateRegistry public registry;
 
+    IStakeupStaking public stakeupStaking;
+
     /// @dev Underlying token decimals
     uint8 internal _underlyingDecimals;
 
@@ -71,9 +74,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     uint16 public constant MAX_BPS = 200; // Max 2%
 
     uint256 public constant AUTO_STAKE_PHASE = 1 days;
-
-    /// @notice Treasury address
-    address public immutable treasury;
 
     /// @dev Total withdrawal balance
     uint256 internal _totalWithdrawalBalance;
@@ -128,16 +128,16 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     event RemainingBalanceAdjusted(uint256 amount);
 
     /**
-     * @notice Emitted when a fee is captured and sent to the treasury
+     * @notice Emitted when a fee is captured and sent to the Stakeup Staking
      * @param feeType Fee type
-     * @param shares Number of stUSD shares sent to the treasury
+     * @param shares Number of stUSD shares sent to the Stakeup Staking
      */
     event FeeCaptured(FeeType feeType, uint256 shares);
 
     // =================== Functions ===================
     constructor(
         address _underlyingToken,
-        address _treasury,
+        address _stakeupStaking,
         address _bloomFactory,
         address _registry,
         uint16 _mintBps, // Suggested default 0.5%
@@ -150,16 +150,16 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     {
         if (_underlyingToken == address(0)) revert InvalidAddress();
         if (_wstUSD == address(0)) revert InvalidAddress();
-        if (_treasury == address(0)) revert InvalidAddress();
         if (_bloomFactory == address(0)) revert InvalidAddress();
         if (_registry == address(0)) revert InvalidAddress();
+        if (_stakeupStaking == address(0)) revert InvalidAddress();
         if (_mintBps > MAX_BPS || _redeemBps > MAX_BPS) revert ParameterOutOfBounds();
         
         underlyingToken = IERC20(_underlyingToken);
         _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
-        treasury = _treasury;
         bloomFactory = IBloomFactory(_bloomFactory);
         registry = IExchangeRateRegistry(_registry);
+        stakeupStaking = IStakeupStaking(_stakeupStaking);
 
         mintBps = _mintBps;
         redeemBps = _redeemBps;
@@ -198,13 +198,16 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         if (mintFee > 0) {
             sharesFeeAmount = getSharesByUsd(mintFee);
+
+            stakeupStaking.processFees(sharesFeeAmount);
+
             emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
         }
 
         uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
 
         _mintShares(msg.sender, sharesAmount);
-        _mintShares(treasury, sharesFeeAmount);
+        _mintShares(address(stakeupStaking), sharesFeeAmount);
 
         _setTotalUsd(_getTotalUsd() + amountScaled);
 
@@ -234,13 +237,16 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         if (mintFee > 0) {
             sharesFeeAmount = getSharesByUsd(mintFee);
+
+            stakeupStaking.processFees(sharesFeeAmount);
+
             emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
         }
 
         uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
 
         _mintShares(msg.sender, sharesAmount);
-        _mintShares(treasury, sharesFeeAmount);
+        _mintShares(address(stakeupStaking), sharesFeeAmount);
 
         _setTotalUsd(_getTotalUsd() + amountScaled);
 
@@ -348,7 +354,11 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             _shares -= redeemFee;
             uint256 redeemFeeAmount = getUsdByShares(redeemFee);
             _underlyingAmount -= redeemFeeAmount;
-            _transfer(_account, treasury, redeemFeeAmount);
+
+            _transfer(_account, address(stakeupStaking), redeemFeeAmount);
+            
+            stakeupStaking.processFees(redeemFee);
+
             emit FeeCaptured(FeeType.Redeem, redeemFee);
         }
 
@@ -409,7 +419,10 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         if (performanceFee > 0) {
             uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
 
-            _mintShares(treasury, sharesFeeAmount);
+            _mintShares(address(stakeupStaking), sharesFeeAmount);
+            
+            stakeupStaking.processFees(sharesFeeAmount);
+
             emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
         }
         
