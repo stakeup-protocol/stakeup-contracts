@@ -47,61 +47,6 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     // @dev Duration of a reward period
     uint256 constant REWARD_DURATION = 1 weeks;
 
-    // =================== Structs ====================
-    /**
-     * @notice Data structure containing information pertaining to a user's stake
-     * @dev All rewards are denominated in stUSD shares due to the token's rebasing nature
-     * @param amountStaked The amount of STAKEUP tokens currently staked
-     * @param rewardsAccrued The amount of stUSD rewards that have accrued to the stake
-     */
-    struct StakingData {
-        uint256 amountStaked;
-        uint256 rewardsPerTokenPaid;
-        uint256 rewardsAccrued;
-    }
-
-    /**
-     * @notice Data structure containing information pertaining to a reward period
-     * @dev All rewards are denominated in stUSD shares due to the token's rebasing nature
-     * @param periodFinished The end time of the reward period
-     * @param lastUpdate The last time the staking rewards were updated
-     * @param rewardRate The amount of stUSD rewards per second for the reward period
-     * @param rewardPerTokenStaked The amount of stUSD rewards per STAKEUP staked
-     * @param availableRewards The amount of stUSD rewards available for the reward period
-     * @param pendingRewards The amount of stUSD rewards that have not been claimed
-     */
-    struct RewardData {
-        uint32 periodFinished;
-        uint32 lastUpdate;
-        uint256 rewardRate;
-        uint96 rewardPerTokenStaked;
-        uint128 availableRewards;
-        uint128 pendingRewards;
-    }
-
-    // =================== Events ====================
-
-    /**
-     * @notice Emitted when a user's stakes their Stakeup Token
-     * @param user Address of the user who has staked their STAKEUP
-     * @param amount Amount of STAKEUP staked
-     */
-    event StakeupStaked(address indexed user, uint256 amount);
-
-    /**
-     * @notice Emitted when a user's stakes their Stakeup Token
-     * @param user Address of the user who is unstaking their STAKEUP
-     * @param amount Amount of STAKEUP unstaked
-     */
-    event StakeupUnstaked(address indexed user, uint256 amount);
-
-    /**
-     * @notice Emitted when a user claims their stUSD rewards
-     * @param user Address of the user who is claiming their rewards
-     * @param shares Shares of stUSD claimed
-     */
-    event RewardsHarvested(address indexed user, uint256 shares);
-
     constructor(
         address _stakeupToken,
         address _supVestingContract,
@@ -143,6 +88,10 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         _;
     }
 
+    /**
+     * 
+     * @notice Only the reward token can call this function
+     */
     modifier onlyReward() {
         if (msg.sender != address(stUSD)) revert OnlyRewardToken();
         _;
@@ -150,10 +99,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
 
     // ================== functions ==================
 
-    /**
-     * @notice Stake Stakeup Token's to earn stUSD rewards
-     * @param stakeupAmount Amount of STAKEUP to stake
-     */
+    /// @inheritdoc IStakeupStaking
     function stake(
         uint256 stakeupAmount
     ) external override nonReentrant updateReward(msg.sender) {
@@ -173,11 +119,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         emit StakeupStaked(msg.sender, stakeupAmount);
     }
 
-    /**
-     * @notice Unstakes the user's STAKEUP and sends it back to them, along with their accumulated stUSD gains
-     * @param stakeupAmount Amount of STAKEUP to unstake
-     * @param harvestShares Number of stUSD shares to claim
-     */
+    /// @inheritdoc IStakeupStaking
     function unstake(
         uint256 stakeupAmount,
         uint256 harvestShares
@@ -201,17 +143,12 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         emit StakeupUnstaked(msg.sender, stakeupAmount);
     }
 
-    /**
-     * @notice Claim all stUSD rewards accrued by the user
-     */
+    /// @inheritdoc IStakeupStaking
     function harvest() external {
         harvest(type(uint256).max);
     }
 
-    /**
-     * @notice Claim a specific amount of stUSD rewards
-     * @param shares Shares of stUSD to claim
-     */
+    /// @inheritdoc IStakeupStaking
     function harvest(
         uint256 shares
     ) public nonReentrant updateReward(msg.sender) {
@@ -225,10 +162,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         _harvest(userStakingData, shares);
     }
 
-    /**
-     * @notice Adds stUSD rewards to the next period's reward pool
-     * @param shares Amount of shares of stUSD to add to the reward pool
-     */
+    /// @inheritdoc IStakeupStaking
     function processFees(
         uint256 shares
     ) external nonReentrant onlyReward updateReward(address(0)) {
@@ -250,11 +184,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         rewardData.lastUpdate = uint32(block.timestamp);
     }
 
-    /**
-     * @notice How much stUSD rewards a user has earned
-     * @param account Address of the user to query rewards for
-     * @return Amount of stUSD rewards earned
-     */
+    /// @inheritdoc IStakeupStaking
     function claimableRewards(
         address account
     ) external view override returns (uint256) {
