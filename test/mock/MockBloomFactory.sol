@@ -8,15 +8,18 @@
 ╚═════╝░╚══════╝░╚════╝░░╚════╝░╚═╝░░░░░╚═╝
 */
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.19;
 
-interface IMockSwapFacility {
-    function swap(
-        address inToken,
-        address outToken,
-        uint256 inAmount,
-        bytes32[] calldata proof
-    ) external;
+import {IBloomFactory} from "src/interfaces/IBloomFactory.sol";
 
-    function exchangeRate() external view returns (uint256);
+contract MockBloomFactory is IBloomFactory {
+    address private _pool;
+
+    function getLastCreatedPool() external view override returns (address) {
+        return _pool;
+    }
+
+    function setLastCreatedPool(address pool) external {
+        _pool = pool;
+    }
 }

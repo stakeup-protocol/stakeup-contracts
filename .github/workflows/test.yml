@@ -1,6 +1,6 @@
 name: test
 
-on: workflow_dispatch
+on: [push]
 
 env:
   FOUNDRY_PROFILE: ci
@@ -25,10 +25,10 @@ jobs:
       - name: Run Forge build
         run: |
           forge --version
-          forge build --sizes
+          forge build --via-ir --sizes
         id: build
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          forge test --via-ir -vvv
         id: test
