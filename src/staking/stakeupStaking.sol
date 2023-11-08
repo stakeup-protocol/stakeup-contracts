@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 import {IStUSD} from "../interfaces/IStUSD.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
@@ -71,7 +72,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     struct RewardData {
         uint32 periodFinished;
         uint32 lastUpdate;
-        uint96 rewardRate;
+        uint256 rewardRate;
         uint96 rewardPerTokenStaked;
         uint128 availableRewards;
         uint128 pendingRewards;
@@ -242,9 +243,11 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
             rewards.availableRewards += rewards.pendingRewards;
             rewards.pendingRewards = 0;
             rewards.periodFinished = uint32(block.timestamp + REWARD_DURATION);
-            rewards.rewardRate = uint96(
-                uint256(rewards.availableRewards) / REWARD_DURATION
+            rewards.rewardRate = FixedPointMathLib.divWad(
+                rewards.availableRewards,
+                REWARD_DURATION
             );
+            emit Log("rewardRate", rewards.rewardRate);
         }
 
         rewardData.lastUpdate = uint32(block.timestamp);
@@ -290,14 +293,14 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
 
         return
             uint256(rewardData.rewardPerTokenStaked) +
-            ((timeElapsed * uint256(rewardData.rewardRate) * 1e18) / totalStakupLocked);
+            ((timeElapsed * uint256(rewardData.rewardRate)) / totalStakupLocked);
     }
 
     function _rewardsEarned(address account) internal view returns (uint256) {
         StakingData storage userStakingData = stakingData[account];
         uint256 amountEligibleForRewards = uint256(
             userStakingData.amountStaked
-        ) + _supLockedInVesting(account);
+        );
         
         return
             (amountEligibleForRewards *
