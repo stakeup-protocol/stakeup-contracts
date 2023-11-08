@@ -254,7 +254,7 @@ contract StUSDTest is Test {
         /// ########## High Level Initial Share Math ##########
         uint256 aliceMintedShares = .995e18;
         uint256 bobMintedShares = 1.99e18;
-        uint256 mintedTreasuryShares = .015e18; // 0.5% of total minted shares
+        uint256 mintedStakeupStakingShares = .015e18; // 0.5% of total minted shares
         uint256 totalMintedShares = 3e18;
         uint256 totalTBY = 3e6;
 
@@ -282,7 +282,7 @@ contract StUSDTest is Test {
         // Verify state after deposits
         assertEq(stUSD.balanceOf(alice), aliceMintedShares);
         assertEq(wstUSD.balanceOf(bob), bobMintedShares);
-        assertEq(stUSD.balanceOf(address(staking)), mintedTreasuryShares);
+        assertEq(stUSD.balanceOf(address(staking)), mintedStakeupStakingShares);
         assertEq(stUSD.totalSupply(), totalMintedShares);
         assertEq(stUSD.getTotalShares(), totalMintedShares);
 
@@ -327,7 +327,7 @@ contract StUSDTest is Test {
         // ###############################################
 
         // ####### Verify performance fee #################
-        uint256 treasuryShares = stUSD.sharesOf(address(staking));
+        uint256 stakeupStakingShares = stUSD.sharesOf(address(staking));
         uint256 performanceFeeInShares = stUSD.getSharesByUsd(expectedPerformanceFee);
 
         stUSD.redeemUnderlying(address(pool), totalTBY);
@@ -352,7 +352,7 @@ contract StUSDTest is Test {
         assertEq(stableToken.balanceOf(bob), bobAmountReceived / 1e12);
         vm.stopPrank();
 
-        assertEq(stUSD.sharesOf(address(staking)), treasuryShares + performanceFeeInShares);
+        assertEq(stUSD.sharesOf(address(staking)), stakeupStakingShares + performanceFeeInShares);
         // ###############################################
     }
 }
