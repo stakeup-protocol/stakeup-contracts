@@ -230,7 +230,7 @@ contract StakeupTokenTest is Test {
         stakeupStaking.harvest();
         vm.stopPrank();
         
-        assertEq(mockStUSD.balanceOf(address(stakeupStaking)) - 10, 0);
+        assertEq(mockStUSD.balanceOf(address(stakeupStaking)) - 10 ether, 0);
         // Dont allow alice to claim more than she has been allocated
         skip(1 days);
         vm.startPrank(alice);
