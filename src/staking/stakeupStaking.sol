@@ -22,6 +22,7 @@ import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
  */
 contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using FixedPointMathLib for uint256;
     event Log(string message, uint256 val);
     // =================== Storage ===================
 
@@ -243,10 +244,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
             rewards.availableRewards += rewards.pendingRewards;
             rewards.pendingRewards = 0;
             rewards.periodFinished = uint32(block.timestamp + REWARD_DURATION);
-            rewards.rewardRate = FixedPointMathLib.divWad(
-                rewards.availableRewards,
-                REWARD_DURATION
-            );
+            rewards.rewardRate = uint256(rewards.availableRewards).divWad(REWARD_DURATION);
             emit Log("rewardRate", rewards.rewardRate);
         }
 
@@ -293,7 +291,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
 
         return
             uint256(rewardData.rewardPerTokenStaked) +
-            ((timeElapsed * uint256(rewardData.rewardRate)) / totalStakupLocked);
+            timeElapsed.mulWad(rewardData.rewardRate).divWad(totalStakupLocked);
     }
 
     function _rewardsEarned(address account) internal view returns (uint256) {
@@ -303,11 +301,9 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         );
         
         return
-            (amountEligibleForRewards *
-                (_rewardPerToken() -
-                    uint256(userStakingData.rewardsPerTokenPaid))) /
-            1e18 +
-            uint256(userStakingData.rewardsAccrued);
+            amountEligibleForRewards.mulWad(
+                _rewardPerToken() - uint256(userStakingData.rewardsPerTokenPaid)
+            ).divWad(1e18) + uint256(userStakingData.rewardsAccrued);
     }
 
     function _supLockedInVesting(
