@@ -23,7 +23,7 @@ import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using FixedPointMathLib for uint256;
-    event Log(string message, uint256 val);
+
     // =================== Storage ===================
 
     // @notice The STAKEUP token
@@ -245,7 +245,6 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
             rewards.pendingRewards = 0;
             rewards.periodFinished = uint32(block.timestamp + REWARD_DURATION);
             rewards.rewardRate = uint256(rewards.availableRewards).divWad(REWARD_DURATION);
-            emit Log("rewardRate", rewards.rewardRate);
         }
 
         rewardData.lastUpdate = uint32(block.timestamp);
@@ -294,6 +293,10 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
             timeElapsed.mulWad(rewardData.rewardRate).divWad(totalStakupLocked);
     }
 
+    /**
+     * @dev There will be some dust left over due to precision loss within the
+     *     FixedPointMathLib library. This dust will be added to the next reward period
+     */
     function _rewardsEarned(address account) internal view returns (uint256) {
         StakingData storage userStakingData = stakingData[account];
         uint256 amountEligibleForRewards = uint256(
