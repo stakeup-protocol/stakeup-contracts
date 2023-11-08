@@ -3,7 +3,7 @@
 pragma solidity 0.8.19;
 
 interface IStakeupToken {
-    
+
     /// @notice Amount being minted is greater than the available tokens
     error ExceedsAvailableTokens();
 
