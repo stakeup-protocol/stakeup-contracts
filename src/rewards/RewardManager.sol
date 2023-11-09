@@ -9,33 +9,42 @@ import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
 contract RewardManager is IRewardManager, RewardBase {
-    address private _token;
+    address private _stUsd;
+    address private _stakeupToken;
     address private _stakeupStaking;
 
     uint256 private _pokeRewardsRemaining;
     uint256 private _startTimestamp;
 
     modifier onlySUP() {
-        if (msg.sender != _token) revert CallerNotSUP();
+        if (msg.sender != _stakeupToken) revert CallerNotSUP();
         _;
     }
 
     modifier onlyStUsd() {
-        if (msg.sender != _token) revert CallerNotStUsd();
+        if (msg.sender != _stUsd) revert CallerNotStUsd();
         _;
     }
 
-    constructor(address token, address stakeupStaking) {
-        _token = token;
+    modifier initialized() {
+        if (_startTimestamp == 0) revert NotInitialized();
+        _;
+    }
+
+    constructor(address stUsd, address stakeupToken, address stakeupStaking) {
+        _stUsd = stUsd;
+        _stakeupToken = stakeupToken;
         _stakeupStaking = stakeupStaking;
     }
 
+    /// @inheritdoc IRewardManager
     function initialize() external override onlySUP {
         _startTimestamp = block.timestamp;
         _pokeRewardsRemaining = POKE_REWARDS;
     }
-
-    function distributePokeRewards(address rewardReceiver) external onlyStUsd {
+    
+    /// @inheritdoc IRewardManager
+    function distributePokeRewards(address rewardReceiver) external initialized onlyStUsd {
         if (_pokeRewardsRemaining != 0) {
 
             uint256 amount = _calculateDripAmount(
@@ -51,7 +60,7 @@ contract RewardManager is IRewardManager, RewardBase {
                 
                 // Mint and stake rewards on behalf of the reward receiver
                 IStakeupStaking(_stakeupStaking).delegateStake(rewardReceiver, amount);
-                IStakeupToken(_token).mintRewards(_stakeupStaking, amount);
+                IStakeupToken(_stakeupToken).mintRewards(_stakeupStaking, amount);
             }
         }
     }

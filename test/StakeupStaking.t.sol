@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
-import "forge-std/console2.sol";
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
