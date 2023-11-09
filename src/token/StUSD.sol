@@ -11,6 +11,7 @@ import {StUSDBase} from "./StUSDBase.sol";
 import {IBloomFactory} from "../interfaces/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/IBloomPool.sol";
 import {IExchangeRateRegistry} from "../interfaces/IExchangeRateRegistry.sol";
+import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
@@ -56,6 +57,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     IExchangeRateRegistry public registry;
 
     IStakeupStaking public stakeupStaking;
+
+    IRewardManager public rewardManager;
 
     /// @dev Underlying token decimals
     uint8 internal _underlyingDecimals;
@@ -160,6 +163,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         bloomFactory = IBloomFactory(_bloomFactory);
         registry = IExchangeRateRegistry(_registry);
         stakeupStaking = IStakeupStaking(_stakeupStaking);
+        rewardManager = IRewardManager(stakeupStaking.getRewardManager());
 
         mintBps = _mintBps;
         redeemBps = _redeemBps;
@@ -455,6 +459,10 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         uint256 yieldFromPool = withdrawn - _amount;
 
         _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals), yieldFromPool);
+
+        if (_amount > 0) {
+            rewardManager.distributePokeRewards(msg.sender);
+        }
     }
 
     /**
@@ -468,15 +476,23 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     function poke() external {
         IBloomPool lastCreatedPool = _getLatestPool();
-
         IBloomPool.State currentState = lastCreatedPool.state();
+        bool eligableForReward = false;
 
         if (_within24HoursOfCommitPhaseEnd(lastCreatedPool, currentState)) {
-            _autoMintTBY(lastCreatedPool);
+            if (_autoMintTBY(lastCreatedPool) > 0) {
+                eligableForReward = true;
+            }
         }
 
         if (_isElegibleForAdjustment(currentState)) {
-            _adjustRemainingBalance(lastCreatedPool);
+            if (_adjustRemainingBalance(lastCreatedPool) > 0) {
+                eligableForReward = true;
+            }
+        }
+
+        if (eligableForReward) {
+            rewardManager.distributePokeRewards(msg.sender);
         }
     }
 
@@ -484,8 +500,10 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @notice Auto stake USDC in the latest Bloom pool
      * @dev Auto stake feature can only be executed during the last 24 hours of
      * the newest Bloom Pool's commit phase
+     * @param pool The latest Bloom pool
+     * @return uint256 Amount of USDC auto staked into the pool
      */
-    function _autoMintTBY(IBloomPool pool) internal {
+    function _autoMintTBY(IBloomPool pool) internal returns (uint256) {
         uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
         
         if (underlyingBalance > 0) {
@@ -505,6 +523,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
             emit TBYAutoMinted(address(pool), underlyingBalance);
         }
+
+        return underlyingBalance;
     }
 
     function _within24HoursOfCommitPhaseEnd(IBloomPool pool, IBloomPool.State currentState) internal view returns (bool) {
@@ -536,15 +556,19 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @notice Adjust the remaining balance to account for the difference between
      * the last deposit amount and the current balance of the latest TBYs
      * @param pool The latest Bloom pool
+     * @return uint256 The difference between deposit amount and current balance
      */
-    function _adjustRemainingBalance(IBloomPool pool) internal {
+    function _adjustRemainingBalance(IBloomPool pool) internal returns (uint256) {
+        uint256 depositDifference;
         uint256 latestTbyBalance = IERC20(address(pool)).balanceOf(address(this));
 
         if (_lastDepositAmount > latestTbyBalance) {
-            uint256 depositDifference = _lastDepositAmount - latestTbyBalance;
+            depositDifference = _lastDepositAmount - latestTbyBalance;
             _remainingBalance += depositDifference;
             emit RemainingBalanceAdjusted(_remainingBalance);
         }
+        
+        return depositDifference;
     }
 
     /**

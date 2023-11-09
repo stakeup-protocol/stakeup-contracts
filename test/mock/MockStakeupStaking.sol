@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 import {IStakeupStaking} from "src/interfaces/IStakeupStaking.sol";
 
 contract MockStakeupStaking is IStakeupStaking {
+    address private _rewardManager;
+
     function processFees(uint256 amount) external override {}
 
     function stake(uint256 stakeupAmount) external override {}
@@ -20,4 +22,17 @@ contract MockStakeupStaking is IStakeupStaking {
     function claimableRewards(
         address account
     ) external view override returns (uint256) {}
+
+    function delegateStake(
+        address delegatee,
+        uint256 stakeupAmount
+    ) external override {}
+
+    function getRewardManager() external view override returns (address) {
+        return _rewardManager;
+    }
+
+    function setRewardManager(address rewardManager) external {
+        _rewardManager = rewardManager;
+    }
 }
