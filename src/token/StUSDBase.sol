@@ -31,40 +31,6 @@ contract StUSDBase is IStUSD, OFTV2 {
     /// @dev Total amount of Usd
     uint256 internal _totalUsd;
 
-    // =================== Events ===================
-
-    /**
-     * @notice An executed shares transfer from `sender` to `recipient`.
-     * @dev emitted in pair with an ERC20-defined `Transfer` event.
-     * @param from Address of the sender
-     * @param to Address of the recipient
-     * @param sharesAmount Amount of shares transferred 
-     */
-    event TransferShares(address indexed from, address indexed to, uint256 sharesAmount);
-
-    /**
-     * @notice An executed `burnShares` request
-     * @dev Reports simultaneously burnt shares amount
-     * and corresponding stUSD amount.
-     * The stUSD amount is calculated twice: before and after the burning incurred rebase.
-     * @param account holder of the burnt shares
-     * @param preRebaseTokenAmount amount of stUSD the burnt shares corresponded to before the burn
-     * @param postRebaseTokenAmount amount of stUSD the burnt shares corresponded to after the burn
-     * @param sharesAmount amount of burnt shares
-    */
-    event SharesBurnt(
-        address indexed account, uint256 preRebaseTokenAmount, uint256 postRebaseTokenAmount, uint256 sharesAmount
-    );
-
-    /**
-     * @notice Emitted when user deposits
-     * @param account User address
-     * @param token Address of the token being deposited
-     * @param amount Amount of tokens deposited
-     * @param shares Amount of shares minted to the user
-     */
-    event Deposit(address indexed account, address token, uint256 amount, uint256 shares);
-
     // =================== Functions ===================
 
     constructor(address _layerZeroEndpoint) 
