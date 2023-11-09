@@ -21,29 +21,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeERC20 for IWstUSD;
 
-    // =================== Struct ====================
-
-    /**
-     * @notice Redemption state for account
-     * @param pending Pending redemption amount
-     * @param withdrawn Withdrawn redemption amount
-     * @param redemptionQueueTarget Target in vault's redemption queue
-     */
-    struct Redemption {
-        uint256 pending;
-        uint256 withdrawn;
-        uint256 redemptionQueueTarget;
-    }
-
-    /**
-     * @notice Fee type
-     */
-    enum FeeType {
-        Mint,
-        Redeem,
-        Performance
-    }
-
     // =================== Storage ===================
 
     /// @notice WstUSD token
@@ -99,43 +76,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     /// @dev Remaining underlying token balance
     uint256 internal _remainingBalance;
 
-    // =================== Events ===================
 
-    /**
-     * @notice Emitted when LP tokens are redeemed
-     * @param account Redeeming account
-     * @param shares Amount of LP tokens burned
-     * @param amount Amount of underlying tokens
-     */
-    event Redeemed(address indexed account, uint256 shares, uint256 amount);
-
-    /**
-     * @notice Emitted when redeemed underlying tokens are withdrawn
-     * @param account Withdrawing account
-     * @param amount Amount of underlying tokens withdrawn
-     */
-    event Withdrawn(address indexed account, uint256 amount);
-
-    /**
-     * @notice Emitted when USDC is deposited into a Bloom Pool
-     * @param tby TBY address
-     * @param amount Amount of TBY deposited
-     */
-    event TBYAutoMinted(address indexed tby, uint256 amount);
-
-    /**
-     * @notice Emitted when someone corrects the remaining balance
-     * using the poke function
-     * @param amount The updated remaining balance
-     */
-    event RemainingBalanceAdjusted(uint256 amount);
-
-    /**
-     * @notice Emitted when a fee is captured and sent to the Stakeup Staking
-     * @param feeType Fee type
-     * @param shares Number of stUSD shares sent to the Stakeup Staking
-     */
-    event FeeCaptured(FeeType feeType, uint256 shares);
 
     // =================== Functions ===================
     constructor(
@@ -144,7 +85,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         address _bloomFactory,
         address _registry,
         uint16 _mintBps, // Suggested default 0.5%
-        uint16 _redeemBps, // Suggeste default 0.5%
+        uint16 _redeemBps, // Suggested default 0.5%
         uint16 _performanceBps, // Suggested default 10% of yield
         address _layerZeroEndpoint,
         address _wstUSD
