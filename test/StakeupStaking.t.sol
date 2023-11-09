@@ -2,12 +2,12 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
-import "forge-std/console2.sol";
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
 import {MockERC20} from "./mock/MockERC20.sol";
 import {MockSUPVesting} from "./mock/MockSUPVesting.sol";
+import {MockRewardManager} from "./mock/MockRewardManager.sol";
 
 contract StakeupTokenTest is Test {
     using FixedPointMathLib for uint256;
@@ -16,6 +16,7 @@ contract StakeupTokenTest is Test {
     MockERC20 public mockStakeupToken;
     MockSUPVesting public mockSUPVesting;
     MockERC20 public mockStUSD;
+    MockRewardManager public rewardManager;
 
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
@@ -37,6 +38,7 @@ contract StakeupTokenTest is Test {
         stakeupStaking = new StakeupStaking(
            address(mockStakeupToken),
            address(mockSUPVesting),
+           address(rewardManager),
            address(mockStUSD)
         );
         vm.label(address(stakeupStaking), "stakeupStaking");

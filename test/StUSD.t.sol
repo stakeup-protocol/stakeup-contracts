@@ -15,6 +15,7 @@ import {MockBloomPool, IBloomPool} from "./mock/MockBloomPool.sol";
 import {MockBloomFactory} from "./mock/MockBloomFactory.sol";
 import {MockRegistry} from "./mock/MockRegistry.sol";
 import {MockStakeupStaking} from "./mock/MockStakeupStaking.sol";
+import {MockRewardManager} from "./mock/MockRewardManager.sol";
 
 contract StUSDTest is Test {
 
@@ -28,6 +29,7 @@ contract StUSDTest is Test {
     MockBloomFactory internal factory;
     MockRegistry internal registry;
     MockStakeupStaking internal staking;
+    MockRewardManager internal rewardsManager;
 
     address internal owner = makeAddr("owner");
     address internal layerZeroEndpoint = makeAddr("layerZeroEndpoint");
@@ -56,6 +58,9 @@ contract StUSDTest is Test {
         swap = new MockSwapFacility(stableToken, billyToken);
         vm.label(address(swap), "MockSwapFacility");
 
+        rewardsManager = new MockRewardManager();
+        vm.label(address(rewardsManager), "MockRewardManager");
+
         pool = new MockBloomPool(
             address(stableToken),
             address(billyToken),
@@ -73,6 +78,8 @@ contract StUSDTest is Test {
         registry = new MockRegistry(address(pool));
 
         staking = new MockStakeupStaking();
+        staking.setRewardManager(address(rewardsManager));
+        
         address expectedWrapperAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
 
         stUSD = new StUSD(

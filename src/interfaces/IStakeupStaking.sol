@@ -84,6 +84,13 @@ interface IStakeupStaking {
     function stake(uint256 stakeupAmount) external;
 
     /**
+     * @notice Stake Stakeup Token's to earn stUSD rewards on behalf of another user
+     * @param receiver The address of the user who will receive the staked STAKEUP
+     * @param stakeupAmount Amount of STAKEUP to stake
+     */
+    function delegateStake(address receiver, uint256 stakeupAmount) external;
+
+    /**
      * @notice Unstakes the user's STAKEUP and sends it back to them, along with their accumulated stUSD gains
      * @param stakeupAmount Amount of STAKEUP to unstake
      * @param harvestShares Number of stUSD shares to claim
@@ -106,5 +113,7 @@ interface IStakeupStaking {
      * @param shares Amount of shares of stUSD to add to the reward pool
      */
     function claimableRewards(address shares) external view returns (uint256);
+
+    function getRewardManager() external view returns (address);
 
 }
