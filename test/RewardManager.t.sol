@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
-import "forge-std/console2.sol";
+
 import {RewardManager, IRewardManager} from "src/rewards/RewardManager.sol";
 import {ICurveGaugeDistributor} from "src/interfaces/ICurveGaugeDistributor.sol";
 
