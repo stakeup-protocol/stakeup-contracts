@@ -9,6 +9,10 @@ interface IRewardManager {
 
     /// @notice Invalid caller, must be stUSD
     error CallerNotStUsd();
+    
+    /// @notice Contract not initialized
+    error NotInitialized();
+    
     /**
      * @notice Sets the initial state of the Rewards Manager
      * @dev Only SUP can call this function
