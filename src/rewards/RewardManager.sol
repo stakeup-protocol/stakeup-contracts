@@ -4,15 +4,13 @@ pragma solidity 0.8.19;
 import {RewardBase} from "./RewardBase.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import {CurveGaugeDistributor} from "./CurveGaugeDistributor.sol";
+
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
-contract RewardManager is IRewardManager, RewardBase {
-    address private _stUsd;
-    address private _stakeupToken;
-    address private _stakeupStaking;
-
+contract RewardManager is IRewardManager, CurveGaugeDistributor {
     uint256 private _pokeRewardsRemaining;
     uint256 private _startTimestamp;
 
@@ -31,18 +29,24 @@ contract RewardManager is IRewardManager, RewardBase {
         _;
     }
 
-    constructor(address stUsd, address stakeupToken, address stakeupStaking) {
-        _stUsd = stUsd;
-        _stakeupToken = stakeupToken;
-        _stakeupStaking = stakeupStaking;
+    constructor(
+        address stUsd,
+        address stakeupToken,
+        address stakeupStaking,
+        CurvePoolData[] memory curvePools
+    ) 
+        CurveGaugeDistributor(stUsd, stakeupToken, stakeupStaking, curvePools)
+    {
+        // solhint-disable-next-line no-empty-blocks
     }
 
     /// @inheritdoc IRewardManager
     function initialize() external override onlySUP {
         _startTimestamp = block.timestamp;
         _pokeRewardsRemaining = POKE_REWARDS;
+        _deployCurveGauges(_curvePools);
     }
-    
+
     /// @inheritdoc IRewardManager
     function distributePokeRewards(address rewardReceiver) external initialized onlyStUsd {
         if (_pokeRewardsRemaining != 0) {
