@@ -7,5 +7,4 @@ contract MockRewardManager is IRewardManager {
     function initialize() external override {}
 
     function distributePokeRewards(address rewardReceiver) external override {}
-
 }
