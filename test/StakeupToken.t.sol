@@ -8,6 +8,7 @@ import {StakeupToken, IStakeupToken} from "src/token/StakeupToken.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {MockSUPVesting} from "./mock/MockSUPVesting.sol";
+import {MockRewardManager} from "./mock/MockRewardManager.sol";
 
 contract StakeupTokenTest is Test {
     StakeupToken public stakeupToken;
@@ -20,6 +21,7 @@ contract StakeupTokenTest is Test {
     address internal owner;
     address internal layerZeroEndpoint;
     MockSUPVesting internal vestingContract;
+    MockRewardManager internal rewardManager;
 
     uint64 initialMintPercentage = 1e15; // .01%
 
@@ -32,6 +34,7 @@ contract StakeupTokenTest is Test {
         owner = makeAddr("owner");
         layerZeroEndpoint = makeAddr("layerZeroEndpoint");
         vestingContract = new MockSUPVesting();
+        rewardManager = new MockRewardManager();
     }
 
     function testViewFunctions() public {
@@ -184,6 +187,7 @@ contract StakeupTokenTest is Test {
             initialMintPercent, // .1%
             address(0),
             address(vestingContract),
+            address(rewardManager),
             owner
         );
     }
@@ -250,7 +254,28 @@ contract StakeupTokenTest is Test {
             initialMintPercent,
             address(0),
             address(vestingContract),
+            address(rewardManager),
             owner
         );
+    }
+
+    function testMintRewards() public {
+        uint256 expectedSupply = 1_000_001e18; // .01 * 1 billion + 1e18
+        uint256 rewards = 1e18;
+        _deployOneAllocation(initialMintPercentage);
+
+        // Fails when caller is not reward manager
+        vm.expectRevert(IStakeupToken.CallerNotRewardManager.selector);
+        stakeupToken.mintRewards(address(this), rewards);
+
+        // Mint rewards
+        vm.startPrank(address(rewardManager));
+        stakeupToken.mintRewards(address(rewardManager), rewards);
+        vm.stopPrank();
+
+        // Check that the LP supply was minted
+        assertEq(stakeupToken.balanceOf(address(rewardManager)), rewards);
+        assertEq(stakeupToken.totalSupply(), expectedSupply);
+        assertEq(stakeupToken.circulatingSupply(), expectedSupply);
     }
 }

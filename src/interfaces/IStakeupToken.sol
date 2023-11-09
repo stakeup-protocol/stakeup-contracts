@@ -13,6 +13,9 @@ interface IStakeupToken {
     /// @notice Invalid recipient, must be non-zero address
     error InvalidRecipient();
 
+    /// @notice Invalid caller, must be reward manager
+    error CallerNotRewardManager();
+
     /// @notice The total number of shares have not been fully allocated
     error SharesNotFullyAllocated();
 
@@ -52,6 +55,14 @@ interface IStakeupToken {
      * @param allocations The allocations of tokens to mint
      */
     function mintLpSupply(Allocation[] memory allocations) external;
+
+    /**
+     * @notice Mints SUP rewards
+     * @dev This function is callable by the Reward Manager only
+     * @param recipient The address that will receive the tokens
+     * @param amount The amount of tokens to mint
+     */
+    function mintRewards(address recipient, uint256 amount) external;
 
 }
 
