@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import {StakeupToken} from "../token/StakeupToken.sol";
 import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 
 /**
@@ -16,9 +16,9 @@ import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
  * automatically staked in the StakeUp protocol
  */
 contract SUPVesting is ISUPVesting {
-    using SafeERC20 for StakeupToken;
+    using SafeERC20 for IERC20;
 
-    StakeupToken private _token;
+    IERC20 private _token;
 
     uint256 private constant CLIFF_DURATION = 365 days;
     uint256 private constant VESTING_DURATION = 3 * 365 days;
@@ -26,23 +26,23 @@ contract SUPVesting is ISUPVesting {
     mapping(address => VestedAllocation) private _tokenAllocations;
 
     modifier onlySUP() {
-        require(msg.sender == address(_token), "CallerNotSUP");
+        if (msg.sender != address(_token)) revert CallerNotSUP();
         _;
     }
 
-    constructor(StakeupToken token) {
-        _token = token;
+    constructor(address token) {
+        _token = IERC20(token);
     }
 
     function getAvailableTokens(address account) public view returns (uint256) {
         VestedAllocation memory allocation = _tokenAllocations[account];
-        uint256 timeElapsed = block.timestamp - allocation.vestingStartTime;
+        uint256 timeElapsed = _validateTimeElapsed(block.timestamp - allocation.vestingStartTime);
 
         if (timeElapsed < CLIFF_DURATION) {
             return 0;
         } else {
             return
-                (allocation.startingBalance * timeElapsed) / VESTING_DURATION;
+                allocation.startingBalance * timeElapsed / VESTING_DURATION;
         }
     }
 
@@ -86,5 +86,9 @@ contract SUPVesting is ISUPVesting {
 
     function getSUPToken() external view override returns (address) {
         return address(_token);
+    }
+
+    function _validateTimeElapsed(uint256 timeUnderVesting) internal pure returns (uint256) {
+        return Math.min(timeUnderVesting, VESTING_DURATION);
     }
 }
