@@ -242,7 +242,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         _transferShares(_account, address(redemptionNFT), _shares);
 
-        redemptionId = _mintRedemptionNFT(_account, _underlyingAmount);
+        redemptionId = _mintRedemptionNFT(_account, _shares);
 
         _setTotalUsd(_getTotalUsd());
 
