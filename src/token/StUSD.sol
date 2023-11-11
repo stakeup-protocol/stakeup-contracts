@@ -257,7 +257,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             underlyingToken.safeTransfer(account, transferAmount);
         
             _burnShares(address(redemptionNFT), shares);
-
+            _setTotalUsd(_getTotalUsd() - amount);
         }
 
         emit Withdrawn(msg.sender, amount);

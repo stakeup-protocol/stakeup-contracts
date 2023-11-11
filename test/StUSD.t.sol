@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
-
+import "forge-std/console2.sol";
 import {StUSD} from "src/token/StUSD.sol";
 import {WstUSD} from "src/token/WstUSD.sol";
 import {RedemptionNFT, IRedemptionNFT} from "src/token/RedemptionNFT.sol";
@@ -333,8 +333,8 @@ contract StUSDTest is Test {
         vm.startPrank(bob);
         wstUSD.approve(address(stUSD), UINT256_MAX);
         vm.expectEmit(true, true, true, true);
-        emit Redeemed(bob, bobMintedShares, bobAmountReceived);
-        uint256 bobNFTId = stUSD.redeemWstUSD(bobMintedShares);
+        emit Redeemed(bob, bobWrappedAmount, bobAmountReceived);
+        uint256 bobNFTId = stUSD.redeemWstUSD(bobWrappedAmount);
         vm.stopPrank();
 
         // Verify state after redeems
@@ -374,6 +374,7 @@ contract StUSDTest is Test {
         redemptionNFT.claimWithdrawal(aliceNFTId);
         assertEq(stUSD.sharesOf(alice), 0);
         assertEq(stableToken.balanceOf(alice), aliceAmountReceived / 1e12);
+        console2.log("aliceAmountReceived", aliceAmountReceived / 1e12);
 
         // Verify NFT state after alice withdraws
         assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).claimed, true);
