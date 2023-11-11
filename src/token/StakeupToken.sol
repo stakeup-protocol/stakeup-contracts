@@ -3,14 +3,14 @@
 pragma solidity 0.8.19;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {OFTV2, ERC20} from "@layerzerolabs/token/oft/v2/OFTV2.sol";
+import {OFT, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 
-contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
+contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
     address private _vestingContract;
     address private _rewardManager;
 
@@ -29,7 +29,7 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
         address vestingContract,
         address rewardManager,
         address owner
-    ) OFTV2("Stakeup Token", "SUP", 6, layerZeroEndpoint) Ownable2Step() {
+    ) OFT("Stakeup Token", "SUP", layerZeroEndpoint) Ownable2Step() {
         _vestingContract = vestingContract;
         _rewardManager = rewardManager;
 
