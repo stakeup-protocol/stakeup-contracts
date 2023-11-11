@@ -24,6 +24,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     using SafeERC20 for IWstUSD;
 
     // =================== Storage ===================
+    event Log(string message, uint256 value);
 
     /// @notice WstUSD token
     IWstUSD public wstUSD;
@@ -67,7 +68,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     // =================== Modifiers ===================
     modifier onlyUnStUSD() {
-        if (_msgSender() == address(redemptionNFT)) revert CallerNotUnStUSD();
+        if (_msgSender() != address(redemptionNFT)) revert CallerNotUnStUSD();
         _;
     }
 
@@ -246,16 +247,17 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         uint256 amount = getUsdByShares(shares);
 
         uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
-
+        emit Log("underlyingBalance", underlyingBalance);
         if (amount != 0) {
             
-            _burnShares(address(redemptionNFT), shares);
-
             uint256 transferAmount = amount / (10 ** (18 - _underlyingDecimals));
-
-            if (transferAmount < underlyingBalance) revert InsufficientBalance();
+            emit Log("transferAmount", transferAmount);
+            if (transferAmount > underlyingBalance) revert InsufficientBalance();
 
             underlyingToken.safeTransfer(account, transferAmount);
+        
+            _burnShares(address(redemptionNFT), shares);
+
         }
 
         emit Withdrawn(msg.sender, amount);

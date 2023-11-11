@@ -20,7 +20,7 @@ contract RedemptionNFT is IRedemptionNFT, ONFT721 {
         string memory symbol,
         address stUSD,
         address lzEndpoint
-    ) ONFT721(name, symbol, 0, lzEndpoint) {
+    ) ONFT721(name, symbol, 1, lzEndpoint) {
         _stUSD = stUSD;
     }
 
