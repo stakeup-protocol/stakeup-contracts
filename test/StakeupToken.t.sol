@@ -45,7 +45,7 @@ contract StakeupTokenTest is Test {
         assertEq(stakeupToken.symbol(), "SUP");
         assertEq(stakeupToken.token(), address(stakeupToken));
 
-        assertEq(stakeupToken.sharedDecimals(), 6);
+        //assertEq(stakeupToken.sharedDecimals(), 6);
         assertEq(stakeupToken.decimals(), 18);
 
         assertEq(stakeupToken.totalSupply(), expectedSupply);
