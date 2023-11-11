@@ -12,8 +12,6 @@ import {MockRewardManager} from "./mock/MockRewardManager.sol";
 
 contract StakeupTokenTest is Test {
     StakeupToken public stakeupToken;
-    // IStakeupToken.Allocation[] public allocations;
-    // IStakeupToken.TokenRecipient[] public recipients;
 
     address internal alice;
     address internal bob;
@@ -71,7 +69,7 @@ contract StakeupTokenTest is Test {
 
         // Alice and bob split the first allocation 50/50, rando gets the second allocation
         // Both allocations are 50% of the total supply
-        _deployMultiAllocation(initialMintPercentage, false, false, false);
+        _deployMultiAllocation(initialMintPercentage, false, false, false, bytes4(0));
 
         assertEq(stakeupToken.balanceOf(address(vestingContract)), expectedSupply);
     }
@@ -152,18 +150,33 @@ contract StakeupTokenTest is Test {
     }
 
     function testRevertZeroAddress() public {
-        vm.expectRevert(IStakeupToken.InvalidRecipient.selector);
-        _deployMultiAllocation(initialMintPercentage, true, false, false);
+        _deployMultiAllocation(
+            initialMintPercentage,
+            true,
+            false,
+            false,
+            IStakeupToken.InvalidRecipient.selector
+        );
     }
 
     function testRevertExcessTokens() public {
-        vm.expectRevert(IStakeupToken.ExceedsAvailableTokens.selector);
-        _deployMultiAllocation(initialMintPercentage, false, true, false);
+        _deployMultiAllocation(
+            initialMintPercentage,
+            false,
+            true,
+            false,
+            IStakeupToken.ExceedsAvailableTokens.selector
+        );
     }
 
     function testRevertNotFullyAllocated() public {
-        vm.expectRevert(IStakeupToken.SharesNotFullyAllocated.selector);
-        _deployMultiAllocation(initialMintPercentage, false, false, true);
+        _deployMultiAllocation(
+            initialMintPercentage,
+            false,
+            false,
+            true,
+            IStakeupToken.SharesNotFullyAllocated.selector
+        );
     }
 
     function _deployOneAllocation(uint64 initialMintPercent) internal {
@@ -203,12 +216,14 @@ contract StakeupTokenTest is Test {
      * @param zeroAddress True if we want to send a token to the zero address
      * @param excessTokens True if we want to try and mint excess tokens
      * @param notFullyAllocated True if we only want to partially allocate the tokens
+     * @param expectedRevert The selector of the expected revert
      */
     function _deployMultiAllocation(
         uint64 initialMintPercent,
         bool zeroAddress,
         bool excessTokens,
-        bool notFullyAllocated
+        bool notFullyAllocated,
+        bytes4 expectedRevert
     ) internal {
         uint64 percentPerAllocation = initialMintPercent / 2;
         uint64 aliceAllocation = 5e17;
@@ -266,8 +281,14 @@ contract StakeupTokenTest is Test {
                 owner
             );
         }
+
         vm.startPrank(owner);
-        stakeupToken.mintInitialSupply(allocations, address(vestingContract), initialMintPercent);
+        if (expectedRevert != bytes4(0)) {
+            vm.expectRevert(expectedRevert);
+            stakeupToken.mintInitialSupply(allocations, address(vestingContract), initialMintPercent);
+        } else {
+            stakeupToken.mintInitialSupply(allocations, address(vestingContract), initialMintPercent);
+        }
         vm.stopPrank();
     }
 
