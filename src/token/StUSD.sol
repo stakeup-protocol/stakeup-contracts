@@ -136,28 +136,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             _lastDepositAmount += _amount;
         }
         
-        // TBYs will always have the same underlying decimals as the underlying token
-        uint256 amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
-
-        uint256 sharesFeeAmount;
-        uint256 mintFee = (amountScaled * mintBps) / BPS;
-
-        if (mintFee > 0) {
-            sharesFeeAmount = getSharesByUsd(mintFee);
-
-            stakeupStaking.processFees(sharesFeeAmount);
-
-            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
-        }
-
-        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
-
-        _mintShares(msg.sender, sharesAmount);
-        _mintShares(address(stakeupStaking), sharesFeeAmount);
-
-        _setTotalUsd(_getTotalUsd() + amountScaled);
-
-        emit Deposit(msg.sender, _tby, _amount, sharesAmount);
+        _deposit(_tby, _amount);
     }
     
     /**
@@ -176,27 +155,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             _remainingBalance += _amount;
         }
         
-        uint256 amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
-
-        uint256 sharesFeeAmount;        
-        uint256 mintFee = (amountScaled * mintBps) / BPS;
-
-        if (mintFee > 0) {
-            sharesFeeAmount = getSharesByUsd(mintFee);
-
-            stakeupStaking.processFees(sharesFeeAmount);
-
-            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
-        }
-
-        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
-
-        _mintShares(msg.sender, sharesAmount);
-        _mintShares(address(stakeupStaking), sharesFeeAmount);
-
-        _setTotalUsd(_getTotalUsd() + amountScaled);
-
-        emit Deposit(msg.sender, address(underlyingToken), _amount, sharesAmount);
+        _deposit(address(underlyingToken), _amount);
     }
 
     /**
@@ -255,9 +214,10 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             if (transferAmount > underlyingBalance) revert InsufficientBalance();
 
             underlyingToken.safeTransfer(account, transferAmount);
-        
+    
             _burnShares(address(redemptionNFT), shares);
             _setTotalUsd(_getTotalUsd() - amount);
+
         }
 
         emit Withdrawn(msg.sender, amount);
@@ -275,7 +235,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             uint256 redeemFeeAmount = getUsdByShares(redeemFee);
             _underlyingAmount -= redeemFeeAmount;
 
-            _transfer(_account, address(stakeupStaking), redeemFeeAmount);
+            _transferShares(_account, address(stakeupStaking), redeemFee);
             
             stakeupStaking.processFees(redeemFee);
 
@@ -284,7 +244,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         _transferShares(_account, address(redemptionNFT), _shares);
 
-        redemptionId = _mintRedemptionNFT(_account, _shares);
+        redemptionId = _mintRedemptionNFT(_account, _underlyingAmount);
 
         _setTotalUsd(_getTotalUsd());
 
@@ -374,6 +334,31 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         if (eligableForReward) {
             rewardManager.distributePokeRewards(msg.sender);
         }
+    }
+
+    function _deposit(address token, uint256 amount) internal {   
+        // TBYs will always have the same underlying decimals as the underlying token
+        uint256 amountScaled = amount * 10 ** (18 - _underlyingDecimals);
+
+        uint256 sharesFeeAmount;
+        uint256 mintFee = (amountScaled * mintBps) / BPS;
+
+        if (mintFee > 0) {
+            sharesFeeAmount = getSharesByUsd(mintFee);
+
+            stakeupStaking.processFees(sharesFeeAmount);
+
+            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
+        }
+
+        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
+
+        _mintShares(msg.sender, sharesAmount);
+        _mintShares(address(stakeupStaking), sharesFeeAmount);
+
+        _setTotalUsd(_getTotalUsd() + amountScaled);
+
+        emit Deposit(msg.sender, token, amount, sharesAmount);
     }
 
     /**

@@ -319,13 +319,13 @@ contract StUSDTest is Test {
         // ####### Redeem state Tests ####################
         
         uint256 aliceShares = stUSD.sharesOf(alice);
-        uint256 aliceAmountReceived = stUSD.getUsdByShares(aliceShares) * .995e18 / 1e18;
-        
+        uint256 aliceBalance1 = stUSD.balanceOf(alice);
+
         vm.startPrank(alice);
         stUSD.approve(address(stUSD), UINT256_MAX);
         vm.expectEmit(true, true, true, true);
-        emit Redeemed(alice, aliceShares, aliceAmountReceived);
-        uint256 aliceNFTId = stUSD.redeemStUSD(aliceMintedShares);
+        emit Redeemed(alice, aliceShares, aliceBalance1 * .995e18 / 1e18);
+        uint256 aliceNFTId = stUSD.redeemStUSD(aliceBalance1);
         vm.stopPrank();
         
         uint256 bobWrappedAmount = wstUSD.balanceOf(bob);
@@ -370,11 +370,13 @@ contract StUSDTest is Test {
         // ############ Withdraw to underlying ############
         address rando = makeAddr("rando");
 
+        uint256 aliceBalance = redemptionNFT.getWithdrawalRequest(aliceNFTId).amountOfShares * usdPerShares / 1e18;
+        uint256 bobBalance = redemptionNFT.getWithdrawalRequest(bobNFTId).amountOfShares * usdPerShares / 1e18;
+
         vm.startPrank(alice);
         redemptionNFT.claimWithdrawal(aliceNFTId);
         assertEq(stUSD.sharesOf(alice), 0);
-        assertEq(stableToken.balanceOf(alice), aliceAmountReceived / 1e12);
-        console2.log("aliceAmountReceived", aliceAmountReceived / 1e12);
+        assertEq(stableToken.balanceOf(alice), aliceBalance / 1e12);
 
         // Verify NFT state after alice withdraws
         assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).claimed, true);
@@ -412,7 +414,7 @@ contract StUSDTest is Test {
         vm.startPrank(rando);
         redemptionNFT.claimWithdrawal(bobNFTId);
         assertEq(stUSD.sharesOf(bob), 0);
-        assertEq(stableToken.balanceOf(rando), bobAmountReceived / 1e12);
+        assertEq(stableToken.balanceOf(rando), bobBalance / 1e12);
         vm.stopPrank();
 
         assertEq(stUSD.sharesOf(address(staking)), stakeupStakingShares + performanceFeeInShares);
