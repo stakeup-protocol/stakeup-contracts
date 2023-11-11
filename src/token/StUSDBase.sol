@@ -5,7 +5,7 @@ import {OFTV2} from "@layerzerolabs/token/oft/v2/OFTV2.sol";
 import {IStUSD} from "../interfaces/IStUSD.sol";
 
 /// @title Staked USD Base Contract
-contract StUSDBase is IStUSD, OFTV2 {
+abstract contract StUSDBase is IStUSD, OFTV2 {
     // =================== Constants ===================
 
     uint256 internal constant INFINITE_ALLOWANCE = type(uint256).max;
