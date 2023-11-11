@@ -10,7 +10,7 @@
 
 pragma solidity 0.8.19;
 
-import {IExchangeRateRegistry} from "src/interfaces/IExchangeRateRegistry.sol";
+import {IExchangeRateRegistry} from "src/interfaces/bloom/IExchangeRateRegistry.sol";
 
 import {MockERC20} from "./MockERC20.sol";
 
@@ -35,4 +35,15 @@ contract MockRegistry is IExchangeRateRegistry {
             createdAt: block.timestamp
         });
     }
+
+    function getActiveTokens()
+        external
+        view
+        override
+        returns (address[] memory)
+    {}
+
+    function getExchangeRate(
+        address token
+    ) external view override returns (uint256) {}
 }

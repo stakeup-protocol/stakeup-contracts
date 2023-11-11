@@ -29,4 +29,16 @@ interface IExchangeRateRegistry {
      */
     function tokenInfos(address token) external view returns (TokenInfo memory);
 
+    /**
+     * @notice Return list of active tokens
+     */
+    function getActiveTokens() external view returns (address[] memory);
+
+    /**
+     * @notice Returns the current exchange rate of the given token
+     * @param token The token address
+     * @return The current exchange rate of the given token
+     */
+    function getExchangeRate(address token) external view returns (uint256);
+
 }
