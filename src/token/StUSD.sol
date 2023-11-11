@@ -6,6 +6,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+import {RedemptionNFT} from "./RedemptionNFT.sol";
 import {StUSDBase} from "./StUSDBase.sol";
 
 import {IBloomFactory} from "../interfaces/IBloomFactory.sol";
@@ -37,6 +38,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     IRewardManager public rewardManager;
 
+    RedemptionNFT public redemptionNFT;
+
     /// @dev Underlying token decimals
     uint8 internal _underlyingDecimals;
 
@@ -55,28 +58,17 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     uint256 public constant AUTO_STAKE_PHASE = 1 days;
 
-    /// @dev Total withdrawal balance
-    uint256 internal _totalWithdrawalBalance;
-
-    /// @dev Pending redemptions
-    uint256 internal _pendingRedemptions;
-
-    /// @dev Redemption queue
-    uint256 internal _redemptionQueue;
-
-    /// @dev Processed redemption queue
-    uint256 internal _processedRedemptionQueue;
-
-    /// @dev Mapping of account to redemption state
-    mapping(address => Redemption) internal _redemptions;
-
     /// @dev Last deposit amount
     uint256 internal _lastDepositAmount;
 
     /// @dev Remaining underlying token balance
     uint256 internal _remainingBalance;
 
-
+    // =================== Modifiers ===================
+    modifier onlyUnStUSD() {
+        if (_msgSender() != address(redemptionNFT)) revert CallerNotUnStUSD();
+        _;
+    }
 
     // =================== Functions ===================
     constructor(
@@ -111,6 +103,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         performanceBps = _performanceBps;
 
         wstUSD = IWstUSD(_wstUSD);
+
+        redemptionNFT = new RedemptionNFT(
+            "stUSD Redemption NFT",
+            "unstUSD",
+            address(this),
+            _layerZeroEndpoint
+        );
     }
 
     /**
@@ -135,28 +134,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             _lastDepositAmount += _amount;
         }
         
-        // TBYs will always have the same underlying decimals as the underlying token
-        uint256 amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
-
-        uint256 sharesFeeAmount;
-        uint256 mintFee = (amountScaled * mintBps) / BPS;
-
-        if (mintFee > 0) {
-            sharesFeeAmount = getSharesByUsd(mintFee);
-
-            stakeupStaking.processFees(sharesFeeAmount);
-
-            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
-        }
-
-        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
-
-        _mintShares(msg.sender, sharesAmount);
-        _mintShares(address(stakeupStaking), sharesFeeAmount);
-
-        _setTotalUsd(_getTotalUsd() + amountScaled);
-
-        emit Deposit(msg.sender, _tby, _amount, sharesAmount);
+        _deposit(_tby, _amount);
     }
     
     /**
@@ -175,27 +153,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             _remainingBalance += _amount;
         }
         
-        uint256 amountScaled = _amount * 10 ** (18 - _underlyingDecimals);
-
-        uint256 sharesFeeAmount;        
-        uint256 mintFee = (amountScaled * mintBps) / BPS;
-
-        if (mintFee > 0) {
-            sharesFeeAmount = getSharesByUsd(mintFee);
-
-            stakeupStaking.processFees(sharesFeeAmount);
-
-            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
-        }
-
-        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
-
-        _mintShares(msg.sender, sharesAmount);
-        _mintShares(address(stakeupStaking), sharesFeeAmount);
-
-        _setTotalUsd(_getTotalUsd() + amountScaled);
-
-        emit Deposit(msg.sender, address(underlyingToken), _amount, sharesAmount);
+        _deposit(address(underlyingToken), _amount);
     }
 
     /**
@@ -204,9 +162,10 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * redemption is processed.
      * @dev Emits a {Redeemed} event.
      * @param _stUSDAmount Amount of stUSD
+     * @return uint256 The tokenId of the redemption NFT
      */
-    function redeemStUSD(uint256 _stUSDAmount) external nonReentrant {
-        _redeemStUSD(_stUSDAmount);
+    function redeemStUSD(uint256 _stUSDAmount) external nonReentrant returns (uint256) {
+        return _redeemStUSD(_stUSDAmount);
     }
 
     /**
@@ -215,82 +174,56 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * redemption is processed.
      * @dev Emits a {Redeemed} event.
      * @param _wstUSDAmount Amount of wstUSD
+     * @return uint256 The tokenId of the redemption NFT
      */
-    function redeemWstUSD(uint256 _wstUSDAmount) external nonReentrant {
+    function redeemWstUSD(uint256 _wstUSDAmount) external nonReentrant returns (uint256) {
         IERC20(address(wstUSD)).safeTransferFrom(msg.sender, address(this), _wstUSDAmount);
         uint256 _stUSDAmount = wstUSD.unwrap(_wstUSDAmount);
         _transfer(address(this), msg.sender, _stUSDAmount);
-        _redeemStUSD(_stUSDAmount);
+        return _redeemStUSD(_stUSDAmount);
     }
 
-    function _redeemStUSD(uint256 _stUSDAmount) internal {
+    function _redeemStUSD(uint256 _stUSDAmount) internal returns (uint256) {
         if (_stUSDAmount == 0) revert ParameterOutOfBounds();
 
         uint256 shares = getSharesByUsd(_stUSDAmount);
         
-        uint256 amountRedeemed = _redeem(msg.sender, shares, _stUSDAmount, _redemptionQueue);
-
-        _pendingRedemptions += amountRedeemed;
-        _redemptionQueue += amountRedeemed;
+        (uint256 redemptonId, uint256 amountRedeemed) = _redeem(msg.sender, shares, _stUSDAmount);
 
         emit Redeemed(msg.sender, shares, amountRedeemed);
+
+        return redemptonId;
     }
 
     /**
      * @notice Withdraw redeemed underlying tokens
      * @dev Emits a {Withdrawn} event.
+     * @dev Entrypoint for the withdrawl process is the RedemptionNFT contract
      */
-    function withdraw() external nonReentrant {
-        uint256 amount = redemptionAvailable(msg.sender, _processedRedemptionQueue);
+    function withdraw(address account, uint256 shares) external override nonReentrant onlyUnStUSD {
+        uint256 amount = getUsdByShares(shares);
+
+        uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
 
         if (amount != 0) {
-            _withdraw(msg.sender, amount);
-
-            _totalWithdrawalBalance -= amount;
-
+            
             uint256 transferAmount = amount / (10 ** (18 - _underlyingDecimals));
 
-            underlyingToken.safeTransfer(msg.sender, transferAmount);
+            if (transferAmount > underlyingBalance) revert InsufficientBalance();
+
+            underlyingToken.safeTransfer(account, transferAmount);
+    
+            _burnShares(address(redemptionNFT), shares);
+            _setTotalUsd(_getTotalUsd() - amount);
+
         }
 
         emit Withdrawn(msg.sender, amount);
     }
 
-    /**
-     * @notice Get redemption state for account
-     * @param account Account
-     * @return Redemption state
-     */
-    function redemptions(address account) external view returns (Redemption memory) {
-        return _redemptions[account];
-    }
-
-    /**
-     * @notice Get amount of redemption available for withdraw for account
-     * @param account Account
-     * @param processedRedemptionQueue Current value of processed redemption queue
-     * @return Amount available for withdraw
-     */
-    function redemptionAvailable(address account, uint256 processedRedemptionQueue) public view returns (uint256) {
-        Redemption storage redemption = _redemptions[account];
-
-        if (redemption.pending == 0) {
-            return 0;
-        } else if (processedRedemptionQueue >= redemption.redemptionQueueTarget + redemption.pending) {
-            return redemption.pending - redemption.withdrawn;
-        } else if (processedRedemptionQueue > redemption.redemptionQueueTarget) {
-            return processedRedemptionQueue - redemption.redemptionQueueTarget - redemption.withdrawn;
-        } else {
-            return 0;
-        }
-    }
-
-    function _redeem(address _account, uint256 _shares, uint256 _underlyingAmount, uint256 _redemptionQueueTarget)
-        internal returns (uint256 amountRedeemed)
+    function _redeem(address _account, uint256 _shares, uint256 _underlyingAmount)
+        internal returns (uint256 redemptionId, uint256 amountRedeemed)
     {
-        Redemption storage redemption = _redemptions[_account];
-
-        if (redemption.pending != 0) revert RedemptionInProgress();
         if (balanceOf(_account) < _underlyingAmount) revert InsufficientBalance();
 
         uint256 redeemFee = (_shares * redeemBps) / BPS;
@@ -300,53 +233,20 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             uint256 redeemFeeAmount = getUsdByShares(redeemFee);
             _underlyingAmount -= redeemFeeAmount;
 
-            _transfer(_account, address(stakeupStaking), redeemFeeAmount);
+            _transferShares(_account, address(stakeupStaking), redeemFee);
             
             stakeupStaking.processFees(redeemFee);
 
             emit FeeCaptured(FeeType.Redeem, redeemFee);
         }
 
-        redemption.pending = _underlyingAmount;
-        redemption.withdrawn = 0;
-        redemption.redemptionQueueTarget = _redemptionQueueTarget;
+        _transferShares(_account, address(redemptionNFT), _shares);
 
-        _burnShares(_account, _shares);
-        _setTotalUsd(_getTotalUsd() - _underlyingAmount);
+        redemptionId = _mintRedemptionNFT(_account, _shares);
 
-        return _underlyingAmount;
-    }
+        _setTotalUsd(_getTotalUsd());
 
-    function _withdraw(address _account, uint256 _underlyingAmount) internal {
-        Redemption storage redemption = _redemptions[_account];
-
-        if (redemptionAvailable(_account, _processedRedemptionQueue) < _underlyingAmount) revert InvalidAmount();
-
-        if (redemption.withdrawn + _underlyingAmount == redemption.pending) {
-            delete _redemptions[_account];
-        } else {
-            redemption.withdrawn += _underlyingAmount;
-        }
-    }
-
-    /**
-     * @dev Process redemptions
-     * @param _redeemableProceeds Proceeds in underlying tokens that can be
-     * used for redemptions
-     */
-    function _processRedemptions(uint256 _redeemableProceeds) internal returns (uint256) {
-        // Compute maximum redemption possible
-        uint256 redemptionAmount = Math.min(_pendingRedemptions, _redeemableProceeds);
-
-        // Update redemption state
-        _pendingRedemptions -= redemptionAmount;
-        _processedRedemptionQueue += redemptionAmount;
-
-        // Add redemption to withdrawal balance
-        _totalWithdrawalBalance += redemptionAmount;
-
-        // Return amount of proceeds leftover
-        return _redeemableProceeds - redemptionAmount;
+        return (redemptionId, _underlyingAmount);
     }
 
     /**
@@ -370,12 +270,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
             emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
         }
-        
-        // Process junior redemptions
-        _proceeds = _processRedemptions(_proceeds);
 
         if (_proceeds > 0) {
-            _remainingBalance += _proceeds / scalingFactor;
+            _remainingBalance += _proceeds;
         }
         
         _setTotalUsd(_getTotalUsd() + underlyingGains);
@@ -399,7 +296,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         
         uint256 yieldFromPool = withdrawn - _amount;
 
-        _processProceeds(withdrawn * 10 ** (18 - _underlyingDecimals), yieldFromPool);
+        _processProceeds(withdrawn, yieldFromPool);
 
         if (_amount > 0) {
             rewardManager.distributePokeRewards(msg.sender);
@@ -435,6 +332,31 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         if (eligableForReward) {
             rewardManager.distributePokeRewards(msg.sender);
         }
+    }
+
+    function _deposit(address token, uint256 amount) internal {   
+        // TBYs will always have the same underlying decimals as the underlying token
+        uint256 amountScaled = amount * 10 ** (18 - _underlyingDecimals);
+
+        uint256 sharesFeeAmount;
+        uint256 mintFee = (amountScaled * mintBps) / BPS;
+
+        if (mintFee > 0) {
+            sharesFeeAmount = getSharesByUsd(mintFee);
+
+            stakeupStaking.processFees(sharesFeeAmount);
+
+            emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
+        }
+
+        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
+
+        _mintShares(msg.sender, sharesAmount);
+        _mintShares(address(stakeupStaking), sharesFeeAmount);
+
+        _setTotalUsd(_getTotalUsd() + amountScaled);
+
+        emit Deposit(msg.sender, token, amount, sharesAmount);
     }
 
     /**
@@ -518,5 +440,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     function _getLatestPool() internal view returns (IBloomPool) {
         return IBloomPool(bloomFactory.getLastCreatedPool());
+    }
+
+    function _mintRedemptionNFT(address _account, uint256 _shares) internal returns (uint256) {
+        return redemptionNFT.addWithdrawalRequest(_account, _shares);
     }
 }

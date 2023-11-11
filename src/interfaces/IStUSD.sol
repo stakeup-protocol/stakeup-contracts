@@ -4,6 +4,9 @@ pragma solidity 0.8.19;
 interface IStUSD {
     // =================== Errors ===================
 
+    /// @notice Caller is not the Redemption NFT
+    error CallerNotUnStUSD();
+
     /// @notice Invalid address (e.g. zero address)
     error InvalidAddress();
 
@@ -12,9 +15,6 @@ interface IStUSD {
 
     /// @notice Insufficient balance
     error InsufficientBalance();
-
-    /// @notice Redemption in progress
-    error RedemptionInProgress();
 
     /// @notice Invalid amount
     error InvalidAmount();
@@ -29,18 +29,6 @@ interface IStUSD {
     error ZeroAmount();
 
     // =================== Struct ====================
-
-    /**
-     * @notice Redemption state for account
-     * @param pending Pending redemption amount
-     * @param withdrawn Withdrawn redemption amount
-     * @param redemptionQueueTarget Target in vault's redemption queue
-     */
-    struct Redemption {
-        uint256 pending;
-        uint256 withdrawn;
-        uint256 redemptionQueueTarget;
-    }
 
     /**
      * @notice Fee type
@@ -124,4 +112,6 @@ interface IStUSD {
     function getUsdByShares(uint256 _sharesAmount) external view returns (uint256);
 
     function getSharesByUsd(uint256 _usdAmount) external view returns (uint256);
+
+    function withdraw(address account, uint256 shares) external;
 }
