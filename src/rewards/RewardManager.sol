@@ -44,7 +44,7 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
     function initialize() external override onlySUP {
         _startTimestamp = block.timestamp;
         _pokeRewardsRemaining = POKE_REWARDS;
-        _deployCurveGauges(_curvePools);
+        _deployCurveGauges();
     }
 
     /// @inheritdoc IRewardManager

@@ -27,7 +27,7 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
         address stakeupStaking,
         CurvePoolData[] memory curvePools
     ) RewardBase(stUsd, stakeupToken, stakeupStaking) {
-        _curvePools = curvePools;
+        _setCurvePools(curvePools);
     }
 
     function seedGauges() external {
@@ -65,13 +65,23 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
         return _curvePools;
     }
 
-    function _deployCurveGauges(CurvePoolData[] memory curvePools) internal returns (uint256) {
+    function _setCurvePools(CurvePoolData[] memory curvePools) internal {
+        uint256 length = curvePools.length;
+
+        for (uint i = 0; i < length; i++) {
+            if (curvePools[i].curveFactory == address(0)) revert InvalidAddress();
+            if (curvePools[i].curvePool == address(0)) revert InvalidAddress();
+            
+            _curvePools.push(curvePools[i]);
+        }
+    }
+
+    function _deployCurveGauges() internal returns (uint256) {
+        CurvePoolData[] storage curvePools = _curvePools;
         uint256 length = curvePools.length;
         uint256 totalRewards = POOL_REWARDS;
 
         for (uint256 i = 0; i < length; i++) {
-            if (curvePools[i].curveFactory == address(0)) revert InvalidAddress();
-
             // Deploy the Curve guage and register SUP as the reward token
             address gauge = ICurvePoolFactory(curvePools[i].curveFactory).deploy_gauge(curvePools[i].curvePool);
             ICurvePoolGauge(gauge).add_reward(_stakeupToken, address(this));
@@ -85,8 +95,6 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
         
         _poolDeploymentTimestamp = block.timestamp;
         _lastSeedTimestamp = block.timestamp;
-
-        _curvePools = curvePools;
 
         return totalRewards;
     }
