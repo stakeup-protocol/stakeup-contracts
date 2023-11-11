@@ -12,8 +12,6 @@ import {MockRewardManager} from "./mock/MockRewardManager.sol";
 
 contract StakeupTokenTest is Test {
     StakeupToken public stakeupToken;
-    IStakeupToken.Allocation[] public allocations;
-    IStakeupToken.TokenRecipient[] public recipients;
 
     address internal alice;
     address internal bob;
@@ -71,7 +69,7 @@ contract StakeupTokenTest is Test {
 
         // Alice and bob split the first allocation 50/50, rando gets the second allocation
         // Both allocations are 50% of the total supply
-        _deployMultiAllocation(initialMintPercentage, false, false, false);
+        _deployMultiAllocation(initialMintPercentage, false, false, false, bytes4(0));
 
         assertEq(stakeupToken.balanceOf(address(vestingContract)), expectedSupply);
     }
@@ -152,18 +150,33 @@ contract StakeupTokenTest is Test {
     }
 
     function testRevertZeroAddress() public {
-        vm.expectRevert(IStakeupToken.InvalidRecipient.selector);
-        _deployMultiAllocation(initialMintPercentage, true, false, false);
+        _deployMultiAllocation(
+            initialMintPercentage,
+            true,
+            false,
+            false,
+            IStakeupToken.InvalidRecipient.selector
+        );
     }
 
     function testRevertExcessTokens() public {
-        vm.expectRevert(IStakeupToken.ExceedsAvailableTokens.selector);
-        _deployMultiAllocation(initialMintPercentage, false, true, false);
+        _deployMultiAllocation(
+            initialMintPercentage,
+            false,
+            true,
+            false,
+            IStakeupToken.ExceedsAvailableTokens.selector
+        );
     }
 
     function testRevertNotFullyAllocated() public {
-        vm.expectRevert(IStakeupToken.SharesNotFullyAllocated.selector);
-        _deployMultiAllocation(initialMintPercentage, false, false, true);
+        _deployMultiAllocation(
+            initialMintPercentage,
+            false,
+            false,
+            true,
+            IStakeupToken.SharesNotFullyAllocated.selector
+        );
     }
 
     function _deployOneAllocation(uint64 initialMintPercent) internal {
@@ -172,24 +185,29 @@ contract StakeupTokenTest is Test {
             recipient: alice,
             percentOfAllocation: 1e18 // 100%
         });
+        IStakeupToken.TokenRecipient[] memory recipients = new IStakeupToken.TokenRecipient[](1);
 
-        recipients.push(recipient);
+        recipients[0] = recipient;
 
         IStakeupToken.Allocation memory allocation = IStakeupToken.Allocation({
             recipients: recipients,
             percentOfSupply: initialMintPercent // .1%
         });
 
-        allocations.push(allocation);
+        IStakeupToken.Allocation[] memory allocations = new IStakeupToken.Allocation[](1);
+
+        allocations[0] = allocation;
 
         stakeupToken = new StakeupToken(
-            allocations,
-            initialMintPercent, // .1%
             address(0),
             address(vestingContract),
             address(rewardManager),
             owner
         );
+
+        vm.startPrank(owner);
+        stakeupToken.mintInitialSupply(allocations, address(vestingContract), initialMintPercent);
+        vm.stopPrank();
     }
 
     /**
@@ -198,12 +216,14 @@ contract StakeupTokenTest is Test {
      * @param zeroAddress True if we want to send a token to the zero address
      * @param excessTokens True if we want to try and mint excess tokens
      * @param notFullyAllocated True if we only want to partially allocate the tokens
+     * @param expectedRevert The selector of the expected revert
      */
     function _deployMultiAllocation(
         uint64 initialMintPercent,
         bool zeroAddress,
         bool excessTokens,
-        bool notFullyAllocated
+        bool notFullyAllocated,
+        bytes4 expectedRevert
     ) internal {
         uint64 percentPerAllocation = initialMintPercent / 2;
         uint64 aliceAllocation = 5e17;
@@ -218,45 +238,58 @@ contract StakeupTokenTest is Test {
             aliceAllocation -= 1e16;
         }
 
-        // First allocation
-        IStakeupToken.TokenRecipient memory recipient1 = IStakeupToken.TokenRecipient({
-            recipient: alice,
-            percentOfAllocation: aliceAllocation
-        });
-        recipients.push(recipient1);
-        IStakeupToken.TokenRecipient memory recipient2 = IStakeupToken.TokenRecipient({
-            recipient: bob,
-            percentOfAllocation: 5e17
-        });
-        recipients.push(recipient2);
-
-        IStakeupToken.Allocation memory allocation1 = IStakeupToken.Allocation({
-            recipients: recipients,
-            percentOfSupply: percentPerAllocation
-        });
-        allocations.push(allocation1);
-
+        IStakeupToken.TokenRecipient[] memory recipientsList1 = new IStakeupToken.TokenRecipient[](2);
         IStakeupToken.TokenRecipient[] memory recipientsList2 = new IStakeupToken.TokenRecipient[](1);
 
-        recipientsList2[0] = IStakeupToken.TokenRecipient({
-            recipient: rando,
-            percentOfAllocation: 1e18 // 100%
-        });
+        IStakeupToken.Allocation[] memory allocations = new IStakeupToken.Allocation[](2);
         
-        IStakeupToken.Allocation memory allocation2 = IStakeupToken.Allocation({
-            recipients: recipientsList2,
-            percentOfSupply: percentPerAllocation
-        });
-        allocations.push(allocation2);
+        {
+            // First allocation
+            IStakeupToken.TokenRecipient memory recipient1 = IStakeupToken.TokenRecipient({
+                recipient: alice,
+                percentOfAllocation: aliceAllocation
+            });
+            recipientsList1[0] = recipient1;
+            IStakeupToken.TokenRecipient memory recipient2 = IStakeupToken.TokenRecipient({
+                recipient: bob,
+                percentOfAllocation: 5e17
+            });
+            recipientsList1[1] = recipient2;
 
-        stakeupToken = new StakeupToken(
-            allocations,
-            initialMintPercent,
-            address(0),
-            address(vestingContract),
-            address(rewardManager),
-            owner
-        );
+            IStakeupToken.Allocation memory allocation1 = IStakeupToken.Allocation({
+                recipients: recipientsList1,
+                percentOfSupply: percentPerAllocation
+            });
+
+            allocations[0] = allocation1;
+
+            recipientsList2[0] = IStakeupToken.TokenRecipient({
+                recipient: rando,
+                percentOfAllocation: 1e18 // 100%
+            });
+            
+            IStakeupToken.Allocation memory allocation2 = IStakeupToken.Allocation({
+                recipients: recipientsList2,
+                percentOfSupply: percentPerAllocation
+            });
+            allocations[1] = allocation2;
+
+            stakeupToken = new StakeupToken(
+                address(0),
+                address(vestingContract),
+                address(rewardManager),
+                owner
+            );
+        }
+
+        vm.startPrank(owner);
+        if (expectedRevert != bytes4(0)) {
+            vm.expectRevert(expectedRevert);
+            stakeupToken.mintInitialSupply(allocations, address(vestingContract), initialMintPercent);
+        } else {
+            stakeupToken.mintInitialSupply(allocations, address(vestingContract), initialMintPercent);
+        }
+        vm.stopPrank();
     }
 
     function testMintRewards() public {
