@@ -224,8 +224,9 @@ contract StakeupTokenTest is Test {
         }
 
         IStakeupToken.TokenRecipient[] memory recipientsList1 = new IStakeupToken.TokenRecipient[](2);
-        IStakeupToken.Allocation[] memory allocations = new IStakeupToken.Allocation[](2);
         IStakeupToken.TokenRecipient[] memory recipientsList2 = new IStakeupToken.TokenRecipient[](1);
+
+        IStakeupToken.Allocation[] memory allocations = new IStakeupToken.Allocation[](2);
         
         {
             // First allocation
@@ -256,7 +257,7 @@ contract StakeupTokenTest is Test {
                 recipients: recipientsList2,
                 percentOfSupply: percentPerAllocation
             });
-            allocations[2] = allocation2;
+            allocations[1] = allocation2;
 
             stakeupToken = new StakeupToken(
                 address(0),
