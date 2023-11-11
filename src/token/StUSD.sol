@@ -9,7 +9,6 @@ import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extens
 import {RedemptionNFT} from "./RedemptionNFT.sol";
 import {StUSDBase} from "./StUSDBase.sol";
 
-
 import {IBloomFactory} from "../interfaces/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/IBloomPool.sol";
 import {IExchangeRateRegistry} from "../interfaces/IExchangeRateRegistry.sol";
