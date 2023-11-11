@@ -268,9 +268,8 @@ contract StUSDTest is Test {
         uint256 aliceMintedShares = .995e18;
         uint256 bobMintedShares = 1.99e18;
         uint256 mintedStakeupStakingShares = .015e18; // 0.5% of total minted shares
-        uint256 totalMintedShares = 3e18;
-        uint256 totalTBY = 3e6;
-
+        uint256 aliceRedeemFees = (aliceMintedShares * redeemBps) / stUSD.BPS();
+        uint256 bobRedeemFees = (bobMintedShares * redeemBps) / stUSD.BPS();
         uint256 expectedPerformanceFee = 3e16; // 10% of yield
         // ###########################################
 
@@ -296,8 +295,8 @@ contract StUSDTest is Test {
         assertEq(stUSD.balanceOf(alice), aliceMintedShares);
         assertEq(wstUSD.balanceOf(bob), bobMintedShares);
         assertEq(stUSD.balanceOf(address(staking)), mintedStakeupStakingShares);
-        assertEq(stUSD.totalSupply(), totalMintedShares);
-        assertEq(stUSD.getTotalShares(), totalMintedShares);
+        assertEq(stUSD.totalSupply(), 3e18);
+        assertEq(stUSD.getTotalShares(), 3e18);
 
         assertEq(wstUSD.getWstUSDByStUSD(1 ether), 1 ether);
         assertEq(wstUSD.getStUSDByWstUSD(1 ether), 1 ether);
@@ -318,6 +317,7 @@ contract StUSDTest is Test {
         // ###############################################
 
         // ####### Redeem state Tests ####################
+        
         uint256 aliceShares = stUSD.sharesOf(alice);
         uint256 aliceAmountReceived = stUSD.getUsdByShares(aliceShares) * .995e18 / 1e18;
         
@@ -327,7 +327,7 @@ contract StUSDTest is Test {
         emit Redeemed(alice, aliceShares, aliceAmountReceived);
         uint256 aliceNFTId = stUSD.redeemStUSD(aliceMintedShares);
         vm.stopPrank();
-
+        
         uint256 bobWrappedAmount = wstUSD.balanceOf(bob);
         uint256 bobAmountReceived = wstUSD.getStUSDByWstUSD(bobWrappedAmount) * .995e18 / 1e18;
         vm.startPrank(bob);
@@ -340,11 +340,11 @@ contract StUSDTest is Test {
         // Verify state after redeems
         assertEq(stUSD.balanceOf(alice), 0);
         assertEq(wstUSD.balanceOf(bob), 0);
-        assertEq(stUSD.balanceOf(address(redemptionNFT)), aliceMintedShares + bobMintedShares);
+        assertEq(stUSD.balanceOf(address(redemptionNFT)), bobMintedShares + aliceMintedShares - aliceRedeemFees - bobRedeemFees);
 
         // Verfiy NFT state
-        assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).amountOfShares, aliceMintedShares);
-        assertEq(redemptionNFT.getWithdrawalRequest(bobNFTId).amountOfShares, bobMintedShares);
+        assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).amountOfShares, aliceMintedShares - aliceRedeemFees);
+        assertEq(redemptionNFT.getWithdrawalRequest(bobNFTId).amountOfShares, bobMintedShares - bobRedeemFees);
 
         assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).owner, alice);
         assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).owner, alice);
@@ -358,7 +358,7 @@ contract StUSDTest is Test {
         uint256 stakeupStakingShares = stUSD.sharesOf(address(staking));
         uint256 performanceFeeInShares = stUSD.getSharesByUsd(expectedPerformanceFee);
 
-        stUSD.redeemUnderlying(address(pool), totalTBY);
+        stUSD.redeemUnderlying(address(pool), 3e6);
 
         uint256 sharesPerUsd = stUSD.getTotalShares() * 1e18 / stUSD.getTotalUsd();
         uint256 usdPerShares = stUSD.getTotalUsd() * 1e18 / stUSD.getTotalShares();

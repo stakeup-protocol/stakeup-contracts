@@ -64,5 +64,10 @@ interface IStakeupToken {
      */
     function mintRewards(address recipient, uint256 amount) external;
 
+    function mintInitialSupply(
+        Allocation[] memory allocations,
+        address vestingContract,
+        uint256 initialMintPercentage
+    ) external;
 }
 

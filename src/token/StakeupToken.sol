@@ -25,8 +25,6 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
     }
 
     constructor(
-        Allocation[] memory allocations,
-        uint256 initialMintPercentage,
         address layerZeroEndpoint,
         address vestingContract,
         address rewardManager,
@@ -34,8 +32,6 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
     ) OFTV2("Stakeup Token", "SUP", 6, layerZeroEndpoint) Ownable2Step() {
         _vestingContract = vestingContract;
         _rewardManager = rewardManager;
-
-        _mintInitialSupply(allocations, vestingContract, initialMintPercentage);
 
         IRewardManager(rewardManager).initialize();
 
@@ -75,11 +71,11 @@ contract StakeupToken is IStakeupToken, Ownable2Step, OFTV2 {
         _mint(recipient, amount);
     }
 
-    function _mintInitialSupply(
+    function mintInitialSupply(
         Allocation[] memory allocations,
         address vestingContract,
         uint256 initialMintPercentage
-    ) internal virtual {
+    ) external override onlyOwner {
         uint256 maxSupply = MAX_SUPPLY;
         uint256 sharesRemaining = initialMintPercentage;
         uint256 length = allocations.length;
