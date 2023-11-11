@@ -9,9 +9,9 @@ import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extens
 import {RedemptionNFT} from "./RedemptionNFT.sol";
 import {StUSDBase} from "./StUSDBase.sol";
 
-import {IBloomFactory} from "../interfaces/IBloomFactory.sol";
-import {IBloomPool} from "../interfaces/IBloomPool.sol";
-import {IExchangeRateRegistry} from "../interfaces/IExchangeRateRegistry.sol";
+import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
+import {IBloomPool} from "../interfaces/bloom/IBloomPool.sol";
+import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
@@ -63,6 +63,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     /// @dev Remaining underlying token balance
     uint256 internal _remainingBalance;
+
+    /// @dev Last rate update timestamp
+    uint256 internal _lastRateUpdate;
 
     // =================== Modifiers ===================
     modifier onlyUnStUSD() {
@@ -206,7 +209,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
 
         if (amount != 0) {
-            
             uint256 transferAmount = amount / (10 ** (18 - _underlyingDecimals));
 
             if (transferAmount > underlyingBalance) revert InsufficientBalance();
@@ -244,8 +246,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
         redemptionId = _mintRedemptionNFT(_account, _shares);
 
-        _setTotalUsd(_getTotalUsd());
-
         return (redemptionId, _underlyingAmount);
     }
 
@@ -275,7 +275,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             _remainingBalance += _proceeds;
         }
         
-        _setTotalUsd(_getTotalUsd() + underlyingGains);
+        _setTotalUsd(_getCurrentTbyValue() + underlyingGains);
     }
 
     /**
@@ -316,6 +316,16 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         IBloomPool lastCreatedPool = _getLatestPool();
         IBloomPool.State currentState = lastCreatedPool.state();
         bool eligableForReward = false;
+
+        // If we haven't updated the values of TBYs in 24 hours, update it now
+        if (block.timestamp - _lastRateUpdate > 1 days) {
+            _lastRateUpdate = block.timestamp;
+            
+            uint256 currentUsdTotal = _getTotalUsd();
+            uint256 valueAccrual = currentUsdTotal - _getCurrentTbyValue();
+
+            _setTotalUsd(currentUsdTotal + valueAccrual);
+        }
 
         if (_within24HoursOfCommitPhaseEnd(lastCreatedPool, currentState)) {
             if (_autoMintTBY(lastCreatedPool) > 0) {
@@ -368,7 +378,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     function _autoMintTBY(IBloomPool pool) internal returns (uint256) {
         uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
-        
+
         if (underlyingBalance > 0) {
             uint256 accountedBalance = _remainingBalance;
             uint256 unregisteredBalance = underlyingBalance - accountedBalance;
@@ -377,8 +387,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
             underlyingToken.safeApprove(address(pool), underlyingBalance);
             pool.depositLender(underlyingBalance);
-
-            _lastDepositAmount += underlyingBalance;
 
             uint256 scaledUnregisteredBalance = unregisteredBalance * 10 ** (18 - _underlyingDecimals);
 
@@ -430,7 +438,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             _remainingBalance += depositDifference;
             emit RemainingBalanceAdjusted(_remainingBalance);
         }
-        
+        _lastDepositAmount = 0;
+
         return depositDifference;
     }
 
@@ -442,7 +451,28 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         return IBloomPool(bloomFactory.getLastCreatedPool());
     }
 
+    /**
+     * @notice Creates a withdrawal request and mints a redemption NFT to 
+     * the redeemer
+     * @param _account The address of the account redeeming their stUSD
+     * @param _shares The amount of shares to redeem
+     */
     function _mintRedemptionNFT(address _account, uint256 _shares) internal returns (uint256) {
         return redemptionNFT.addWithdrawalRequest(_account, _shares);
+    }
+    
+    /**
+     * @notice Calculates the current value of all TBYs that are staked in stUSD
+     */
+    function _getCurrentTbyValue() internal view returns (uint256) {
+        address[] memory tokens = registry.getActiveTokens();
+        
+        uint256 usdValue;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 tokenBalance = IERC20(tokens[i]).balanceOf(address(this));
+            usdValue += tokenBalance * registry.getExchangeRate(tokens[i]) / 1e6;
+        }
+
+        return usdValue * 1e12;
     }
 }

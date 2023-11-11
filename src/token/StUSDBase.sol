@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {OFTV2} from "@layerzerolabs/token/oft/v2/OFTV2.sol";
+import {OFT, IERC20, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
 import {IStUSD} from "../interfaces/IStUSD.sol";
 
 /// @title Staked USD Base Contract
-abstract contract StUSDBase is IStUSD, OFTV2 {
+abstract contract StUSDBase is IStUSD, OFT {
     // =================== Constants ===================
 
     uint256 internal constant INFINITE_ALLOWANCE = type(uint256).max;
@@ -34,7 +34,7 @@ abstract contract StUSDBase is IStUSD, OFTV2 {
     // =================== Functions ===================
 
     constructor(address _layerZeroEndpoint) 
-        OFTV2("Staked USD", "stUSD", 6, _layerZeroEndpoint)
+        OFT("Staked USD", "stUSD", _layerZeroEndpoint)
     {
         // solhint-disable-next-line-no-empty-blocks
     }
@@ -49,7 +49,7 @@ abstract contract StUSDBase is IStUSD, OFTV2 {
      *  is pegged to the total amount of Usd controlled by the protocol.
      * @return Amount of tokens in existence
      */
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() public view override(IERC20, ERC20) returns (uint256) {
         return _getTotalUsd();
     }
 
@@ -68,7 +68,7 @@ abstract contract StUSDBase is IStUSD, OFTV2 {
      * @param _account Account to get balance of
      * @return Amount of tokens owned by the `_account`
      */
-    function balanceOf(address _account) public view override returns (uint256) {
+    function balanceOf(address _account) public view override(IERC20, ERC20) returns (uint256) {
         return getUsdByShares(_sharesOf(_account));
     }
 
@@ -83,7 +83,7 @@ abstract contract StUSDBase is IStUSD, OFTV2 {
      * @param _recipient recipient of stUSD tokens
      * @param _amount Amount of tokens being transfered
      */
-    function transfer(address _recipient, uint256 _amount) public override returns (bool) {
+    function transfer(address _recipient, uint256 _amount) public override(IERC20, ERC20) returns (bool) {
         _transfer(msg.sender, _recipient, _amount);
         return true;
     }
@@ -95,7 +95,7 @@ abstract contract StUSDBase is IStUSD, OFTV2 {
      * @param _owner Owner of the tokens
      * @param _spender Spender of the tokens
      */
-    function allowance(address _owner, address _spender) public view override returns (uint256) {
+    function allowance(address _owner, address _spender) public view override(IERC20, ERC20) returns (uint256) {
         return _allowances[_owner][_spender];
     }
 
@@ -107,7 +107,7 @@ abstract contract StUSDBase is IStUSD, OFTV2 {
      * @param _spender Spender of stUSD tokens
      * @param _amount Amount of stUSD tokens allowed to be spent
      */
-    function approve(address _spender, uint256 _amount) public override returns (bool) {
+    function approve(address _spender, uint256 _amount) public override(IERC20, ERC20) returns (bool) {
         _approve(msg.sender, _spender, _amount);
         return true;
     }
@@ -126,7 +126,7 @@ abstract contract StUSDBase is IStUSD, OFTV2 {
      * @param _recipient Destination of stUSD tokens
      * @param _amount Amount of tokens being transfered
      */
-    function transferFrom(address _sender, address _recipient, uint256 _amount) public override returns (bool) {
+    function transferFrom(address _sender, address _recipient, uint256 _amount) public override(IERC20, ERC20) returns (bool) {
         _spendAllowance(_sender, msg.sender, _amount);
         _transfer(_sender, _recipient, _amount);
         return true;

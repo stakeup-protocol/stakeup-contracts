@@ -10,7 +10,7 @@
 
 pragma solidity 0.8.19;
 
-import {IBloomFactory} from "src/interfaces/IBloomFactory.sol";
+import {IBloomFactory} from "src/interfaces/bloom/IBloomFactory.sol";
 
 contract MockBloomFactory is IBloomFactory {
     address private _pool;
