@@ -13,7 +13,7 @@ import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 
 abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
     using SafeERC20 for IERC20;
-
+    event Log(string message, uint256 val);
     CurvePoolData[] internal _curvePools;
     uint256 private _poolDeploymentTimestamp;
     uint256 private _lastSeedTimestamp;
@@ -31,11 +31,12 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
     }
 
     function seedGauges() external {
-        CurvePoolData[] memory curvePools = _curvePools;
+        CurvePoolData[] storage curvePools = _curvePools;
         uint256 length = curvePools.length;
         
         uint256 timeElapsed = block.timestamp - _lastSeedTimestamp;
-        if (timeElapsed < SEED_INTERVAL) revert TooEarlyToSeed();
+
+        if (_lastSeedTimestamp != 0 && timeElapsed < SEED_INTERVAL) revert TooEarlyToSeed();
 
         _lastSeedTimestamp = block.timestamp;
 
@@ -44,9 +45,10 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
             uint256 amount = _calculateDripAmount(
                 curvePools[i].maxRewards,
                 _poolDeploymentTimestamp,
-                curvePools[i].rewardsRemaining
+                curvePools[i].rewardsRemaining,
+                true
             );
-
+            
             if (amount != 0) {
                 amount = Math.min(amount, curvePools[i].rewardsRemaining);
                 _curvePools[i].rewardsRemaining -= amount;
@@ -55,9 +57,9 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
                 IStakeupToken(_stakeupToken).mintRewards(address(this), amount);
                 IERC20(_stakeupToken).safeApprove(curvePools[i].curveGauge, amount);
                 ICurvePoolGauge(curvePools[i].curveGauge).deposit_reward_token(_stakeupToken, amount);
+                
+                emit GaugeSeeded(curvePools[i].curveGauge, amount);
             }
-
-            emit GaugeSeeded(curvePools[i].curveGauge, amount);
         }
     }
 
@@ -94,7 +96,6 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
         if (totalRewards != 0) revert RewardAllocationNotMet();
         
         _poolDeploymentTimestamp = block.timestamp;
-        _lastSeedTimestamp = block.timestamp;
 
         return totalRewards;
     }

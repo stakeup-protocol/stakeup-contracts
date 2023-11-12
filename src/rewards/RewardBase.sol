@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
 abstract contract RewardBase {
     address internal _stUsd;
     address internal _stakeupToken;
@@ -36,14 +38,33 @@ abstract contract RewardBase {
     function _calculateDripAmount(
         uint256 rewardSupply,
         uint256 startTimestamp,
-        uint256 lastRemainingSupply
+        uint256 rewardsRemaining,
+        bool isRewardGauge
     ) internal view returns (uint256) {
         uint256 timeElapsed = block.timestamp - startTimestamp;
-        uint256 year = timeElapsed / 365 days;
 
-        uint256 supplyUnlocked = rewardSupply / (2**year);
-        uint256 existingSupply = rewardSupply - lastRemainingSupply;
+        // Reward gauges will be seeded immediately after deployment
+        // with 1 weeks worth of rewards
+        if (isRewardGauge) {
+            timeElapsed += 1 weeks;
+        }
 
-        return supplyUnlocked - existingSupply;
+
+        uint256 rewardsPaid = rewardSupply - rewardsRemaining;
+        
+        uint256 year = Math.max(1, Math.ceilDiv(timeElapsed, 365 days));
+
+        // If the time elapsed is greater than 5 years, then the reward supply
+        // is fully unlocked
+        if (year > 5) {
+            return rewardSupply - rewardsPaid;
+        }
+
+        // Calculate total tokens unlocked using the formula for the sum of a geometric series
+        uint256 tokensUnlocked = rewardSupply * (1 - (1 / 2**year));
+
+        uint256 yearlyAllocation = tokensUnlocked - rewardsPaid;
+
+        return timeElapsed * yearlyAllocation / 365 days;
     }
 }

@@ -53,7 +53,8 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
             uint256 amount = _calculateDripAmount(
                 POKE_REWARDS,
                 _startTimestamp,
-                _pokeRewardsRemaining
+                _pokeRewardsRemaining,
+                false
             );
 
             if (amount > 0) {
