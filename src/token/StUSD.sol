@@ -59,6 +59,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     uint256 public constant AUTO_STAKE_PHASE = 1 days;
 
+    uint256 public constant MINT_REWARD_CUTOFF = 200_000_000 * 10 ** 18;
+
     /// @dev Last deposit amount
     uint256 internal _lastDepositAmount;
 
@@ -373,7 +375,14 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         _mintShares(msg.sender, sharesAmount);
         _mintShares(address(stakeupStaking), sharesFeeAmount);
 
-        _setTotalUsd(_getTotalUsd() + amountScaled);
+        uint256 totalUsd = _getTotalUsd();
+
+        if (totalUsd <= MINT_REWARD_CUTOFF) {
+            uint256 elegibleAmount = Math.min(amountScaled, MINT_REWARD_CUTOFF - totalUsd);
+            rewardManager.distributeMintRewards(msg.sender, elegibleAmount);
+        }
+
+        _setTotalUsd(totalUsd + amountScaled);
 
         emit Deposit(msg.sender, token, amount, sharesAmount);
     }
