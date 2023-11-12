@@ -11,6 +11,7 @@ import {StUSDBase} from "./StUSDBase.sol";
 
 import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/bloom/IBloomPool.sol";
+import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
@@ -293,8 +294,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
 
         uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(address(this));
-
-        pool.withdrawLender(_amount);
+        
+        if (pool.state() == IBloomPool.State.EmergencyExit) {
+            IEmergencyHandler emergencyHandler = IEmergencyHandler(pool.EMERGENCY_HANDLER());
+            emergencyHandler.redeem(pool);
+        } else {
+            pool.withdrawLender(_amount);
+        }
 
         uint256 withdrawn = underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
         
