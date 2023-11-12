@@ -23,4 +23,6 @@ interface IBloomPool is IERC20 {
     function withdrawLender(uint256 shares) external;
 
     function COMMIT_PHASE_END() external view returns (uint256);
+
+    function EMERGENCY_HANDLER() external view returns (address);
 }
