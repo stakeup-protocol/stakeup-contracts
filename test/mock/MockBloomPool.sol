@@ -101,4 +101,8 @@ contract MockBloomPool is IBloomPool, MockERC20 {
     function setEmergencyHandler(address emergencyHandler) external {
         _emergencyHandler = emergencyHandler;
     }
+
+    function emergencyBurn(uint256 amount) external {
+        _burn(msg.sender, amount);
+    }
 }
