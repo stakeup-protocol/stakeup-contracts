@@ -13,7 +13,7 @@ import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 
 abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
     using SafeERC20 for IERC20;
-    event Log(string message, uint256 val);
+
     CurvePoolData[] internal _curvePools;
     uint256 private _poolDeploymentTimestamp;
     uint256 private _lastSeedTimestamp;
