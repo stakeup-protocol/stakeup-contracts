@@ -110,6 +110,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         performanceBps = _performanceBps;
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
+        _lastRateUpdate = block.timestamp;
 
         wstUSD = IWstUSD(_wstUSD);
 
@@ -279,8 +280,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         if (_proceeds > 0) {
             _remainingBalance += _proceeds;
         }
-        
-        _setTotalUsd(_getCurrentTbyValue() + underlyingGains);
+
+        _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
     }
 
     /**
@@ -297,6 +298,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         
         if (pool.state() == IBloomPool.State.EmergencyExit) {
             IEmergencyHandler emergencyHandler = IEmergencyHandler(pool.EMERGENCY_HANDLER());
+            IERC20(pool).safeApprove(address(emergencyHandler), _amount);
             emergencyHandler.redeem(pool);
         } else {
             pool.withdrawLender(_amount);
