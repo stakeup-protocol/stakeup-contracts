@@ -18,7 +18,7 @@ contract MockRegistry is IExchangeRateRegistry {
     address public pool;
     TokenInfo public tokenInfo;
     address[] activeTokens;
-    uint256 exchangeRate;
+    mapping(address => uint256) public exchangeRates;
 
     constructor(address _pool) {
         pool = _pool;
@@ -54,12 +54,12 @@ contract MockRegistry is IExchangeRateRegistry {
     }
 
     function getExchangeRate(
-        address /*token*/
+        address token
     ) external view override returns (uint256) {
-        return exchangeRate;
+        return exchangeRates[token];
     }
 
-    function setExchangeRate(uint256 rate) public {
-        exchangeRate = rate;
+    function setExchangeRate(address token, uint256 rate) public {
+        exchangeRates[token] = rate;
     }
 }
