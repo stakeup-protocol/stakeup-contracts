@@ -337,6 +337,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         if (block.timestamp - _lastRateUpdate >= 1 days) {
             _lastRateUpdate = block.timestamp;            
             _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
+            eligableForReward = true;
         }
 
         if (eligableForReward) {
