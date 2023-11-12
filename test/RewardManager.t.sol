@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
-
+import "forge-std/console2.sol";
 import {RewardManager, IRewardManager} from "src/rewards/RewardManager.sol";
 import {ICurveGaugeDistributor} from "src/interfaces/ICurveGaugeDistributor.sol";
 
@@ -23,6 +23,9 @@ contract RewardManagerTest is Test {
 
     uint256 constant MAX_POKE_REWARDS = 1_000_000_000e18 * 1e16 / 1e18;
     uint256 constant MAX_POOL_REWARDS = 1_000_000_000e18 * 2e17 / 1e18;
+    uint256 constant MAX_MINT_REWARDS = 1_000_000_000e18 * 1e17 / 1e18;
+    // Amount of stUSD that is eligible for minting rewards
+    uint256 internal constant STUSD_MINT_THREASHOLD = 200_000_000e18;
 
     function setUp() public {
         mockStUSD = new MockERC20(18);
@@ -138,5 +141,30 @@ contract RewardManagerTest is Test {
         skip(3 days);
         vm.expectRevert(ICurveGaugeDistributor.TooEarlyToSeed.selector);
         rewardManager.seedGauges();
+    }
+
+    function test_DistributeMintRewards() public {
+        // Initialize the contract to deploy the gauges
+        vm.startPrank(address(mockStakeupToken));
+        rewardManager.initialize();
+        vm.stopPrank();
+
+        // Fail to distribute rewards if not called by stUSD
+        vm.expectRevert(IRewardManager.CallerNotStUsd.selector);
+        rewardManager.distributeMintRewards(address(this), 1000e18);
+
+        // Distribute rewards if called by stUSD
+        vm.startPrank(address(mockStUSD));
+        rewardManager.distributeMintRewards(address(this), 1000e18);
+        vm.stopPrank();
+        
+        uint256 percentOfMax = 1000e18 * 1e18 / STUSD_MINT_THREASHOLD;
+
+        uint256 expectedReward = MAX_MINT_REWARDS * percentOfMax / 1e18;
+
+        assertEq(mockStakeupToken.balanceOf(address(stakeupStaking)), expectedReward);
+        
+        (uint256 amountStaked,,) = stakeupStaking.stakingData(address(this));
+        assertEq(amountStaked, expectedReward);
     }
 }
