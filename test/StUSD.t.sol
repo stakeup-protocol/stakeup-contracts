@@ -202,7 +202,14 @@ contract StUSDTest is Test {
         uint256 stUSDMintAmount = 1e18;
         uint256 aliceDepositFee = (stUSDMintAmount * stUSD.mintBps()) / stUSD.BPS();
         uint256 expectedEndSharesAlice = stUSDMintAmount - aliceDepositFee;
+        uint256 exchangeRate = 1.04e18;
         
+        address[] memory activeTokens = new address[](1);
+        activeTokens[0] = address(pool);
+
+        registry.setActiveTokens(activeTokens);
+        registry.setExchangeRate(1e18);
+
         // Setup pool and stUSD
         registry.setTokenInfos(true);
         pool.mint(alice, startingTBYAliceBalance);
@@ -218,8 +225,9 @@ contract StUSDTest is Test {
         // Donate to stUSD
         stableToken.mint(address(stUSD), amount);
 
-        // Expect nothing to happen if the pool is not in the last 24 hours        
+        // Expect nothing to happen if the pool is not in the last 24 hours   
         stUSD.poke();
+        assertEq(stUSD.getTotalUsd(), startingTBYAliceBalance * 1e12);
         assertEq(stableToken.balanceOf(address(stUSD)), amount);
         
         // fast forward to 1 hour before the end of the commit phase
@@ -233,10 +241,10 @@ contract StUSDTest is Test {
         assertEq(stableToken.balanceOf(address(pool)), amount);
         assertEq(stUSD.sharesOf(alice), expectedEndSharesAlice);
 
-        // fast forward to 1 hour after the end of the commit phase
+        // fast forward to 1 day after the end of the commit phase
         // if some of the deposit does not get matched, remaining balance
         // should be adjusted
-        skip(2 hours);
+        skip(1 days);
         uint256 unmatchedAmount = 10e6;
         uint256 tbyReturned = amount - unmatchedAmount;
 
@@ -247,11 +255,18 @@ contract StUSDTest is Test {
         uint256 startingRemainingBalance = stUSD.getRemainingBalance();
         uint256 expectedRemainingBalanceEnd = startingRemainingBalance + unmatchedAmount;
 
+        // Rate will also be adjusted
+        registry.setExchangeRate(exchangeRate);
+
         pool.setState(IBloomPool.State.Holding);
         vm.expectEmit(true, true, true, true);
         emit RemainingBalanceAdjusted(unmatchedAmount);
         stUSD.poke();
-
+        
+        uint256 underlyingScaledBalance = stableToken.balanceOf(address(stUSD)) * 1e12;
+        uint256 tbyScaledBalance = pool.balanceOf(address(stUSD)) * 1e12;
+        
+        assertEq(stUSD.getTotalUsd(), tbyScaledBalance * exchangeRate / 1e18 + underlyingScaledBalance);
         assertEq(pool.balanceOf(address(stUSD)), tbyReturned + startingTBYAliceBalance);
         assertEq(stableToken.balanceOf(address(stUSD)), expectedRemainingBalanceEnd);
         assertEq(stUSD.sharesOf(alice), expectedEndSharesAlice);
