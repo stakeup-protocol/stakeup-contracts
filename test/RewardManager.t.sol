@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
-import "forge-std/console2.sol";
+
 import {RewardManager, IRewardManager} from "src/rewards/RewardManager.sol";
 import {ICurveGaugeDistributor} from "src/interfaces/ICurveGaugeDistributor.sol";
 
@@ -102,9 +102,10 @@ contract RewardManagerTest is Test {
         rewardManager.distributePokeRewards(address(this));
 
         skip(3 days);
-        uint256 yearsElapsed = block.timestamp / 365 days;
+        uint256 year = 1;
+        uint256 yearOneRewards = MAX_POKE_REWARDS * (1 - (1 / 2**year));
 
-        uint256 expectedReward = MAX_POKE_REWARDS / (2**yearsElapsed);
+        uint256 expectedReward = 3 days * yearOneRewards / 365 days;
         
         // distribution succeeds if called by SUP
         vm.startPrank(address(mockStUSD));
@@ -123,15 +124,17 @@ contract RewardManagerTest is Test {
         rewardManager.initialize();
         vm.stopPrank();
 
-        skip(7 days);
         // Seed the gauges
         rewardManager.seedGauges();
 
         ICurveGaugeDistributor.CurvePoolData[] memory data =  rewardManager.getCurvePoolData();
 
         for (uint256 i = 0; i < data.length; i++) {
-            uint256 yearsElapsed = block.timestamp / 365 days;
-            uint256 expectedReward = data[i].maxRewards / (2**yearsElapsed);
+            uint256 week = 1 weeks;
+            uint256 year = 1;
+            uint256 yearOneRewards = data[i].maxRewards * (1 - (1 / 2**year));
+
+            uint256 expectedReward = week * yearOneRewards / 365 days;
 
             assertEq(data[i].rewardsRemaining, data[i].maxRewards - expectedReward);
             assertEq(mockStakeupToken.balanceOf(data[i].curveGauge), expectedReward);
@@ -140,6 +143,11 @@ contract RewardManagerTest is Test {
         // Fail to seed the gauges if called too early
         skip(3 days);
         vm.expectRevert(ICurveGaugeDistributor.TooEarlyToSeed.selector);
+        rewardManager.seedGauges();
+
+        // Seed the gauges if called at the right time
+        skip(4 days);
+        // Seed the gauges
         rewardManager.seedGauges();
     }
 
