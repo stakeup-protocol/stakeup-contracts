@@ -11,6 +11,7 @@ import {StUSDBase} from "./StUSDBase.sol";
 
 import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/bloom/IBloomPool.sol";
+import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
@@ -109,6 +110,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         performanceBps = _performanceBps;
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
+        _lastRateUpdate = block.timestamp;
 
         wstUSD = IWstUSD(_wstUSD);
 
@@ -278,8 +280,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         if (_proceeds > 0) {
             _remainingBalance += _proceeds;
         }
-        
-        _setTotalUsd(_getCurrentTbyValue() + underlyingGains);
+
+        _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
     }
 
     /**
@@ -293,8 +295,14 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
 
         uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(address(this));
-
-        pool.withdrawLender(_amount);
+        
+        if (pool.state() == IBloomPool.State.EmergencyExit) {
+            IEmergencyHandler emergencyHandler = IEmergencyHandler(pool.EMERGENCY_HANDLER());
+            IERC20(pool).safeApprove(address(emergencyHandler), _amount);
+            emergencyHandler.redeem(pool);
+        } else {
+            pool.withdrawLender(_amount);
+        }
 
         uint256 withdrawn = underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
         

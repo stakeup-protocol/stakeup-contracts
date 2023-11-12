@@ -14,8 +14,9 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IMockSwapFacility} from "./interfaces/IMockSwapFacility.sol";
 import {IBloomPool} from "src/interfaces/bloom/IBloomPool.sol";
+import {IEmergencyHandler} from "src/interfaces/bloom/IEmergencyHandler.sol";
 
-import {MockERC20} from "./MockERC20.sol";
+import {MockERC20, ERC20, IERC20} from "./MockERC20.sol";
 
 contract MockBloomPool is IBloomPool, MockERC20 {
     using SafeTransferLib for address;
@@ -27,6 +28,8 @@ contract MockBloomPool is IBloomPool, MockERC20 {
 
     State private _state;
     uint256 private _commitPhaseEnd;
+    
+    address private _emergencyHandler;
 
     constructor(
         address _underlyingToken,
@@ -56,10 +59,14 @@ contract MockBloomPool is IBloomPool, MockERC20 {
     function withdrawLender(uint256 _amount) external {
         _burn(msg.sender, _amount);
         uint256 exchangeRate = swap.exchangeRate();
-        uint256 amountToSend = _amount * exchangeRate / 10 ** IERC20Metadata(billToken).decimals();
+        uint256 amountToSend = (_amount * exchangeRate) /
+            10 ** IERC20Metadata(billToken).decimals();
         uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
         if (amountToSend > underlyingBalance) {
-            MockERC20(underlyingToken).mint(address(this), amountToSend - underlyingBalance);
+            MockERC20(underlyingToken).mint(
+                address(this),
+                amountToSend - underlyingBalance
+            );
         }
         underlyingToken.safeTransfer(msg.sender, amountToSend);
     }
@@ -85,5 +92,17 @@ contract MockBloomPool is IBloomPool, MockERC20 {
 
     function setState(State _newState) external {
         _state = _newState;
+    }
+
+    function EMERGENCY_HANDLER() external view override returns (address) {
+        return address(_emergencyHandler);
+    }
+
+    function setEmergencyHandler(address emergencyHandler) external {
+        _emergencyHandler = emergencyHandler;
+    }
+
+    function emergencyBurn(uint256 amount) external {
+        _burn(msg.sender, amount);
     }
 }

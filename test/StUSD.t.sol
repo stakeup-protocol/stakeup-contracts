@@ -14,6 +14,7 @@ import {MockERC20} from "./mock/MockERC20.sol";
 import {MockSwapFacility} from "./mock/MockSwapFacility.sol";
 import {MockBloomPool, IBloomPool} from "./mock/MockBloomPool.sol";
 import {MockBloomFactory} from "./mock/MockBloomFactory.sol";
+import {MockEmergencyHandler} from "./mock/MockEmergencyHandler.sol";
 import {MockRegistry} from "./mock/MockRegistry.sol";
 import {MockStakeupStaking} from "./mock/MockStakeupStaking.sol";
 import {MockRewardManager} from "./mock/MockRewardManager.sol";
@@ -32,7 +33,7 @@ contract StUSDTest is Test {
     MockRegistry internal registry;
     MockStakeupStaking internal staking;
     MockRewardManager internal rewardsManager;
-
+    MockEmergencyHandler internal emergencyHandler;
 
     address internal owner = makeAddr("owner");
     address internal layerZeroEndpoint = makeAddr("layerZeroEndpoint");
@@ -63,7 +64,7 @@ contract StUSDTest is Test {
 
         rewardsManager = new MockRewardManager();
         vm.label(address(rewardsManager), "MockRewardManager");
-
+        
         pool = new MockBloomPool(
             address(stableToken),
             address(billyToken),
@@ -71,6 +72,11 @@ contract StUSDTest is Test {
             6
         );
         vm.label(address(pool), "MockBloomPool");
+        
+        emergencyHandler = new MockEmergencyHandler();
+        vm.label(address(emergencyHandler), "MockEmergencyHandler");
+
+        pool.setEmergencyHandler(address(emergencyHandler));
 
         vm.startPrank(owner);
 
@@ -208,7 +214,7 @@ contract StUSDTest is Test {
         activeTokens[0] = address(pool);
 
         registry.setActiveTokens(activeTokens);
-        registry.setExchangeRate(1e18);
+        registry.setExchangeRate(address(pool), 1e18);
 
         // Setup pool and stUSD
         registry.setTokenInfos(true);
@@ -256,7 +262,7 @@ contract StUSDTest is Test {
         uint256 expectedRemainingBalanceEnd = startingRemainingBalance + unmatchedAmount;
 
         // Rate will also be adjusted
-        registry.setExchangeRate(exchangeRate);
+        registry.setExchangeRate(address(pool), exchangeRate);
 
         pool.setState(IBloomPool.State.Holding);
         vm.expectEmit(true, true, true, true);
@@ -270,6 +276,71 @@ contract StUSDTest is Test {
         assertEq(pool.balanceOf(address(stUSD)), tbyReturned + startingTBYAliceBalance);
         assertEq(stableToken.balanceOf(address(stUSD)), expectedRemainingBalanceEnd);
         assertEq(stUSD.sharesOf(alice), expectedEndSharesAlice);
+    }
+
+    function testEmergencyHandlerWithdraw() public {
+        uint256 amount = 100e6;
+        registry.setTokenInfos(true);
+
+        pool.setState(IBloomPool.State.Commit);
+        pool.setCommitPhaseEnd(2 days);
+        
+        pool.mint(alice, amount);
+        vm.startPrank(alice);
+        pool.approve(address(stUSD), amount);
+        stUSD.depositTby(address(pool), amount);
+        vm.stopPrank();
+
+        registry.setExchangeRate(address(pool), 1.04e18);
+
+        skip(2 days);
+        pool.setState(IBloomPool.State.Holding);
+        
+        MockBloomPool newPool = new MockBloomPool(
+            address(stableToken),
+            address(billyToken),
+            address(swap),
+            6
+        );
+
+        newPool.mint(alice, amount);
+        vm.startPrank(alice);
+        newPool.approve(address(stUSD), amount);
+        stUSD.depositTby(address(newPool), amount);
+        newPool.setEmergencyHandler(address(emergencyHandler));
+        factory.setLastCreatedPool(address(newPool));
+        
+        newPool.setCommitPhaseEnd(1 days);
+        skip(5 days);
+
+        newPool.setState(IBloomPool.State.EmergencyExit);
+        // This is a delayed rate that has accrued value after
+        // tokens were sent to emergency handler. This is to simulate
+        // a pool that has been in emergency exit for a while
+        // and tokens being withdraw after the rate freeze in the handler.
+        // For these tests we will assume the frozen rate is 1e18 and the 
+        // preceived rate from the registry is 1.02e18
+        registry.setExchangeRate(address(newPool), 1.02e18); 
+        address[] memory activeTokens = new address[](2);
+        activeTokens[0] = address(pool);
+        activeTokens[1] = address(newPool);
+        registry.setActiveTokens(activeTokens);
+
+        uint256 expectedUSDPreEmergency = (amount * 1e12 * 1.04e18 / 1e18) + (amount * 1e12 * 1.02e18 / 1e18); 
+        uint256 expectedUSDPostEmergency = (amount * 1e12 * 1.04e18 / 1e18) + amount * 1e12;
+        
+        stUSD.poke();
+        assertEq(stUSD.getTotalUsd(), expectedUSDPreEmergency);
+
+        stableToken.mint(address(emergencyHandler), amount);
+        
+        vm.startPrank(alice);
+        emergencyHandler.setNumTokensToRedeem(amount);
+        stUSD.redeemUnderlying(address(newPool), amount);
+
+        assertEq(stableToken.balanceOf(address(emergencyHandler)), 0);
+        assertEq(stableToken.balanceOf(address(stUSD)), amount);
+        assertEq(stUSD.getTotalUsd(), expectedUSDPostEmergency);
     }
 
     function testFullFlow() public {
