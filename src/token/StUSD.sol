@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -67,6 +67,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     /// @dev Last rate update timestamp
     uint256 internal _lastRateUpdate;
 
+    /// @dev Scaling factor for underlying token
+    uint256 private _scalingFactor;
+
     // =================== Modifiers ===================
     modifier onlyUnStUSD() {
         if (_msgSender() != address(redemptionNFT)) revert CallerNotUnStUSD();
@@ -104,6 +107,8 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         mintBps = _mintBps;
         redeemBps = _redeemBps;
         performanceBps = _performanceBps;
+
+        _scalingFactor = 10 ** (18 - _underlyingDecimals);
 
         wstUSD = IWstUSD(_wstUSD);
 
@@ -209,7 +214,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
 
         if (amount != 0) {
-            uint256 transferAmount = amount / (10 ** (18 - _underlyingDecimals));
+            uint256 transferAmount = amount / _scalingFactor;
 
             if (transferAmount > underlyingBalance) revert InsufficientBalance();
 
@@ -256,8 +261,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @param _yield Yield gained from TBY
      */
     function _processProceeds(uint256 _proceeds, uint256 _yield) internal {
-        uint256 scalingFactor = 10 ** (18 - _underlyingDecimals);
-        uint256 underlyingGains = _yield * scalingFactor;
+        uint256 underlyingGains = _yield * _scalingFactor;
 
         uint256 performanceFee = underlyingGains * performanceBps / BPS;
 
@@ -285,7 +289,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     function redeemUnderlying(address _tby, uint256 _amount) external {
         IBloomPool pool = IBloomPool(_tby);
-
+        
         _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
 
         uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(address(this));
@@ -317,16 +321,6 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         IBloomPool.State currentState = lastCreatedPool.state();
         bool eligableForReward = false;
 
-        // If we haven't updated the values of TBYs in 24 hours, update it now
-        if (block.timestamp - _lastRateUpdate > 1 days) {
-            _lastRateUpdate = block.timestamp;
-            
-            uint256 currentUsdTotal = _getTotalUsd();
-            uint256 valueAccrual = currentUsdTotal - _getCurrentTbyValue();
-
-            _setTotalUsd(currentUsdTotal + valueAccrual);
-        }
-
         if (_within24HoursOfCommitPhaseEnd(lastCreatedPool, currentState)) {
             if (_autoMintTBY(lastCreatedPool) > 0) {
                 eligableForReward = true;
@@ -339,6 +333,12 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             }
         }
 
+        // If we haven't updated the values of TBYs in 24 hours, update it now
+        if (block.timestamp - _lastRateUpdate >= 1 days) {
+            _lastRateUpdate = block.timestamp;            
+            _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
+        }
+
         if (eligableForReward) {
             rewardManager.distributePokeRewards(msg.sender);
         }
@@ -346,7 +346,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     function _deposit(address token, uint256 amount) internal {   
         // TBYs will always have the same underlying decimals as the underlying token
-        uint256 amountScaled = amount * 10 ** (18 - _underlyingDecimals);
+        uint256 amountScaled = amount * _scalingFactor;
 
         uint256 sharesFeeAmount;
         uint256 mintFee = (amountScaled * mintBps) / BPS;
@@ -388,7 +388,9 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             underlyingToken.safeApprove(address(pool), underlyingBalance);
             pool.depositLender(underlyingBalance);
 
-            uint256 scaledUnregisteredBalance = unregisteredBalance * 10 ** (18 - _underlyingDecimals);
+            _lastDepositAmount += underlyingBalance;
+
+            uint256 scaledUnregisteredBalance = unregisteredBalance * _scalingFactor;
 
             _setTotalUsd(_getTotalUsd() + scaledUnregisteredBalance);
 
@@ -466,13 +468,17 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      */
     function _getCurrentTbyValue() internal view returns (uint256) {
         address[] memory tokens = registry.getActiveTokens();
-        
+        uint256 length = tokens.length;
+
         uint256 usdValue;
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < length; i++) {
             uint256 tokenBalance = IERC20(tokens[i]).balanceOf(address(this));
-            usdValue += tokenBalance * registry.getExchangeRate(tokens[i]) / 1e6;
+
+            usdValue += tokenBalance
+                .rawMul(_scalingFactor)
+                .mulWad(registry.getExchangeRate(tokens[i]));
         }
 
-        return usdValue * 1e12;
+        return usdValue;
     }
 }

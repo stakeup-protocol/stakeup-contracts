@@ -36,6 +36,7 @@ interface IExchangeRateRegistry {
 
     /**
      * @notice Returns the current exchange rate of the given token
+     * @dev Returns value as an 18 decimal fixed point number
      * @param token The token address
      * @return The current exchange rate of the given token
      */
