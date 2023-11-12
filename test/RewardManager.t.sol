@@ -23,6 +23,9 @@ contract RewardManagerTest is Test {
 
     uint256 constant MAX_POKE_REWARDS = 1_000_000_000e18 * 1e16 / 1e18;
     uint256 constant MAX_POOL_REWARDS = 1_000_000_000e18 * 2e17 / 1e18;
+    uint256 constant MAX_MINT_REWARDS = 1_000_000_000e18 * 1e17 / 1e18;
+    // Amount of stUSD that is eligible for minting rewards
+    uint256 internal constant STUSD_MINT_THREASHOLD = 200_000_000e18;
 
     function setUp() public {
         mockStUSD = new MockERC20(18);
@@ -99,9 +102,10 @@ contract RewardManagerTest is Test {
         rewardManager.distributePokeRewards(address(this));
 
         skip(3 days);
-        uint256 yearsElapsed = block.timestamp / 365 days;
+        uint256 year = 1;
+        uint256 yearOneRewards = MAX_POKE_REWARDS * (1 - (1 / 2**year));
 
-        uint256 expectedReward = MAX_POKE_REWARDS / (2**yearsElapsed);
+        uint256 expectedReward = 3 days * yearOneRewards / 365 days;
         
         // distribution succeeds if called by SUP
         vm.startPrank(address(mockStUSD));
@@ -120,15 +124,17 @@ contract RewardManagerTest is Test {
         rewardManager.initialize();
         vm.stopPrank();
 
-        skip(7 days);
         // Seed the gauges
         rewardManager.seedGauges();
 
         ICurveGaugeDistributor.CurvePoolData[] memory data =  rewardManager.getCurvePoolData();
 
         for (uint256 i = 0; i < data.length; i++) {
-            uint256 yearsElapsed = block.timestamp / 365 days;
-            uint256 expectedReward = data[i].maxRewards / (2**yearsElapsed);
+            uint256 week = 1 weeks;
+            uint256 year = 1;
+            uint256 yearOneRewards = data[i].maxRewards * (1 - (1 / 2**year));
+
+            uint256 expectedReward = week * yearOneRewards / 365 days;
 
             assertEq(data[i].rewardsRemaining, data[i].maxRewards - expectedReward);
             assertEq(mockStakeupToken.balanceOf(data[i].curveGauge), expectedReward);
@@ -138,5 +144,35 @@ contract RewardManagerTest is Test {
         skip(3 days);
         vm.expectRevert(ICurveGaugeDistributor.TooEarlyToSeed.selector);
         rewardManager.seedGauges();
+
+        // Seed the gauges if called at the right time
+        skip(4 days);
+        // Seed the gauges
+        rewardManager.seedGauges();
+    }
+
+    function test_DistributeMintRewards() public {
+        // Initialize the contract to deploy the gauges
+        vm.startPrank(address(mockStakeupToken));
+        rewardManager.initialize();
+        vm.stopPrank();
+
+        // Fail to distribute rewards if not called by stUSD
+        vm.expectRevert(IRewardManager.CallerNotStUsd.selector);
+        rewardManager.distributeMintRewards(address(this), 1000e18);
+
+        // Distribute rewards if called by stUSD
+        vm.startPrank(address(mockStUSD));
+        rewardManager.distributeMintRewards(address(this), 1000e18);
+        vm.stopPrank();
+        
+        uint256 percentOfMax = 1000e18 * 1e18 / STUSD_MINT_THREASHOLD;
+
+        uint256 expectedReward = MAX_MINT_REWARDS * percentOfMax / 1e18;
+
+        assertEq(mockStakeupToken.balanceOf(address(stakeupStaking)), expectedReward);
+        
+        (uint256 amountStaked,,) = stakeupStaking.stakingData(address(this));
+        assertEq(amountStaked, expectedReward);
     }
 }

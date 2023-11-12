@@ -16,8 +16,6 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
 
     uint256 internal constant DECIMAL_SCALING = 1e18;
     uint256 internal constant MAX_SUPPLY = 1_000_000_000 * DECIMAL_SCALING;
-    uint256 internal constant REWARD_SUPPLY =
-        (MAX_SUPPLY * 23e4) / DECIMAL_SCALING; // 23% of total supply
 
     modifier onlyManager() {
         if (msg.sender != _rewardManager) revert CallerNotRewardManager();
