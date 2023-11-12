@@ -13,7 +13,7 @@ pragma solidity 0.8.19;
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IMockSwapFacility} from "./interfaces/IMockSwapFacility.sol";
-import {IBloomPool} from "src/interfaces/IBloomPool.sol";
+import {IBloomPool} from "src/interfaces/bloom/IBloomPool.sol";
 
 import {MockERC20} from "./MockERC20.sol";
 
