@@ -31,7 +31,7 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
     }
 
     function seedGauges() external {
-        CurvePoolData[] storage curvePools = _curvePools;
+        CurvePoolData[] memory curvePools = _curvePools;
         uint256 length = curvePools.length;
         
         uint256 timeElapsed = block.timestamp - _lastSeedTimestamp;
