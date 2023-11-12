@@ -20,8 +20,17 @@ interface IRewardManager {
     function initialize() external;
 
     /**
-     * @notice Only stUSD can call this function
+     * @notice Distributes rewards to users who execute the poke function
+     * @dev Only stUSD can call this function
      * @param rewardReceiver Address of the user which the rewards will be allocated to
      */
     function distributePokeRewards(address rewardReceiver) external;
+
+    /**
+     * @notice Distributes rewards to the first users who mint the first 200M stUSD
+     * @dev Only stUSD can call this function
+     * @param rewardReceiver The address of the user to receive the rewards
+     * @param stUSDAmount The amount of stUSD that was minted by the user
+     */
+    function distributeMintRewards(address rewardReceiver, uint256 stUSDAmount) external;
 }
