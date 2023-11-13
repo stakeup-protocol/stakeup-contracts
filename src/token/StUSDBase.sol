@@ -53,10 +53,7 @@ abstract contract StUSDBase is IStUSD, OFT {
         return _getTotalUsd();
     }
 
-    /**
-     * @return the entire amount of Usd controlled by the protocol.
-     * @dev The sum of all USD balances in the protocol, equals to the total supply of stUSD.
-     */
+    /// @inheritdoc IStUSD
     function getTotalUsd() external view returns (uint256) {
         return _getTotalUsd();
     }
@@ -65,11 +62,11 @@ abstract contract StUSDBase is IStUSD, OFT {
      * @notice Get the balance of an account
      * @dev Balances are dynamic and equal the `_account`'s share in the amount of the
      * total Usd controlled by the protocol. See `sharesOf`.
-     * @param _account Account to get balance of
+     * @param account Account to get balance of
      * @return Amount of tokens owned by the `_account`
      */
-    function balanceOf(address _account) public view override(IERC20, ERC20) returns (uint256) {
-        return getUsdByShares(_sharesOf(_account));
+    function balanceOf(address account) public view override(IERC20, ERC20) returns (uint256) {
+        return getUsdByShares(_sharesOf(account));
     }
 
     /**
@@ -80,11 +77,11 @@ abstract contract StUSDBase is IStUSD, OFT {
      * Requirements:
      * - `_recipient` cannot be the zero address.
      * - the caller must have a balance of at least `_amount`.
-     * @param _recipient recipient of stUSD tokens
-     * @param _amount Amount of tokens being transfered
+     * @param recipient recipient of stUSD tokens
+     * @param amount Amount of tokens being transfered
      */
-    function transfer(address _recipient, uint256 _amount) public override(IERC20, ERC20) returns (bool) {
-        _transfer(msg.sender, _recipient, _amount);
+    function transfer(address recipient, uint256 amount) public override(IERC20, ERC20) returns (bool) {
+        _transfer(msg.sender, recipient, amount);
         return true;
     }
 
@@ -92,11 +89,11 @@ abstract contract StUSDBase is IStUSD, OFT {
      * @notice Get the remaining number of tokens that `_spender` is allowed to spend
      * on behalf of `_owner` through `transferFrom`. This is zero by default.
      * @dev This value changes when `approve` or `transferFrom` is called.
-     * @param _owner Owner of the tokens
-     * @param _spender Spender of the tokens
+     * @param owner Owner of the tokens
+     * @param spender Spender of the tokens
      */
-    function allowance(address _owner, address _spender) public view override(IERC20, ERC20) returns (uint256) {
-        return _allowances[_owner][_spender];
+    function allowance(address owner, address spender) public view override(IERC20, ERC20) returns (uint256) {
+        return _allowances[owner][spender];
     }
 
     /**
@@ -104,11 +101,11 @@ abstract contract StUSDBase is IStUSD, OFT {
      * @dev Emits an `Approval` event.
      * Requirements:
      * - `_spender` cannot be the zero address.
-     * @param _spender Spender of stUSD tokens
-     * @param _amount Amount of stUSD tokens allowed to be spent
+     * @param spender Spender of stUSD tokens
+     * @param amount Amount of stUSD tokens allowed to be spent
      */
-    function approve(address _spender, uint256 _amount) public override(IERC20, ERC20) returns (bool) {
-        _approve(msg.sender, _spender, _amount);
+    function approve(address spender, uint256 amount) public override(IERC20, ERC20) returns (bool) {
+        _approve(msg.sender, spender, amount);
         return true;
     }
 
@@ -117,113 +114,109 @@ abstract contract StUSDBase is IStUSD, OFT {
      * @dev Emits a `Transfer` event.
      * @dev Emits a `TransferShares` event.
      * @dev Emits an `Approval` event indicating the updated allowance.
-     * @dev The `_amount` argument is the amount of tokens, not shares.
+     * @dev The `amount` argument is the amount of tokens, not shares.
      * Requirements:
-     * - `_sender` and `_recipient` cannot be the zero addresses.
-     * - `_sender` must have a balance of at least `_amount`.
-     * - the caller must have allowance for `_sender`'s tokens of at least `_amount`.
-     * @param _sender Sender of stUSD tokens
-     * @param _recipient Destination of stUSD tokens
-     * @param _amount Amount of tokens being transfered
+     * - sender` and `recipient` cannot be the zero addresses.
+     * - `sender` must have a balance of at least `amount`.
+     * - the caller must have allowance for `sender`'s tokens of at least `amount`.
+     * @param sender Sender of stUSD tokens
+     * @param recipient Destination of stUSD tokens
+     * @param amount Amount of tokens being transfered
      */
-    function transferFrom(address _sender, address _recipient, uint256 _amount) public override(IERC20, ERC20) returns (bool) {
-        _spendAllowance(_sender, msg.sender, _amount);
-        _transfer(_sender, _recipient, _amount);
+    function transferFrom(
+        address sender,
+        address recipient, 
+        uint256 amount
+    ) public override(IERC20, ERC20) returns (bool) {
+        _spendAllowance(sender, msg.sender, amount);
+        _transfer(sender, recipient, amount);
         return true;
     }
 
     /**
-     * @notice Atomically increases the allowance granted to `_spender` by the caller by `_addedValue`.
+     * @notice Atomically increases the allowance granted to `spender` by the caller by `addedValue`.
      * @dev This is an alternative to `approve` that can be used as a mitigation for
      * problems described in:
      * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/b709eae01d1da91902d06ace340df6b324e6f049/contracts/token/ERC20/IERC20.sol#L57
      * Emits an `Approval` event indicating the updated allowance.
      * Requirements:
-     * - `_spender` cannot be the zero address.
-     * @param _spender The address which the allowance is increased for
-     * @param _addedValue The additional amount of allowance to be granted
+     * - `spender` cannot be the zero address.
+     * @param spender The address which the allowance is increased for
+     * @param addedValue The additional amount of allowance to be granted
      */
-    function increaseAllowance(address _spender, uint256 _addedValue) public override returns (bool) {
-        _approve(msg.sender, _spender, _allowances[msg.sender][_spender] + _addedValue);
+    function increaseAllowance(
+        address spender,
+        uint256 addedValue
+    ) public override returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
         return true;
     }
 
     /**
-     * @notice Atomically decreases the allowance granted to `_spender` by the caller by `_subtractedValue`.
+     * @notice Atomically decreases the allowance granted to `spender` by the caller by `subtractedValue`.
      * @dev This is an alternative to `approve` that can be used as a mitigation for
      * problems described in:
      * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/b709eae01d1da91902d06ace340df6b324e6f049/contracts/token/ERC20/IERC20.sol#L57
      * Emits an `Approval` event indicating the updated allowance.
      * Requirements:
-     * - `_spender` cannot be the zero address.
-     * - `_spender` must have allowance for the caller of at least `_subtractedValue`.
-     * @param _spender The address which the allowance is decreased for
-     * @param _subtractedValue The amount of allowance to be reduced
+     * - `spender` cannot be the zero address.
+     * - `spender` must have allowance for the caller of at least `subtractedValue`.
+     * @param spender The address which the allowance is decreased for
+     * @param subtractedValue The amount of allowance to be reduced
      */
-    function decreaseAllowance(address _spender, uint256 _subtractedValue) public override returns (bool) {
-        uint256 currentAllowance = _allowances[msg.sender][_spender];
-        require(currentAllowance >= _subtractedValue, "ALLOWANCE_BELOW_ZERO");
-        _approve(msg.sender, _spender, currentAllowance - _subtractedValue);
+    function decreaseAllowance(
+        address spender,
+        uint256 subtractedValue
+    ) public override returns (bool) {
+        uint256 currentAllowance = _allowances[msg.sender][spender];
+        require(currentAllowance >= subtractedValue, "ALLOWANCE_BELOW_ZERO");
+        _approve(msg.sender, spender, currentAllowance - subtractedValue);
         return true;
     }
 
-    /**
-     * @notice Get the total amount of shares in existence.
-     * @dev The sum of all accounts' shares can be an arbitrary number, therefore
-     * it is necessary to store it in order to calculate each account's relative share.
-     */
+    /// @inheritdoc IStUSD
     function getTotalShares() external view returns (uint256) {
         return _getTotalShares();
     }
 
-    /**
-     * @notice Get the amount of shares owned by `_account`
-     * @param _account Account to get shares of
-     */
-    function sharesOf(address _account) external view returns (uint256) {
-        return _sharesOf(_account);
+    /// @inheritdoc IStUSD
+    function sharesOf(address account) external view returns (uint256) {
+        return _sharesOf(account);
     }
 
-    /**
-     * @notice Get the amount of shares that corresponds to a given dollar value.
-     * @param _usdAmount Amount of Usd
-     */
-    function getSharesByUsd(uint256 _usdAmount) public view override returns (uint256) {
+    /// @inheritdoc IStUSD
+    function getSharesByUsd(uint256 usdAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
-            return _usdAmount;
+            return usdAmount;
         }
-        return (_usdAmount * totalShares) / _getTotalUsd();
+        return (usdAmount * totalShares) / _getTotalUsd();
     }
-
-    /// @return the amount of Usd that corresponds to `_sharesAmount` token shares.
-    /**
-     * @notice Get the amount of Usd that corresponds to a given number of token shares.
-     * @param _sharesAmount Amount of shares
-     */
-    function getUsdByShares(uint256 _sharesAmount) public view override returns (uint256) {
+    
+    /// @inheritdoc IStUSD
+    function getUsdByShares(uint256 sharesAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
-            return _sharesAmount;
+            return sharesAmount;
         }
-        return (_sharesAmount * _getTotalUsd()) / totalShares;
+        return (sharesAmount * _getTotalUsd()) / totalShares;
     }
 
     /**
      * @notice Transfer shares from caller to recipient
      * @dev Emits a `TransferShares` event.
      * @dev Emits a `Transfer` event.
-     * @dev The `_sharesAmount` argument is the amount of shares, not tokens.
+     * @dev The `sharesAmount` argument is the amount of shares, not tokens.
      * Requirements:
-     * - `_recipient` cannot be the zero address.
-     * - the caller must have at least `_sharesAmount` shares.
-     * @param _recipient recipient of stUSD tokens
-     * @param _sharesAmount Amount of shares being transfered
+     * - `recipient` cannot be the zero address.
+     * - the caller must have at least `sharesAmount` shares.
+     * @param recipient recipient of stUSD tokens
+     * @param sharesAmount Amount of shares being transfered
      */
-    function transferShares(address _recipient, uint256 _sharesAmount) external returns (uint256) {
-        _transferShares(msg.sender, _recipient, _sharesAmount);
-        uint256 tokensAmount = getUsdByShares(_sharesAmount);
-        _emitTransferEvents(msg.sender, _recipient, tokensAmount, _sharesAmount);
+    function transferShares(address recipient, uint256 sharesAmount) external returns (uint256) {
+        _transferShares(msg.sender, recipient, sharesAmount);
+        uint256 tokensAmount = getUsdByShares(sharesAmount);
+        _emitTransferEvents(msg.sender, recipient, tokensAmount, sharesAmount);
         return tokensAmount;
     }
 
@@ -232,21 +225,21 @@ abstract contract StUSDBase is IStUSD, OFT {
      * @dev Emits a `TransferShares` event.
      * @dev Emits a `Transfer` event.
      * Requirements:
-     * - `_sender` and `_recipient` cannot be the zero addresses.
-     * - `_sender` must have at least `_sharesAmount` shares.
-     * - the caller must have allowance for `_sender`'s tokens of at least `getUsdByShares(_sharesAmount)`.
-     * @param _sender Sender of stUSD tokens
-     * @param _recipient Destination of stUSD tokens
-     * @param _sharesAmount Amount of shares being transfered
+     * - `sender` and `recipient` cannot be the zero addresses.
+     * - `sender` must have at least `sharesAmount` shares.
+     * - the caller must have allowance for `sender`'s tokens of at least `getUsdByShares(sharesAmount)`.
+     * @param sender Sender of stUSD tokens
+     * @param recipient Destination of stUSD tokens
+     * @param sharesAmount Amount of shares being transfered
      */
-    function transferSharesFrom(address _sender, address _recipient, uint256 _sharesAmount)
+    function transferSharesFrom(address sender, address recipient, uint256 sharesAmount)
         external
         returns (uint256)
     {
-        uint256 tokensAmount = getUsdByShares(_sharesAmount);
-        _spendAllowance(_sender, msg.sender, tokensAmount);
-        _transferShares(_sender, _recipient, _sharesAmount);
-        _emitTransferEvents(_sender, _recipient, tokensAmount, _sharesAmount);
+        uint256 tokensAmount = getUsdByShares(sharesAmount);
+        _spendAllowance(sender, msg.sender, tokensAmount);
+        _transferShares(sender, recipient, sharesAmount);
+        _emitTransferEvents(sender, recipient, tokensAmount, sharesAmount);
         return tokensAmount;
     }
 
@@ -261,36 +254,36 @@ abstract contract StUSDBase is IStUSD, OFT {
 
     /**
      * @dev Set the total amount of Usd.
-     * @param _amount Amount
+     * @param amount Amount
      */
-    function _setTotalUsd(uint256 _amount) internal {
-        _totalUsd = _amount;
+    function _setTotalUsd(uint256 amount) internal {
+        _totalUsd = amount;
     }
 
     /**
-     * @notice Moves `_amount` tokens from `_sender` to `_recipient`.
+     * @notice Moves `amount` tokens from `sender` to `recipient`.
      * @dev Emits a `Transfer` event.
      * @dev Emits a `TransferShares` event.
      */
-    function _transfer(address _sender, address _recipient, uint256 _amount) internal override {
-        uint256 _sharesToTransfer = getSharesByUsd(_amount);
-        _transferShares(_sender, _recipient, _sharesToTransfer);
-        _emitTransferEvents(_sender, _recipient, _amount, _sharesToTransfer);
+    function _transfer(address sender, address recipient, uint256 amount) internal override {
+        uint256 sharesToTransfer = getSharesByUsd(amount);
+        _transferShares(sender, recipient, sharesToTransfer);
+        _emitTransferEvents(sender, recipient, amount, sharesToTransfer);
     }
 
     /**
-     * @notice Sets `_amount` as the allowance of `_spender` over the `_owner` s tokens.
+     * @notice Sets `amount` as the allowance of `spender` over the `owner` s tokens.
      * @dev Emits an `Approval` event.
      * Requirements:
-     * - `_owner` cannot be the zero address.
-     * - `_spender` cannot be the zero address. 
+     * - `owner` cannot be the zero address.
+     * - `spender` cannot be the zero address. 
      */
-    function _approve(address _owner, address _spender, uint256 _amount) internal override {
-        require(_owner != address(0), "APPROVE_FROM_ZERO_ADDR");
-        require(_spender != address(0), "APPROVE_TO_ZERO_ADDR");
+    function _approve(address owner, address spender, uint256 amount) internal override {
+        require(owner != address(0), "APPROVE_FROM_ZERO_ADDR");
+        require(spender != address(0), "APPROVE_TO_ZERO_ADDR");
 
-        _allowances[_owner][_spender] = _amount;
-        emit Approval(_owner, _spender, _amount);
+        _allowances[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
     }
 
     /**
@@ -299,11 +292,11 @@ abstract contract StUSDBase is IStUSD, OFT {
      * Revert if not enough allowance is available.
      * Might emit an {Approval} event.
      */
-    function _spendAllowance(address _owner, address _spender, uint256 _amount) internal override {
-        uint256 currentAllowance = _allowances[_owner][_spender];
+    function _spendAllowance(address owner, address spender, uint256 amount) internal override {
+        uint256 currentAllowance = _allowances[owner][spender];
         if (currentAllowance != INFINITE_ALLOWANCE) {
-            require(currentAllowance >= _amount, "ALLOWANCE_EXCEEDED");
-            _approve(_owner, _spender, currentAllowance - _amount);
+            require(currentAllowance >= amount, "ALLOWANCE_EXCEEDED");
+            _approve(owner, spender, currentAllowance - amount);
         }
     }
 
@@ -312,48 +305,48 @@ abstract contract StUSDBase is IStUSD, OFT {
         return _totalShares;
     }
 
-    /// @return the amount of shares owned by `_account`.
-    function _sharesOf(address _account) internal view returns (uint256) {
-        return _shares[_account];
+    /// @return the amount of shares owned by `account`.
+    function _sharesOf(address account) internal view returns (uint256) {
+        return _shares[account];
     }
 
     /**
-     * @notice Moves `_sharesAmount` shares from `_sender` to `_recipient`.
+     * @notice Moves `sharesAmount` shares from `sender` to `recipient`.
      * @dev This doesn't change the token total supply.
      * Requirements:
-     * - `_sender` cannot be the zero address.
-     * - `_recipient` cannot be the zero address.
-     * - `_sender` must hold at least `_sharesAmount` shares.
-     * @param _sender The sender of stUSD tokens
-     * @param _recipient The recipient of stUSD tokens
-     * @param _sharesAmount Amount of shares to transfer
+     * - `sender` cannot be the zero address.
+     * - `recipient` cannot be the zero address.
+     * - `sender` must hold at least `sharesAmount` shares.
+     * @param sender The sender of stUSD tokens
+     * @param recipient The recipient of stUSD tokens
+     * @param sharesAmount Amount of shares to transfer
      */
-    function _transferShares(address _sender, address _recipient, uint256 _sharesAmount) internal {
-        require(_sender != address(0), "TRANSFER_FROM_ZERO_ADDR");
-        require(_recipient != address(0), "TRANSFER_TO_ZERO_ADDR");
+    function _transferShares(address sender, address recipient, uint256 sharesAmount) internal {
+        require(sender != address(0), "TRANSFER_FROM_ZERO_ADDR");
+        require(recipient != address(0), "TRANSFER_TO_ZERO_ADDR");
 
-        uint256 currentSenderShares = _shares[_sender];
-        require(_sharesAmount <= currentSenderShares, "BALANCE_EXCEEDED");
+        uint256 currentSenderShares = _shares[sender];
+        require(sharesAmount <= currentSenderShares, "BALANCE_EXCEEDED");
 
-        _shares[_sender] = currentSenderShares - _sharesAmount;
-        _shares[_recipient] = _shares[_recipient] + _sharesAmount;
+        _shares[sender] = currentSenderShares - sharesAmount;
+        _shares[recipient] = _shares[recipient] + sharesAmount;
     }
 
     /**
-     * @notice  Creates `_sharesAmount` shares and assigns them to `_recipient`, increasing the total amount of shares.
+     * @notice  Creates `sharesAmount` shares and assigns them to `recipient`, increasing the total amount of shares.
      * @dev This doesn't increase the token total supply.
      * Requirements:
-     * - `_recipient` cannot be the zero address.
-     * @param _recipient Destination where minted shares will be sent
-     * @param _sharesAmount Amount of shares to mint
+     * - `recipient` cannot be the zero address.
+     * @param recipient Destination where minted shares will be sent
+     * @param sharesAmount Amount of shares to mint
      */
-    function _mintShares(address _recipient, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
-        require(_recipient != address(0), "MINT_TO_ZERO_ADDR");
+    function _mintShares(address recipient, uint256 sharesAmount) internal returns (uint256 newTotalShares) {
+        require(recipient != address(0), "MINT_TO_ZERO_ADDR");
 
-        newTotalShares = _getTotalShares() + _sharesAmount;
+        newTotalShares = _getTotalShares() + sharesAmount;
         _totalShares = newTotalShares;
 
-        _shares[_recipient] = _shares[_recipient] + _sharesAmount;
+        _shares[recipient] = _shares[recipient] + sharesAmount;
 
         // Notice: we're not emitting a Transfer event from the zero address here since shares mint
         // works by taking the amount of tokens corresponding to the minted shares from all other
@@ -364,30 +357,30 @@ abstract contract StUSDBase is IStUSD, OFT {
     }
 
     /**
-     * @notice Destroys `_sharesAmount` shares from `_account`'s holdings, decreasing the total amount of shares.
+     * @notice Destroys `sharesAmount` shares from `account`'s holdings, decreasing the total amount of shares.
      * @dev This doesn't decrease the token total supply.
      *  Requirements:
-     * - `_account` cannot be the zero address.
-     * - `_account` must hold at least `_sharesAmount` shares.
-     * @param _account Account to burn shares from
-     * @param _sharesAmount Amount of shares to burn
+     * - `account` cannot be the zero address.
+     * - `account` must hold at least `sharesAmount` shares.
+     * @param account Account to burn shares from
+     * @param sharesAmount Amount of shares to burn
      */
-    function _burnShares(address _account, uint256 _sharesAmount) internal returns (uint256 newTotalShares) {
-        require(_account != address(0), "BURN_FROM_ZERO_ADDR");
+    function _burnShares(address account, uint256 sharesAmount) internal returns (uint256 newTotalShares) {
+        require(account != address(0), "BURN_FROM_ZERO_ADDR");
 
-        uint256 accountShares = _shares[_account];
-        require(_sharesAmount <= accountShares, "BALANCE_EXCEEDED");
+        uint256 accountShares = _shares[account];
+        require(sharesAmount <= accountShares, "BALANCE_EXCEEDED");
 
-        uint256 preRebaseTokenAmount = getUsdByShares(_sharesAmount);
+        uint256 preRebaseTokenAmount = getUsdByShares(sharesAmount);
 
-        newTotalShares = _getTotalShares() - _sharesAmount;
+        newTotalShares = _getTotalShares() - sharesAmount;
         _totalShares = newTotalShares;
 
-        _shares[_account] = accountShares - _sharesAmount;
+        _shares[account] = accountShares - sharesAmount;
 
-        uint256 postRebaseTokenAmount = getUsdByShares(_sharesAmount);
+        uint256 postRebaseTokenAmount = getUsdByShares(sharesAmount);
 
-        emit SharesBurnt(_account, preRebaseTokenAmount, postRebaseTokenAmount, _sharesAmount);
+        emit SharesBurnt(account, preRebaseTokenAmount, postRebaseTokenAmount, sharesAmount);
 
         // Notice: we're not emitting a Transfer event to the zero address here since shares burn
         // works by redistributing the amount of tokens corresponding to the burned shares between
@@ -399,8 +392,8 @@ abstract contract StUSDBase is IStUSD, OFT {
     }
 
     /// @dev Emits {Transfer} and {TransferShares} events
-    function _emitTransferEvents(address _from, address _to, uint256 _tokenAmount, uint256 _sharesAmount) internal {
-        emit Transfer(_from, _to, _tokenAmount);
-        emit TransferShares(_from, _to, _sharesAmount);
+    function _emitTransferEvents(address from, address to, uint256 tokenAmount, uint256 sharesAmount) internal {
+        emit Transfer(from, to, tokenAmount);
+        emit TransferShares(from, to, sharesAmount);
     }
 }

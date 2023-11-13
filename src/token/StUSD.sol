@@ -7,15 +7,15 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {RedemptionNFT} from "./RedemptionNFT.sol";
-import {StUSDBase} from "./StUSDBase.sol";
+import {StUSDBase, IStUSD} from "./StUSDBase.sol";
 
 import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/bloom/IBloomPool.sol";
 import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
-import {IWstUSD} from "../interfaces/IWstUSD.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+import {IWstUSD} from "../interfaces/IWstUSD.sol";
 
 /// @title Staked USD Contract
 contract StUSD is StUSDBase, ReentrancyGuard {
@@ -26,23 +26,23 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     // =================== Storage ===================
 
     /// @notice WstUSD token
-    IWstUSD public wstUSD;
+    IWstUSD private immutable _wstUSD;
 
     /// @dev Underlying token
-    IERC20 public underlyingToken;
+    IERC20 private immutable _underlyingToken;
 
-    IBloomFactory public bloomFactory;
+    IBloomFactory private immutable _bloomFactory;
 
-    IExchangeRateRegistry public registry;
+    IExchangeRateRegistry private immutable _registry;
 
-    IStakeupStaking public stakeupStaking;
+    IStakeupStaking private immutable _stakeupStaking;
 
-    IRewardManager public rewardManager;
+    IRewardManager private immutable _rewardManager;
 
-    RedemptionNFT public redemptionNFT;
+    RedemptionNFT private immutable _redemptionNFT;
 
     /// @dev Underlying token decimals
-    uint8 internal _underlyingDecimals;
+    uint8 internal immutable _underlyingDecimals;
 
     /// @notice Mint fee bps
     uint16 public immutable mintBps;
@@ -71,160 +71,121 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     uint256 internal _lastRateUpdate;
 
     /// @dev Scaling factor for underlying token
-    uint256 private _scalingFactor;
+    uint256 private immutable _scalingFactor;
 
     // =================== Modifiers ===================
     modifier onlyUnStUSD() {
-        if (_msgSender() != address(redemptionNFT)) revert CallerNotUnStUSD();
+        if (_msgSender() != address(_redemptionNFT)) revert CallerNotUnStUSD();
         _;
     }
 
     // =================== Functions ===================
     constructor(
-        address _underlyingToken,
-        address _stakeupStaking,
-        address _bloomFactory,
-        address _registry,
-        uint16 _mintBps, // Suggested default 0.5%
-        uint16 _redeemBps, // Suggested default 0.5%
-        uint16 _performanceBps, // Suggested default 10% of yield
-        address _layerZeroEndpoint,
-        address _wstUSD
+        address underlyingToken,
+        address stakeupStaking,
+        address bloomFactory,
+        address registry,
+        uint16 mintBps_, // Suggested default 0.5%
+        uint16 redeemBps_, // Suggested default 0.5%
+        uint16 performanceBps_, // Suggested default 10% of yield
+        address layerZeroEndpoint,
+        address wstUSD
     )
-        StUSDBase(_layerZeroEndpoint)
+        StUSDBase(layerZeroEndpoint)
     {
-        if (_underlyingToken == address(0)) revert InvalidAddress();
-        if (_wstUSD == address(0)) revert InvalidAddress();
-        if (_bloomFactory == address(0)) revert InvalidAddress();
-        if (_registry == address(0)) revert InvalidAddress();
-        if (_stakeupStaking == address(0)) revert InvalidAddress();
-        if (_mintBps > MAX_BPS || _redeemBps > MAX_BPS) revert ParameterOutOfBounds();
+        if (underlyingToken == address(0)) revert InvalidAddress();
+        if (wstUSD == address(0)) revert InvalidAddress();
+        if (bloomFactory == address(0)) revert InvalidAddress();
+        if (registry == address(0)) revert InvalidAddress();
+        if (stakeupStaking == address(0)) revert InvalidAddress();
+        if (mintBps_ > MAX_BPS || redeemBps_ > MAX_BPS) revert ParameterOutOfBounds();
         
-        underlyingToken = IERC20(_underlyingToken);
-        _underlyingDecimals = IERC20Metadata(_underlyingToken).decimals();
-        bloomFactory = IBloomFactory(_bloomFactory);
-        registry = IExchangeRateRegistry(_registry);
-        stakeupStaking = IStakeupStaking(_stakeupStaking);
-        rewardManager = IRewardManager(stakeupStaking.getRewardManager());
+        _underlyingToken = IERC20(underlyingToken);
+        _underlyingDecimals = IERC20Metadata(underlyingToken).decimals();
+        _bloomFactory = IBloomFactory(bloomFactory);
+        _registry = IExchangeRateRegistry(registry);
+        _stakeupStaking = IStakeupStaking(stakeupStaking);
+        _rewardManager = IRewardManager(_stakeupStaking.getRewardManager());
 
-        mintBps = _mintBps;
-        redeemBps = _redeemBps;
-        performanceBps = _performanceBps;
+        mintBps = mintBps_;
+        redeemBps = redeemBps_;
+        performanceBps = performanceBps_;
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
         _lastRateUpdate = block.timestamp;
 
-        wstUSD = IWstUSD(_wstUSD);
+        _wstUSD = IWstUSD(wstUSD);
 
-        redemptionNFT = new RedemptionNFT(
+        _redemptionNFT = new RedemptionNFT(
             "stUSD Redemption NFT",
             "unstUSD",
             address(this),
-            _layerZeroEndpoint
+            layerZeroEndpoint
         );
     }
 
-    /**
-     * @notice Get the total amount of underlying tokens in the pool
-     */
+    /// @inheritdoc IStUSD
+    function depositTby(address tby, uint256 amount) external nonReentrant {
+        if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
+        IBloomPool latestPool = _getLatestPool();
+
+        IERC20(tby).safeTransferFrom(msg.sender, address(this), amount);
+
+        if (tby == address(latestPool)) {
+            _lastDepositAmount += amount;
+        }
+        
+        _deposit(tby, amount);
+    }
+    
+    /// @inheritdoc IStUSD
+    function depostUnderlying(uint256 amount) external nonReentrant {
+        _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
+        IBloomPool latestPool = _getLatestPool();
+
+        if (latestPool.state() == IBloomPool.State.Commit) {
+            _lastDepositAmount += amount;
+            _underlyingToken.safeApprove(address(latestPool), amount);
+            latestPool.depositLender(amount);
+        } else {
+            _remainingBalance += amount;
+        }
+        
+        _deposit(address(_underlyingToken), amount);
+    }
+
+    /// @inheritdoc IStUSD
+    function redeemStUSD(uint256 stUSDAmount) external nonReentrant returns (uint256) {
+        return _redeemStUSD(stUSDAmount);
+    }
+
+    /// @inheritdoc IStUSD
+    function redeemWstUSD(uint256 wstUSDAmount) external nonReentrant returns (uint256) {
+        IERC20(address(_wstUSD)).safeTransferFrom(msg.sender, address(this), wstUSDAmount);
+        uint256 stUSDAmount = _wstUSD.unwrap(wstUSDAmount);
+        _transfer(address(this), msg.sender, stUSDAmount);
+        return _redeemStUSD(stUSDAmount);
+    }
+
+    /// @inheritdoc IStUSD
     function getRemainingBalance() external view returns (uint256) {
         return _remainingBalance;
     }
 
-    /**
-     * @notice Deposit TBY and get stUSD minted
-     * @param _tby TBY address
-     * @param _amount TBY amount to deposit
-     */
-    function depositTby(address _tby, uint256 _amount) external {
-        if (!registry.tokenInfos(_tby).active) revert TBYNotActive();
-        IBloomPool latestPool = _getLatestPool();
-
-        IERC20(_tby).safeTransferFrom(msg.sender, address(this), _amount);
-
-        if (_tby == address(latestPool)) {
-            _lastDepositAmount += _amount;
-        }
-        
-        _deposit(_tby, _amount);
-    }
-    
-    /**
-     * @notice Deposit underlying tokens and get stUSD minted
-     * @param _amount Amount of underlying tokens to deposit
-     */
-    function depostUnderlying(uint256 _amount) external {
-        underlyingToken.safeTransferFrom(msg.sender, address(this), _amount);
-        IBloomPool latestPool = _getLatestPool();
-
-        if (latestPool.state() == IBloomPool.State.Commit) {
-            _lastDepositAmount += _amount;
-            underlyingToken.safeApprove(address(latestPool), _amount);
-            latestPool.depositLender(_amount);
-        } else {
-            _remainingBalance += _amount;
-        }
-        
-        _deposit(address(underlyingToken), _amount);
-    }
-
-    /**
-     * @notice Redeem stUSD in exchange for underlying tokens. Underlying
-     * tokens can be withdrawn with the `withdraw()` method, once the
-     * redemption is processed.
-     * @dev Emits a {Redeemed} event.
-     * @param _stUSDAmount Amount of stUSD
-     * @return uint256 The tokenId of the redemption NFT
-     */
-    function redeemStUSD(uint256 _stUSDAmount) external nonReentrant returns (uint256) {
-        return _redeemStUSD(_stUSDAmount);
-    }
-
-    /**
-     * @notice Redeem wstUSD in exchange for underlying tokens. Underlying
-     * tokens can be withdrawn with the `withdraw()` method, once the
-     * redemption is processed.
-     * @dev Emits a {Redeemed} event.
-     * @param _wstUSDAmount Amount of wstUSD
-     * @return uint256 The tokenId of the redemption NFT
-     */
-    function redeemWstUSD(uint256 _wstUSDAmount) external nonReentrant returns (uint256) {
-        IERC20(address(wstUSD)).safeTransferFrom(msg.sender, address(this), _wstUSDAmount);
-        uint256 _stUSDAmount = wstUSD.unwrap(_wstUSDAmount);
-        _transfer(address(this), msg.sender, _stUSDAmount);
-        return _redeemStUSD(_stUSDAmount);
-    }
-
-    function _redeemStUSD(uint256 _stUSDAmount) internal returns (uint256) {
-        if (_stUSDAmount == 0) revert ParameterOutOfBounds();
-
-        uint256 shares = getSharesByUsd(_stUSDAmount);
-        
-        (uint256 redemptonId, uint256 amountRedeemed) = _redeem(msg.sender, shares, _stUSDAmount);
-
-        emit Redeemed(msg.sender, shares, amountRedeemed);
-
-        return redemptonId;
-    }
-
-    /**
-     * @notice Withdraw redeemed underlying tokens
-     * @dev Emits a {Withdrawn} event.
-     * @dev Entrypoint for the withdrawl process is the RedemptionNFT contract
-     */
+    /// @inheritdoc IStUSD
     function withdraw(address account, uint256 shares) external override nonReentrant onlyUnStUSD {
         uint256 amount = getUsdByShares(shares);
 
-        uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
+        uint256 underlyingBalance = _underlyingToken.balanceOf(address(this));
 
         if (amount != 0) {
             uint256 transferAmount = amount / _scalingFactor;
 
             if (transferAmount > underlyingBalance) revert InsufficientBalance();
 
-            underlyingToken.safeTransfer(account, transferAmount);
+            _underlyingToken.safeTransfer(account, transferAmount);
     
-            _burnShares(address(redemptionNFT), shares);
+            _burnShares(address(_redemptionNFT), shares);
             _setTotalUsd(_getTotalUsd() - amount);
 
         }
@@ -232,88 +193,33 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         emit Withdrawn(msg.sender, amount);
     }
 
-    function _redeem(address _account, uint256 _shares, uint256 _underlyingAmount)
-        internal returns (uint256 redemptionId, uint256 amountRedeemed)
-    {
-        if (balanceOf(_account) < _underlyingAmount) revert InsufficientBalance();
-
-        uint256 redeemFee = (_shares * redeemBps) / BPS;
-
-        if (redeemFee > 0) {
-            _shares -= redeemFee;
-            uint256 redeemFeeAmount = getUsdByShares(redeemFee);
-            _underlyingAmount -= redeemFeeAmount;
-
-            _transferShares(_account, address(stakeupStaking), redeemFee);
-            
-            stakeupStaking.processFees(redeemFee);
-
-            emit FeeCaptured(FeeType.Redeem, redeemFee);
-        }
-
-        _transferShares(_account, address(redemptionNFT), _shares);
-
-        redemptionId = _mintRedemptionNFT(_account, _shares);
-
-        return (redemptionId, _underlyingAmount);
-    }
-
-    /**
-     * @dev Process new proceeds by applying them to redemptions and undeployed
-     * cash
-     * @param _proceeds Proceeds in underlying tokens
-     * @param _yield Yield gained from TBY
-     */
-    function _processProceeds(uint256 _proceeds, uint256 _yield) internal {
-        uint256 underlyingGains = _yield * _scalingFactor;
-
-        uint256 performanceFee = underlyingGains * performanceBps / BPS;
-
-        if (performanceFee > 0) {
-            uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
-
-            _mintShares(address(stakeupStaking), sharesFeeAmount);
-            
-            stakeupStaking.processFees(sharesFeeAmount);
-
-            emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
-        }
-
-        if (_proceeds > 0) {
-            _remainingBalance += _proceeds;
-        }
-
-        _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
-    }
-
     /**
      * @notice Redeem underlying token from TBY
-     * @param _tby TBY address
-     * @param _amount Redeem amount
+     * @param tby TBY address
+     * @param amount Redeem amount
      */
-    function redeemUnderlying(address _tby, uint256 _amount) external {
-        IBloomPool pool = IBloomPool(_tby);
+    function redeemUnderlying(address tby, uint256 amount) external nonReentrant {
+        IBloomPool pool = IBloomPool(tby);
         
-        _amount = Math.min(_amount, IERC20(_tby).balanceOf(address(this)));
+        amount = Math.min(amount, IERC20(tby).balanceOf(address(this)));
 
-        uint256 beforeUnderlyingBalance = underlyingToken.balanceOf(address(this));
+        uint256 beforeUnderlyingBalance = _underlyingToken.balanceOf(address(this));
         
         if (pool.state() == IBloomPool.State.EmergencyExit) {
             IEmergencyHandler emergencyHandler = IEmergencyHandler(pool.EMERGENCY_HANDLER());
-            IERC20(pool).safeApprove(address(emergencyHandler), _amount);
+            IERC20(pool).safeApprove(address(emergencyHandler), amount);
             emergencyHandler.redeem(pool);
         } else {
-            pool.withdrawLender(_amount);
+            pool.withdrawLender(amount);
         }
 
-        uint256 withdrawn = underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
+        uint256 withdrawn = _underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
+        uint256 yieldFromPool = withdrawn - amount;
         
-        uint256 yieldFromPool = withdrawn - _amount;
-
         _processProceeds(withdrawn, yieldFromPool);
 
-        if (_amount > 0) {
-            rewardManager.distributePokeRewards(msg.sender);
+        if (amount > 0) {
+            _rewardManager.distributePokeRewards(msg.sender);
         }
     }
 
@@ -326,7 +232,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * in any other state than commit and deposits dont get fully staked
      * @dev anyone can call this function for now
      */
-    function poke() external {
+    function poke() external nonReentrant {
         IBloomPool lastCreatedPool = _getLatestPool();
         IBloomPool.State currentState = lastCreatedPool.state();
         bool eligableForReward = false;
@@ -351,10 +257,50 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         }
 
         if (eligableForReward) {
-            rewardManager.distributePokeRewards(msg.sender);
+            _rewardManager.distributePokeRewards(msg.sender);
         }
     }
 
+    /// @inheritdoc IStUSD
+    function getWstUSD() external view returns (IWstUSD) {
+        return _wstUSD;
+    }
+
+    /// @inheritdoc IStUSD
+    function getUnderlyingToken() external view returns (IERC20) {
+        return _underlyingToken;
+    }
+
+    /// @inheritdoc IStUSD
+    function getBloomFactory() external view returns (IBloomFactory) {
+        return _bloomFactory;
+    }
+
+    /// @inheritdoc IStUSD
+    function getExchangeRateRegistry() external view returns (IExchangeRateRegistry) {
+        return _registry;
+    }
+
+    /// @notice Returns the address of the StakeupStaking contract.
+    function getStakeupStaking() external view returns (IStakeupStaking) {
+        return _stakeupStaking;
+    }
+
+    /// @notice Returns the address of the RewardManager contract.
+    function getRewardManager() external view returns (IRewardManager) {
+        return _rewardManager;
+    }
+
+    /// @notice Returns the address of the RedemptionNFT contract.
+    function getRedemptionNFT() external view returns (RedemptionNFT) {
+        return _redemptionNFT;
+    }
+
+    /**
+     * @notice Deposit tokens into stUSD
+     * @param token Token being deposited
+     * @param amount The amount of tokens being deposited
+     */
     function _deposit(address token, uint256 amount) internal {   
         // TBYs will always have the same underlying decimals as the underlying token
         uint256 amountScaled = amount * _scalingFactor;
@@ -365,26 +311,96 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         if (mintFee > 0) {
             sharesFeeAmount = getSharesByUsd(mintFee);
 
-            stakeupStaking.processFees(sharesFeeAmount);
-
             emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
         }
 
         uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
 
         _mintShares(msg.sender, sharesAmount);
-        _mintShares(address(stakeupStaking), sharesFeeAmount);
+        _mintShares(address(_stakeupStaking), sharesFeeAmount);
 
         uint256 totalUsd = _getTotalUsd();
 
         if (totalUsd <= MINT_REWARD_CUTOFF) {
             uint256 elegibleAmount = Math.min(amountScaled, MINT_REWARD_CUTOFF - totalUsd);
-            rewardManager.distributeMintRewards(msg.sender, elegibleAmount);
+            _rewardManager.distributeMintRewards(msg.sender, elegibleAmount);
         }
 
         _setTotalUsd(totalUsd + amountScaled);
 
         emit Deposit(msg.sender, token, amount, sharesAmount);
+    }
+
+    /**
+     * @notice Redeems stUSD in exchange for underlying tokens
+     * @param stUSDAmount Amount of stUSD to redeem
+     */
+    function _redeemStUSD(uint256 stUSDAmount) internal returns (uint256) {
+        if (stUSDAmount == 0) revert ParameterOutOfBounds();
+
+        uint256 shares = getSharesByUsd(stUSDAmount);
+        
+        (uint256 redemptonId, uint256 amountRedeemed) = _redeem(msg.sender, shares, stUSDAmount);
+
+        emit Redeemed(msg.sender, shares, amountRedeemed);
+
+        return redemptonId;
+    }
+
+    function _redeem(
+        address account,
+        uint256 shares,
+        uint256 underlyingAmount
+    )
+        internal returns (uint256 redemptionId, uint256 amountRedeemed)
+    {
+        if (balanceOf(account) < underlyingAmount) revert InsufficientBalance();
+
+        uint256 redeemFee = (shares * redeemBps) / BPS;
+
+        if (redeemFee > 0) {
+            shares -= redeemFee;
+            uint256 redeemFeeAmount = getUsdByShares(redeemFee);
+            underlyingAmount -= redeemFeeAmount;
+
+            _transferShares(account, address(_stakeupStaking), redeemFee);
+            _stakeupStaking.processFees(redeemFee);
+
+            emit FeeCaptured(FeeType.Redeem, redeemFee);
+        }
+
+        _transferShares(account, address(_redemptionNFT), shares);
+
+        redemptionId = _mintRedemptionNFT(account, shares);
+
+        return (redemptionId, underlyingAmount);
+    }
+
+    /**
+     * @notice Process the proceeds of TBYs and pay fees to Stakeup
+     *   Staking
+     * @param proceeds Proceeds in underlying tokens
+     * @param yield Yield gained from TBY
+     */
+    function _processProceeds(uint256 proceeds, uint256 yield) internal {
+        uint256 underlyingGains = yield * _scalingFactor;
+
+        uint256 performanceFee = underlyingGains * performanceBps / BPS;
+
+        if (performanceFee > 0) {
+            uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
+
+            _mintShares(address(_stakeupStaking), sharesFeeAmount);
+            _stakeupStaking.processFees(sharesFeeAmount);
+
+            emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
+        }
+
+        if (proceeds > 0) {
+            _remainingBalance += proceeds;
+        }
+
+        _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
     }
 
     /**
@@ -395,7 +411,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
      * @return uint256 Amount of USDC auto staked into the pool
      */
     function _autoMintTBY(IBloomPool pool) internal returns (uint256) {
-        uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
+        uint256 underlyingBalance = _underlyingToken.balanceOf(address(this));
 
         if (underlyingBalance > 0) {
             uint256 accountedBalance = _remainingBalance;
@@ -403,7 +419,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
             
             delete _remainingBalance;
 
-            underlyingToken.safeApprove(address(pool), underlyingBalance);
+            _underlyingToken.safeApprove(address(pool), underlyingBalance);
             pool.depositLender(underlyingBalance);
 
             _lastDepositAmount += underlyingBalance;
@@ -418,7 +434,15 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         return underlyingBalance;
     }
 
-    function _within24HoursOfCommitPhaseEnd(IBloomPool pool, IBloomPool.State currentState) internal view returns (bool) {
+    /**
+     * @notice Checks if a pool is within the last 24 hours of the commit phase
+     * @param pool The Bloom Pool that is being checked
+     * @param currentState The current state of the pool
+     */
+    function _within24HoursOfCommitPhaseEnd(
+        IBloomPool pool,
+        IBloomPool.State currentState
+    ) internal view returns (bool) {
         uint256 commitPhaseEnd = pool.COMMIT_PHASE_END();
         uint256 last24hoursOfCommitPhase = pool.COMMIT_PHASE_END() - AUTO_STAKE_PHASE;
 
@@ -434,13 +458,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
     /**
      * @notice Check if the pool is elegible for adjustment
-     * @param _state Pool state
+     * @param state Pool state
      * @return bool True if the pool is in a state that allows for adjustment
      */
-    function _isElegibleForAdjustment(IBloomPool.State _state) internal pure returns (bool) {
-        return _state != IBloomPool.State.Commit
-            && _state != IBloomPool.State.FinalWithdraw
-            && _state != IBloomPool.State.EmergencyExit;
+    function _isElegibleForAdjustment(IBloomPool.State state) internal pure returns (bool) {
+        return state != IBloomPool.State.Commit
+            && state != IBloomPool.State.FinalWithdraw
+            && state != IBloomPool.State.EmergencyExit;
     }
 
     /**
@@ -464,28 +488,28 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     }
 
     /**
-     * @notice Gets the latest pool created by the BloomFactory
+     * @notice Gets the latest pool created by the _bloomFactory
      * @return IBloomPool The latest pool
      */
     function _getLatestPool() internal view returns (IBloomPool) {
-        return IBloomPool(bloomFactory.getLastCreatedPool());
+        return IBloomPool(_bloomFactory.getLastCreatedPool());
     }
 
     /**
      * @notice Creates a withdrawal request and mints a redemption NFT to 
      * the redeemer
-     * @param _account The address of the account redeeming their stUSD
-     * @param _shares The amount of shares to redeem
+     * @param account The address of the account redeeming their stUSD
+     * @param shares The amount of shares to redeem
      */
-    function _mintRedemptionNFT(address _account, uint256 _shares) internal returns (uint256) {
-        return redemptionNFT.addWithdrawalRequest(_account, _shares);
+    function _mintRedemptionNFT(address account, uint256 shares) internal returns (uint256) {
+        return _redemptionNFT.addWithdrawalRequest(account, shares);
     }
     
     /**
      * @notice Calculates the current value of all TBYs that are staked in stUSD
      */
     function _getCurrentTbyValue() internal view returns (uint256) {
-        address[] memory tokens = registry.getActiveTokens();
+        address[] memory tokens = _registry.getActiveTokens();
         uint256 length = tokens.length;
 
         uint256 usdValue;
@@ -494,7 +518,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
 
             usdValue += tokenBalance
                 .rawMul(_scalingFactor)
-                .mulWad(registry.getExchangeRate(tokens[i]));
+                .mulWad(_registry.getExchangeRate(tokens[i]));
         }
 
         return usdValue;

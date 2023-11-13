@@ -18,7 +18,7 @@ import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 contract SUPVesting is ISUPVesting {
     using SafeERC20 for IERC20;
 
-    IERC20 private _token;
+    IERC20 private immutable _token;
 
     uint256 private constant CLIFF_DURATION = 365 days;
     uint256 private constant VESTING_DURATION = 3 * 365 days;
@@ -34,6 +34,7 @@ contract SUPVesting is ISUPVesting {
         _token = IERC20(token);
     }
 
+    /// @inheritdoc ISUPVesting
     function getAvailableTokens(address account) public view returns (uint256) {
         VestedAllocation memory allocation = _tokenAllocations[account];
         uint256 timeElapsed = _validateTimeElapsed(block.timestamp - allocation.vestingStartTime);
@@ -46,6 +47,7 @@ contract SUPVesting is ISUPVesting {
         }
     }
 
+    /// @inheritdoc ISUPVesting
     function vestTokens(address account, uint256 amount) external onlySUP {
         VestedAllocation storage allocation = _tokenAllocations[account];
 
@@ -63,6 +65,7 @@ contract SUPVesting is ISUPVesting {
         }
     }
 
+    /// @inheritdoc ISUPVesting
     function claimAvailableTokens() external returns (uint256) {
         VestedAllocation storage allocation = _tokenAllocations[msg.sender];
         uint32 amount = uint32(getAvailableTokens(msg.sender));
@@ -78,12 +81,14 @@ contract SUPVesting is ISUPVesting {
         return amount;
     }
 
+    /// @inheritdoc ISUPVesting
     function getCurrentBalance(
         address account
     ) external view override returns (uint256) {
         return _tokenAllocations[account].currentBalance;
     }
 
+    /// @inheritdoc ISUPVesting
     function getSUPToken() external view override returns (address) {
         return address(_token);
     }
