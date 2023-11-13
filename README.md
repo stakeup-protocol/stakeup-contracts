@@ -8,7 +8,7 @@ TBYs are limited due to users being subject to the 6-month fixed term lockup of 
 
 ## How stUSD Solves This Problem
 
-stUSD solves TBYs composability and liquidity issues by allowing users to deposit their TBYs or USDC into the contract and receive stUSD in return. stUSD can be thought of as an index of active TBYs in the market. As new Bloom Pool mint occur every two weeks, the stUSD contract will automatically redeposit all underlying funds into the new TBYs, allowing users to continue earning yield on their stUSD without the need of actively managing their funds. This token follows a rebasing mechanism that distributes TBY yield to stUSD holders while maintaining a peg to the US Dollar.
+stUSD solves TBYs composability issues by allowing users to deposit their TBYs or USDC into the contract and receive stUSD in return. stUSD can be thought of as an index of active TBYs in the market. As new Bloom Pool mint occur every two weeks, the stUSD contract will automatically redeposit all underlying funds into the new TBYs, allowing users to hold stUSD without the need of actively managing their various TBY batches. This token follows a rebasing mechanism that automates TBY's to stUSD holders.
 
 ## Design
 
@@ -16,9 +16,9 @@ stUSD solves TBYs composability and liquidity issues by allowing users to deposi
 
 ### Tokens
 
-- **stUSD**: The stUSD token is the main token of the protocol. It is a rebasing token that is pegged to the US Dollar. It is minted when users deposit TBYs or USDC into the contract and burned when users withdraw their USDC. This token rebases using a hybrid system. Maintenance rebases occur every transaction, while yield rebases are triggered every 24-hours, via cross-referencing Bloom's `ExchangeRateRegistry` contract.
+- **stUSD**: The stUSD token is the main token of the protocol. It is a rebasing token that tracks the underlying TBY. It is minted when users deposit TBYs or USDC into the contract and burned when users withdraw their USDC. This token rebases using a hybrid system. Maintenance rebases occur every transaction, while yield rebases are triggered every 24-hours, via cross-referencing Bloom's `ExchangeRateRegistry` contract.
 
-- **wstUsD**: Wrapped stUSD is the wrapped asset of `stUSD`. It is non-rebasing, allowing users to access the underlying value of their stUSD without the tax implications of rebasing tokens.
+- **wstUsD**: Wrapped stUSD is the wrapped asset of `stUSD`. It is non-rebasing, allowing users to access the underlying value of their stUSD and be more useable in DeFi.
 
 - **StakupToken**: Stakeup Token (SUP), is the reward token of the Stakeup Protocol.
 
