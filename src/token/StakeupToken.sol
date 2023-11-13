@@ -11,8 +11,8 @@ import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 
 contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
-    address private _vestingContract;
-    address private _rewardManager;
+    address private immutable _vestingContract;
+    address private immutable _rewardManager;
 
     uint256 internal constant DECIMAL_SCALING = 1e18;
     uint256 internal constant MAX_SUPPLY = 1_000_000_000 * DECIMAL_SCALING;
@@ -36,6 +36,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         _transferOwnership(owner);
     }
 
+    /// @inheritdoc IStakeupToken
     function mintLpSupply(Allocation[] memory allocations) external onlyOwner {
         uint256 length = allocations.length;
         for (uint256 i = 0; i < length; i++) {
@@ -43,6 +44,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         }
     }
 
+    /// @inheritdoc IStakeupToken
     function airdropTokens(
         TokenRecipient[] memory recipients,
         uint256 percentOfTotalSupply
@@ -65,13 +67,14 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         if (tokensRemaining > 0) revert SharesNotFullyAllocated();
     }
 
+    /// @inheritdoc IStakeupToken
     function mintRewards(address recipient, uint256 amount) external override onlyManager {
         _mint(recipient, amount);
     }
 
+    /// @inheritdoc IStakeupToken
     function mintInitialSupply(
         Allocation[] memory allocations,
-        address vestingContract,
         uint256 initialMintPercentage
     ) external override onlyOwner {
         uint256 maxSupply = MAX_SUPPLY;
@@ -83,7 +86,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
                 revert ExceedsAvailableTokens();               
             }
             sharesRemaining -= allocations[i].percentOfSupply;
-            _mintAndVest(allocations[i], vestingContract, maxSupply);
+            _mintAndVest(allocations[i], _vestingContract, maxSupply);
         }
         if (sharesRemaining > 0) revert SharesNotFullyAllocated();
     }

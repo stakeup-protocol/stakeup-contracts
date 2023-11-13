@@ -114,7 +114,7 @@ contract RewardManagerTest is Test {
 
         assertEq(mockStakeupToken.balanceOf(address(stakeupStaking)), expectedReward);
         
-        (uint256 amountStaked,,) = stakeupStaking.stakingData(address(this));
+        uint256 amountStaked = stakeupStaking.getUserStakingData(address(this)).amountStaked;
         assertEq(amountStaked, expectedReward);
     }
 
@@ -172,7 +172,7 @@ contract RewardManagerTest is Test {
 
         assertEq(mockStakeupToken.balanceOf(address(stakeupStaking)), expectedReward);
         
-        (uint256 amountStaked,,) = stakeupStaking.stakingData(address(this));
+        uint256 amountStaked = stakeupStaking.getUserStakingData(address(this)).amountStaked;
         assertEq(amountStaked, expectedReward);
     }
 }

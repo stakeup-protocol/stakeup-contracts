@@ -28,41 +28,41 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     // =================== Storage ===================
 
     // @notice The STAKEUP token
-    IStakeupToken public immutable stakeupToken;
+    IStakeupToken private immutable _stakeupToken;
 
     // @notice The SUP vesting contract
-    ISUPVesting public immutable supVestingContract;
+    ISUPVesting private immutable _supVestingContract;
 
     // @notice The stUSD token
-    IStUSD public immutable stUSD;
+    IStUSD private immutable _stUSD;
 
     // @notice Address of the reward manager
-    IRewardManager public immutable rewardManager;
+    IRewardManager private immutable _rewardManager;
 
     // @dev Mapping of users to their staking data
-    mapping(address => StakingData) public stakingData;
+    mapping(address => StakingData) private _stakingData;
 
     // @dev Data pertaining to the current reward period
-    RewardData public rewardData;
+    RewardData private _rewardData;
 
     // @notice Total amount of STAKEUP staked
-    uint256 public totalStakeUpStaked;
+    uint256 private _totalStakeUpStaked;
 
     // @dev Duration of a reward period
     uint256 constant REWARD_DURATION = 1 weeks;
 
     constructor(
-        address _stakeupToken,
-        address _supVestingContract,
-        address _rewardManager,
-        address _stUSD
+        address stakeupToken,
+        address supVestingContract,
+        address rewardManager,
+        address stUSD
     ) {
-        stakeupToken = IStakeupToken(_stakeupToken);
-        supVestingContract = ISUPVesting(_supVestingContract);
-        stUSD = IStUSD(_stUSD);
-        rewardManager = IRewardManager(_rewardManager);
+        _stakeupToken = IStakeupToken(stakeupToken);
+        _supVestingContract = ISUPVesting(supVestingContract);
+        _stUSD = IStUSD(stUSD);
+        _rewardManager = IRewardManager(rewardManager);
 
-        rewardData = RewardData({
+        _rewardData = RewardData({
             periodFinished: uint32(block.timestamp + REWARD_DURATION),
             lastUpdate: uint32(block.timestamp),
             rewardRate: 0,
@@ -78,7 +78,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
      */
     modifier updateReward(address account) {
         {
-            RewardData storage rewards = rewardData;
+            RewardData storage rewards = _rewardData;
 
             uint256 newRewardPerTokenStaked = _rewardPerToken();
             rewards.rewardPerTokenStaked = uint96(newRewardPerTokenStaked);
@@ -87,8 +87,8 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
             );
 
             if (account != address(0)) {
-                stakingData[account].rewardsAccrued = _rewardsEarned(account);
-                stakingData[account]
+                _stakingData[account].rewardsAccrued = _rewardsEarned(account);
+                _stakingData[account]
                     .rewardsPerTokenPaid = newRewardPerTokenStaked;
             }
         }
@@ -100,7 +100,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
      * @notice Only the reward token can call this function
      */
     modifier onlyReward() {
-        if (msg.sender != address(stUSD)) revert OnlyRewardToken();
+        if (msg.sender != address(_stUSD)) revert OnlyRewardToken();
         _;
     }
 
@@ -121,7 +121,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         uint256 stakeupAmount,
         uint256 harvestShares
     ) external override nonReentrant updateReward(msg.sender) {
-        StakingData storage userStakingData = stakingData[msg.sender];
+        StakingData storage userStakingData = _stakingData[msg.sender];
 
         if (userStakingData.amountStaked == 0) revert UserHasNoStaked();
 
@@ -129,13 +129,13 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         harvestShares = Math.min(harvestShares, userStakingData.rewardsAccrued);
 
         userStakingData.amountStaked -= uint128(stakeupAmount);
-        totalStakeUpStaked -= stakeupAmount;
+        _totalStakeUpStaked -= stakeupAmount;
 
         if (harvestShares > 0) {
             _harvest(userStakingData, harvestShares);
         }
 
-        IERC20(address(stakeupToken)).safeTransfer(msg.sender, stakeupAmount);
+        IERC20(address(_stakeupToken)).safeTransfer(msg.sender, stakeupAmount);
 
         emit StakeupUnstaked(msg.sender, stakeupAmount);
     }
@@ -149,7 +149,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     function harvest(
         uint256 shares
     ) public nonReentrant updateReward(msg.sender) {
-        StakingData storage userStakingData = stakingData[msg.sender];
+        StakingData storage userStakingData = _stakingData[msg.sender];
 
         if (userStakingData.amountStaked == 0) revert UserHasNoStaked();
         if (userStakingData.rewardsAccrued == 0) revert NoRewardsToClaim();
@@ -164,11 +164,10 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         uint256 shares
     ) external nonReentrant onlyReward updateReward(address(0)) {
         if (shares == 0) revert NoFeesToProcess();
-
-        RewardData storage rewards = rewardData;
+        
+        RewardData storage rewards = _rewardData;
 
         rewards.pendingRewards += uint128(shares);
-
         // If the current reward period has ended, update the reward rate
         // and add the leftover rewards to the next period's reward pool
         if (block.timestamp >= rewards.periodFinished) {
@@ -179,8 +178,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
                 REWARD_DURATION
             );
         }
-
-        rewardData.lastUpdate = uint32(block.timestamp);
+        _rewardData.lastUpdate = uint32(block.timestamp);
     }
 
     /// @inheritdoc IStakeupStaking
@@ -190,22 +188,53 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         return _rewardsEarned(account);
     }
 
+    /// @inheritdoc IStakeupStaking
+    function getStakupToken() external view returns (IStakeupToken) {
+        return _stakeupToken;
+    }
+
+    /// @inheritdoc IStakeupStaking
+    function getSupVestingContract() external view returns (ISUPVesting) {
+        return _supVestingContract;
+    }
+
+    /// @inheritdoc IStakeupStaking
+    function getStUSD() external view returns (IStUSD) {
+        return _stUSD;
+    }
+
+    /// @inheritdoc IStakeupStaking
     function getRewardManager() external view override returns (address) {
-        return address(rewardManager);
+        return address(_rewardManager);
+    }
+
+    /// @inheritdoc IStakeupStaking
+    function totalStakeUpStaked() external view returns (uint256) {
+        return _totalStakeUpStaked;
+    }
+
+    /// @inheritdoc IStakeupStaking
+    function getRewardData() external view returns (RewardData memory) {
+        return _rewardData;
+    }
+
+    /// @inheritdoc IStakeupStaking
+    function getUserStakingData(address user) external view returns (StakingData memory) {
+        return _stakingData[user];
     }
 
     function _stake(address user, uint256 amount) internal nonReentrant updateReward(user) {
-        StakingData storage userStakingData = stakingData[user];
+        StakingData storage userStakingData = _stakingData[user];
 
         if (amount == 0) revert ZeroTokensStaked();
 
         userStakingData.amountStaked += uint128(amount);
-        totalStakeUpStaked += amount;
+        _totalStakeUpStaked += amount;
 
         // If the reward manager is the sender, then there is no need to transfer tokens
         // as the tokens will be minted directly to the staking contract
-        if (msg.sender != address(rewardManager)) {
-            IERC20(address(stakeupToken)).safeTransferFrom(
+        if (msg.sender != address(_rewardManager)) {
+            IERC20(address(_stakeupToken)).safeTransferFrom(
                 msg.sender,
                 address(this),
                 amount
@@ -219,9 +248,9 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         StakingData storage userStakingData,
         uint256 shares
     ) internal {
-        uint256 amount = stUSD.getUsdByShares(shares);
+        uint256 amount = _stUSD.getUsdByShares(shares);
         userStakingData.rewardsAccrued -= uint128(shares);
-        IERC20(address(stUSD)).safeTransfer(msg.sender, amount);
+        IERC20(address(_stUSD)).safeTransfer(msg.sender, amount);
         emit RewardsHarvested(msg.sender, shares);
     }
 
@@ -232,19 +261,21 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     }
 
     function _rewardPerToken() internal view returns (uint256) {
-        uint256 totalStakupLocked = totalStakeUpStaked +
+        RewardData memory rewards = _rewardData;
+
+        uint256 totalStakupLocked = _totalStakeUpStaked +
             _totalSupLockedInVesting();
 
         if (totalStakupLocked == 0) {
-            return rewardData.rewardPerTokenStaked;
+            return rewards.rewardPerTokenStaked;
         }
         uint256 timeElapsed = uint256(
-            _lastTimeRewardApplicable(rewardData.periodFinished)
-        ) - rewardData.lastUpdate;
+            _lastTimeRewardApplicable(_rewardData.periodFinished)
+        ) - rewards.lastUpdate;
 
         return
-            uint256(rewardData.rewardPerTokenStaked) +
-            timeElapsed.mulWad(rewardData.rewardRate).divWad(totalStakupLocked);
+            uint256(rewards.rewardPerTokenStaked) +
+            timeElapsed.mulWad(_rewardData.rewardRate).divWad(totalStakupLocked);
     }
 
     /**
@@ -252,7 +283,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
      *     FixedPointMathLib library. This dust will be added to the next reward period
      */
     function _rewardsEarned(address account) internal view returns (uint256) {
-        StakingData storage userStakingData = stakingData[account];
+        StakingData storage userStakingData = _stakingData[account];
         uint256 amountEligibleForRewards = uint256(
             userStakingData.amountStaked
         );
@@ -266,16 +297,10 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
                 .divWad(1e18) + uint256(userStakingData.rewardsAccrued);
     }
 
-    function _supLockedInVesting(
-        address account
-    ) internal view returns (uint256) {
-        return supVestingContract.getCurrentBalance(account);
-    }
-
     function _totalSupLockedInVesting() internal view returns (uint256) {
         return
-            IERC20(address(stakeupToken)).balanceOf(
-                address(supVestingContract)
+            IERC20(address(_stakeupToken)).balanceOf(
+                address(_supVestingContract)
             );
     }
 }

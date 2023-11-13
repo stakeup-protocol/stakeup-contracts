@@ -26,9 +26,28 @@ interface IRedemptionNFT {
         bool claimed;
     }
 
+    /**
+     * @notice Mints a new NFT and adds a withdrawal request
+     * @dev This function is callable by the stUSD contract only
+     * @param to Recipient of the withdrawal request
+     * @param shares Shares requested to be withdrawn
+     */
     function addWithdrawalRequest(address to, uint256 shares) external returns (uint256);
 
+    /**
+     * @notice Claims a withdrawal request in exchange for underlying tokens
+     * @param tokenId The tokenId of the NFT
+     */
     function claimWithdrawal(uint256 tokenId) external;
 
+    /**
+     * @notice Returns the withdrawal request for a given tokenId
+     * @param tokenId The tokenId of the NFT
+     */
     function getWithdrawalRequest(uint256 tokenId) external view returns (WithdrawalRequest memory);
+
+    /**
+     * @notice Returns the address of the stUSD contract
+     */
+    function getStUSD() external view returns (address);
 }

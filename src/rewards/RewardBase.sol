@@ -4,9 +4,9 @@ pragma solidity 0.8.19;
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 abstract contract RewardBase {
-    address internal _stUsd;
-    address internal _stakeupToken;
-    address internal _stakeupStaking;
+    address internal immutable _stUsd;
+    address internal immutable _stakeupToken;
+    address internal immutable _stakeupStaking;
 
     uint256 internal constant DECIMAL_SCALING = 1e18;
     uint256 internal constant SUP_MAX_SUPPLY = 1_000_000_000 * DECIMAL_SCALING;
@@ -42,18 +42,14 @@ abstract contract RewardBase {
         bool isRewardGauge
     ) internal view returns (uint256) {
         uint256 timeElapsed = block.timestamp - startTimestamp;
-
         // Reward gauges will be seeded immediately after deployment
         // with 1 weeks worth of rewards
         if (isRewardGauge) {
             timeElapsed += 1 weeks;
         }
 
-
         uint256 rewardsPaid = rewardSupply - rewardsRemaining;
-        
         uint256 year = Math.max(1, Math.ceilDiv(timeElapsed, 365 days));
-
         // If the time elapsed is greater than 5 years, then the reward supply
         // is fully unlocked
         if (year > 5) {
@@ -62,7 +58,6 @@ abstract contract RewardBase {
 
         // Calculate total tokens unlocked using the formula for the sum of a geometric series
         uint256 tokensUnlocked = rewardSupply * (1 - (1 / 2**year));
-
         uint256 yearlyAllocation = tokensUnlocked - rewardsPaid;
 
         return timeElapsed * yearlyAllocation / 365 days;

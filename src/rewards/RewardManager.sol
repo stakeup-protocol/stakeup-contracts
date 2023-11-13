@@ -59,7 +59,6 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
 
             if (amount > 0) {
                 amount = Math.min(amount, _pokeRewardsRemaining);
-
                 _pokeRewardsRemaining -= amount;
 
                 _executeDelegateStake(rewardReceiver, amount);
@@ -67,6 +66,7 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
         }
     }
 
+    /// @inheritdoc IRewardManager
     function distributeMintRewards(
         address rewardReceiver,
         uint256 stUSDAmount
@@ -87,5 +87,20 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
         // Mint and stake rewards on behalf of the reward receiver
         IStakeupStaking(_stakeupStaking).delegateStake(rewardReceiver, amount);
         IStakeupToken(_stakeupToken).mintRewards(_stakeupStaking, amount);
+    }
+
+    /// @inheritdoc IRewardManager
+    function getStUsd() external view override returns (address) {
+        return _stUsd;
+    }
+
+    /// @inheritdoc IRewardManager
+    function getStakeupToken() external view override returns (address) {
+        return _stakeupToken;
+    }
+
+    /// @inheritdoc IRewardManager
+    function getStakeupStaking() external view override returns (address) {
+        return _stakeupStaking;
     }
 }
