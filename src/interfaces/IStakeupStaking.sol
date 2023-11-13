@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.19;
+
+import {IStakeupToken} from "./IStakeupToken.sol";
+import {IStUSD} from "./IStUSD.sol";
+import {ISUPVesting} from "./ISUPVesting.sol";
 
 interface IStakeupStaking {
 
@@ -113,7 +116,28 @@ interface IStakeupStaking {
      * @param shares Amount of shares of stUSD to add to the reward pool
      */
     function claimableRewards(address shares) external view returns (uint256);
+    
+    /// @notice Returns the Stakeup Token
+    function getStakupToken() external view returns (IStakeupToken);
+    
+    // @returns the SUP Vesting contract
+    function getSupVestingContract() external view returns (ISUPVesting);
 
+    /// @notice Returns the stUSD token
+    function getStUSD() external view returns (IStUSD);
+
+    /// @notice Returns the address of the Reward Manager
     function getRewardManager() external view returns (address);
+    
+    /// @notice Returns the total amount of STAKEUP staked within the contract
+    function totalStakeUpStaked() external view returns (uint256);
 
+    /// @notice Gets the information for the current rewards period
+    function getRewardData() external view returns (RewardData memory);
+
+    /**
+     * @notice Gets the staking data for a user
+     * @param user Address of the user to get the staking data for
+     */
+    function getUserStakingData(address user) external view returns (StakingData memory);
 }

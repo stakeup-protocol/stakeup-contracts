@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import {IWstUSD} from "./IWstUSD.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IBloomFactory} from "./bloom/IBloomFactory.sol";
+import {IExchangeRateRegistry} from "./bloom/IExchangeRateRegistry.sol";
+import {IStakeupStaking} from "./IStakeupStaking.sol";
+import {IRewardManager} from "./IRewardManager.sol";
+import {RedemptionNFT} from "src/token/RedemptionNFT.sol";
+
 interface IStUSD {
     // =================== Errors ===================
 
@@ -108,10 +116,97 @@ interface IStUSD {
      * @param shares Amount of shares minted to the user
      */
     event Deposit(address indexed account, address token, uint256 amount, uint256 shares);
+    
+    /**
+     * @return the entire amount of Usd controlled by the protocol.
+     * @dev The sum of all USD balances in the protocol, equals to the total supply of stUSD.
+     */
+    function getTotalUsd() external view returns (uint256);
+    /**
+     * @notice Get the total amount of shares in existence.
+     * @dev The sum of all accounts' shares can be an arbitrary number, therefore
+     * it is necessary to store it in order to calculate each account's relative share.
+     */
+    function getTotalShares() external view returns (uint256);
+        /**
+     * @notice Get the amount of shares owned by `_account`
+     * @param account Account to get shares of
+     */
+    function sharesOf(address account) external view returns (uint256);
 
-    function getUsdByShares(uint256 _sharesAmount) external view returns (uint256);
+    /**
+     * @notice Get the amount of shares that corresponds to a given dollar value.
+     * @param usdAmount Amount of Usd
+     */
+    function getSharesByUsd(uint256 usdAmount) external view returns (uint256);
 
-    function getSharesByUsd(uint256 _usdAmount) external view returns (uint256);
+    /**
+     * @notice Get the amount of Usd that corresponds to a given number of token shares.
+     * @param sharesAmount Amount of shares
+     * @return Amount of Usd that corresponds to `sharesAmount` token shares.
+     */
+    function getUsdByShares(uint256 sharesAmount) external view returns (uint256);
 
+    /**
+     * @notice Deposit TBY and get stUSD minted
+     * @param tby TBY address
+     * @param amount TBY amount to deposit
+     */
+    function depositTby(address tby, uint256 amount) external;
+    /**
+     * @notice Deposit underlying tokens and get stUSD minted
+     * @param amount Amount of underlying tokens to deposit
+     */
+    function depostUnderlying(uint256 amount) external;
+
+    /**
+     * @notice Redeem stUSD in exchange for underlying tokens. Underlying
+     * tokens can be withdrawn with the `withdraw()` method, once the
+     * redemption is processed.
+     * @dev Emits a {Redeemed} event.
+     * @param stUSDAmount Amount of stUSD
+     * @return uint256 The tokenId of the redemption NFT
+     */
+    function redeemStUSD(uint256 stUSDAmount) external returns (uint256);
+   
+    /**
+     * @notice Redeem wstUSD in exchange for underlying tokens. Underlying
+     * tokens can be withdrawn with the `withdraw()` method, once the
+     * redemption is processed.
+     * @dev Emits a {Redeemed} event.
+     * @param wstUSDAmount Amount of wstUSD
+     * @return uint256 The tokenId of the redemption NFT
+     */
+    function redeemWstUSD(uint256 wstUSDAmount) external returns (uint256);
+ 
+    /// @notice Get the total amount of underlying tokens in the pool
+    function getRemainingBalance() external view returns (uint256);
+
+    /**
+     * @notice Withdraw redeemed underlying tokens
+     * @dev Emits a {Withdrawn} event.
+     * @dev Entrypoint for the withdrawl process is the RedemptionNFT contract
+     */
     function withdraw(address account, uint256 shares) external;
+
+    /// @notice Returns the WstUSD contract
+    function getWstUSD() external view returns (IWstUSD);
+
+    /// @notice Returns the underlying token
+    function getUnderlyingToken() external view returns (IERC20);
+
+    /// @notice Returns the Bloom Pool Factory
+    function getBloomFactory() external view returns (IBloomFactory);
+
+    /// @notice Returns the Exchange Rate Registry
+    function getExchangeRateRegistry() external view returns (IExchangeRateRegistry);
+
+    /// @notice Returns the StakeupStaking contract.
+    function getStakeupStaking() external view returns (IStakeupStaking);
+
+    /// @notice Returns the RewardManager contract.
+    function getRewardManager() external view returns (IRewardManager);
+
+    /// @notice Returns the RedemptionNFT contract.
+    function getRedemptionNFT() external view returns (RedemptionNFT);
 }

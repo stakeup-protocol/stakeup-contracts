@@ -30,12 +30,12 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
         _setCurvePools(curvePools);
     }
 
+    /// @inheritdoc ICurveGaugeDistributor
     function seedGauges() external {
         CurvePoolData[] memory curvePools = _curvePools;
         uint256 length = curvePools.length;
         
         uint256 timeElapsed = block.timestamp - _lastSeedTimestamp;
-
         if (_lastSeedTimestamp != 0 && timeElapsed < SEED_INTERVAL) revert TooEarlyToSeed();
 
         _lastSeedTimestamp = block.timestamp;
@@ -62,7 +62,8 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
             }
         }
     }
-
+    
+    /// @inheritdoc ICurveGaugeDistributor
     function getCurvePoolData() external view override returns (CurvePoolData[] memory) {
         return _curvePools;
     }

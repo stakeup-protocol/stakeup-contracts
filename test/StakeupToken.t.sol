@@ -206,7 +206,7 @@ contract StakeupTokenTest is Test {
         );
 
         vm.startPrank(owner);
-        stakeupToken.mintInitialSupply(allocations, address(vestingContract), initialMintPercent);
+        stakeupToken.mintInitialSupply(allocations, initialMintPercent);
         vm.stopPrank();
     }
 
@@ -285,9 +285,9 @@ contract StakeupTokenTest is Test {
         vm.startPrank(owner);
         if (expectedRevert != bytes4(0)) {
             vm.expectRevert(expectedRevert);
-            stakeupToken.mintInitialSupply(allocations, address(vestingContract), initialMintPercent);
+            stakeupToken.mintInitialSupply(allocations, initialMintPercent);
         } else {
-            stakeupToken.mintInitialSupply(allocations, address(vestingContract), initialMintPercent);
+            stakeupToken.mintInitialSupply(allocations, initialMintPercent);
         }
         vm.stopPrank();
     }

@@ -9,7 +9,7 @@ import {MockERC20} from "./mock/MockERC20.sol";
 import {MockSUPVesting} from "./mock/MockSUPVesting.sol";
 import {MockRewardManager} from "./mock/MockRewardManager.sol";
 
-contract StakeupTokenTest is Test {
+contract StakeupStakingTest is Test {
     using FixedPointMathLib for uint256;
 
     StakeupStaking public stakeupStaking;
@@ -127,20 +127,31 @@ contract StakeupTokenTest is Test {
         // Updates PendingRewards successfully
         _processFees(1000 ether);
 
-        (,,,,uint128 availableRewards,uint128 pendingRewards) = stakeupStaking.rewardData();
-        assertEq(availableRewards, 0);
-        assertEq(pendingRewards, 1000 ether);
+        {
+            IStakeupStaking.RewardData memory rewardData = stakeupStaking.getRewardData();
+            uint256 availableRewards = rewardData.availableRewards;
+            uint256 pendingRewards = rewardData.pendingRewards;
+
+            assertEq(availableRewards, 0);
+            assertEq(pendingRewards, 1000 ether);
+        }
+
 
 
         // If we are after the end of the reward period, then the pending rewards are added to available rewards
         skip(2 weeks);
         _processFees(1000 ether);
+        
+        {
+            IStakeupStaking.RewardData memory rewards = stakeupStaking.getRewardData();
+            uint256 periodFinished = rewards.periodFinished;
+            uint256 rewardsAvailable = rewards.availableRewards;
+            uint256 rewardsPending = rewards.pendingRewards;
 
-        (uint96 periodFinished,,,,uint128 rewards, uint128 pending) = stakeupStaking.rewardData();
-
-        assertEq(periodFinished, block.timestamp + 1 weeks);
-        assertEq(rewards, 2000 ether);
-        assertEq(pending, 0);
+            assertEq(periodFinished, block.timestamp + 1 weeks);
+            assertEq(rewardsAvailable, 2000 ether);
+            assertEq(rewardsPending, 0);
+        }
     }
 
     function test_Harvest() public {
@@ -173,16 +184,21 @@ contract StakeupTokenTest is Test {
         skip(1 weeks);
         _processFees(rewardSupply / 2);
 
-        (,,uint256 rewardRate,uint96 rewardPerTokenStaked,uint128 availableRewards,) = stakeupStaking.rewardData();
-        assertEq(availableRewards, rewardSupply);
-        assertEq(rewardRate, rewardSupply.divWad(1 weeks));
-        assertEq(rewardPerTokenStaked, 0);
+        {
+            IStakeupStaking.RewardData memory rewardData = stakeupStaking.getRewardData();
+            uint256 rewardRate = rewardData.rewardRate;
+            uint96 rewardPerTokenStaked = rewardData.rewardPerTokenStaked;
+            uint256 availableRewards = rewardData.availableRewards;
+            uint256 pendingRewards = rewardData.pendingRewards;
+
+            assertEq(availableRewards, rewardSupply);
+            assertEq(rewardRate, rewardSupply.divWad(1 weeks));
+            assertEq(rewardPerTokenStaked, 0);
+        }
 
         skip(3 days);
         mockStUSD.mint(address(stakeupStaking), 10 ether);
         _processFees(10 ether);
-
-        (,,,uint96 rewardPerToken,,) = stakeupStaking.rewardData();
 
         uint256 aliceClaimableRewards = stakeupStaking.claimableRewards(alice);
 
@@ -204,10 +220,6 @@ contract StakeupTokenTest is Test {
 
         assertEq(mockStUSD.balanceOf(alice), aliceClaimableRewards);
         assertEq(stakeupStaking.claimableRewards(alice), 0);
-        
-        // with no time passed, the rewardPerTokenStaked is the same
-        (,,,rewardPerToken,,) = stakeupStaking.rewardData();
-        //assertEq(rewardPerToken, expectedRewardPerToken);
 
         // Skip to the end of the reward period and allow alice to claim the rest of her rewards
         skip(1 weeks);

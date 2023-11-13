@@ -11,81 +11,62 @@ contract WstUSD is IWstUSD, ERC20 {
     using SafeERC20 for ERC20;
     // =================== Constants ===================
 
-    /// @notice StUSD token
-    IStUSD public stUSD;
+    IStUSD private immutable _stUSD;
 
     // =================== Functions ===================
-    
-    constructor(address _stUSD) ERC20("Wrapped staked USD", "wstUSD") {
-        stUSD = IStUSD(_stUSD);
+
+    constructor(address stUSD) ERC20("Wrapped staked USD", "wstUSD") {
+        _stUSD = IStUSD(stUSD);
     }
 
-    /**
-     * @notice Exchanges stUSD to wstUSD
-     * @dev Requirements:
-     *  - `_stUSDAmount` must be non-zero
-     *  - msg.sender must approve at least `_stUSDAmount` stUSD to this
-     *    contract.
-     *  - msg.sender must have at least `_stUSDAmount` of stUSD.
-     *  User should first approve _stUSDAmount to the WstUSD contract
-     * @param _stUSDAmount amount of stUSD to wrap in exchange for wstUSD
-     * @return Amount of wstUSD user receives after wrap
-     */
-    function wrap(uint256 _stUSDAmount) external returns (uint256) {
-        if (_stUSDAmount == 0) revert ZeroAmount();
-        uint256 wstUSDAmount = stUSD.getSharesByUsd(_stUSDAmount);
+    /// @inheritdoc IWstUSD
+    function wrap(uint256 stUSDAmount) external returns (uint256) {
+        if (stUSDAmount == 0) revert ZeroAmount();
+        uint256 wstUSDAmount = _stUSD.getSharesByUsd(stUSDAmount);
         _mint(msg.sender, wstUSDAmount);
-        ERC20(address(stUSD)).safeTransferFrom(msg.sender, address(this), _stUSDAmount);
+        ERC20(address(_stUSD)).safeTransferFrom(
+            msg.sender,
+            address(this),
+            stUSDAmount
+        );
         return wstUSDAmount;
     }
 
-    /**
-     * @notice Exchanges wstUSD to stUSD
-     * @dev Requirements:
-     *  - `_wstUSDAmount` must be non-zero
-     *  - msg.sender must have at least `_wstUSDAmount` wstUSD.
-     * @param _wstUSDAmount amount of wstUSD to uwrap in exchange for stUSD
-     * @return Amount of stUSD user receives after unwrap
-     */
-    function unwrap(uint256 _wstUSDAmount) external returns (uint256) {
-        require(_wstUSDAmount > 0, "wstUSD: zero amount unwrap not allowed");
-        uint256 stUSDAmount = stUSD.getUsdByShares(_wstUSDAmount);
-        _burn(msg.sender, _wstUSDAmount);
-        ERC20(address(stUSD)).safeTransfer(msg.sender, stUSDAmount);
+    /// @inheritdoc IWstUSD
+    function unwrap(uint256 wstUSDAmount) external returns (uint256) {
+        if (wstUSDAmount == 0) revert ZeroAmount();
+        uint256 stUSDAmount = _stUSD.getUsdByShares(wstUSDAmount);
+        _burn(msg.sender, wstUSDAmount);
+        ERC20(address(_stUSD)).safeTransfer(msg.sender, stUSDAmount);
         return stUSDAmount;
     }
 
-    /**
-     * @notice Get amount of wstUSD for a given amount of stUSD
-     * @param _stUSDAmount amount of stUSD
-     * @return Amount of wstUSD for a given stUSD amount
-     */
-    function getWstUSDByStUSD(uint256 _stUSDAmount) external view returns (uint256) {
-        return stUSD.getSharesByUsd(_stUSDAmount);
+    /// @inheritdoc IWstUSD
+    function getWstUSDByStUSD(
+        uint256 stUSDAmount
+    ) external view returns (uint256) {
+        return _stUSD.getSharesByUsd(stUSDAmount);
     }
 
-    /**
-     * @notice Get amount of stUSD for a given amount of wstUSD
-     * @param _wstUSDAmount amount of wstUSD
-     * @return Amount of stUSD for a given wstUSD amount
-     */
-    function getStUSDByWstUSD(uint256 _wstUSDAmount) external view returns (uint256) {
-        return stUSD.getUsdByShares(_wstUSDAmount);
+    /// @inheritdoc IWstUSD
+    function getStUSDByWstUSD(
+        uint256 wstUSDAmount
+    ) external view returns (uint256) {
+        return _stUSD.getUsdByShares(wstUSDAmount);
     }
 
-    /**
-     * @notice Get amount of stUSD for a one wstUSD
-     * @return Amount of stUSD for a 1 wstUSD
-     */
+    /// @inheritdoc IWstUSD
     function stUsdPerToken() external view returns (uint256) {
-        return stUSD.getUsdByShares(1 ether);
+        return _stUSD.getUsdByShares(1 ether);
     }
 
-    /**
-     * @notice Get amount of wstUSD for a one stUSD
-     * @return Amount of wstUSD for a 1 stUSD
-     */
+    /// @inheritdoc IWstUSD
     function tokensPerStUsd() external view returns (uint256) {
-        return stUSD.getSharesByUsd(1 ether);
+        return _stUSD.getSharesByUsd(1 ether);
+    }
+
+    /// @inheritdoc IWstUSD
+    function getStUSD() external view override returns (IStUSD) {
+        return _stUSD;
     }
 }

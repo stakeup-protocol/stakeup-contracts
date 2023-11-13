@@ -12,4 +12,10 @@ contract MockRewardManager is IRewardManager {
         address rewardReceiver,
         uint256 stUSDAmount
     ) external override {}
+
+    function getStUsd() external view override returns (address) {}
+
+    function getStakeupToken() external view override returns (address) {}
+
+    function getStakeupStaking() external view override returns (address) {}
 }

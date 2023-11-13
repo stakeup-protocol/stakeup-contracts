@@ -105,7 +105,7 @@ contract StUSDTest is Test {
         vm.label(address(stUSD), "StUSD");
 
         assertEq(stUSD.owner(), owner);
-        assertEq(address(stUSD.underlyingToken()), address(stableToken));
+        assertEq(address(stUSD.getUnderlyingToken()), address(stableToken));
         assertEq(stUSD.mintBps(), mintBps);
         assertEq(stUSD.redeemBps(), redeemBps);
         assertEq(stUSD.performanceBps(), performanceFeeBps);
@@ -113,11 +113,11 @@ contract StUSDTest is Test {
         wstUSD = new WstUSD(address(stUSD));
         vm.label(address(wstUSD), "WstUSD");
         
-        redemptionNFT = stUSD.redemptionNFT();
+        redemptionNFT = stUSD.getRedemptionNFT();
         vm.label(address(redemptionNFT), "RedemptionNFT");
 
         assertEq(address(wstUSD), expectedWrapperAddress);
-        assertEq(address(wstUSD.stUSD()), address(stUSD));
+        assertEq(address(wstUSD.getStUSD()), address(stUSD));
 
         vm.stopPrank();
     }
