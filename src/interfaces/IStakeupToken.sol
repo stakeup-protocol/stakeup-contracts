@@ -64,9 +64,23 @@ interface IStakeupToken {
      */
     function mintRewards(address recipient, uint256 amount) external;
 
+    /**
+     * @notice Airdrops tokens to recipients
+     * @param recipients An array of TokenRecipients that will receive tokens
+     * @param percentOfTotalSupply The percentage of the total supply that will be minted
+     */
+    function airdropTokens(
+        TokenRecipient[] memory recipients,
+        uint256 percentOfTotalSupply
+    ) external;
+
+    /**
+     * @notice Mints the initial supply of tokens
+     * @param allocations An array of token Allocations for the initial supply mint 
+     * @param initialMintPercentage The percentage of the total supply that will be minted
+     */
     function mintInitialSupply(
         Allocation[] memory allocations,
-        address vestingContract,
         uint256 initialMintPercentage
     ) external;
 }

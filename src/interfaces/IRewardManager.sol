@@ -33,4 +33,19 @@ interface IRewardManager {
      * @param stUSDAmount The amount of stUSD that was minted by the user
      */
     function distributeMintRewards(address rewardReceiver, uint256 stUSDAmount) external;
+
+    /**
+     * @notice Returns the address of the stUSD contract
+     */
+    function getStUsd() external view returns (address);
+
+    /**
+     * @notice Returns the address of the SUP contract
+     */
+    function getStakeupToken() external view returns (address);
+
+    /**
+     * @notice Returns the address of the StakeupStaking Protocol
+     */
+    function getStakeupStaking() external view returns (address);
 }

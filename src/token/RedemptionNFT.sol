@@ -6,7 +6,7 @@ import {IRedemptionNFT} from "../interfaces/IRedemptionNFT.sol";
 import {IStUSD} from "../interfaces/IStUSD.sol";
 
 contract RedemptionNFT is IRedemptionNFT, ONFT721 {
-    address private _stUSD;
+    address private immutable _stUSD;
     uint256 private _mintCount;
     mapping(uint256 => WithdrawalRequest) private _withdrawalRequests;
 
@@ -24,6 +24,7 @@ contract RedemptionNFT is IRedemptionNFT, ONFT721 {
         _stUSD = stUSD;
     }
 
+    /// @inheritdoc IRedemptionNFT
     function addWithdrawalRequest(
         address to,
         uint256 shares
@@ -43,6 +44,7 @@ contract RedemptionNFT is IRedemptionNFT, ONFT721 {
         return tokenId;
     }
 
+    /// @inheritdoc IRedemptionNFT
     function claimWithdrawal(uint256 tokenId) external override {
         WithdrawalRequest storage request = _withdrawalRequests[tokenId];
 
@@ -54,10 +56,16 @@ contract RedemptionNFT is IRedemptionNFT, ONFT721 {
         IStUSD(_stUSD).withdraw(request.owner, request.amountOfShares);
     }
 
+    /// @inheritdoc IRedemptionNFT
     function getWithdrawalRequest(
         uint256 tokenId
     ) external view override returns (WithdrawalRequest memory) {
         return _withdrawalRequests[tokenId];
+    }
+
+    /// @inheritdoc IRedemptionNFT
+    function getStUSD() external view returns (address) {
+        return _stUSD;
     }
 
     function _transfer(address from, address to, uint256 tokenId) internal override {

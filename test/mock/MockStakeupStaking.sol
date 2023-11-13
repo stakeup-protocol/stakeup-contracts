@@ -2,6 +2,9 @@
 pragma solidity 0.8.19;
 
 import {IStakeupStaking} from "src/interfaces/IStakeupStaking.sol";
+import {IStakeupToken} from "src/interfaces/IStakeupToken.sol";
+import {IStUSD} from "src/interfaces/IStUSD.sol";
+import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
 
 contract MockStakeupStaking is IStakeupStaking {
     address private _rewardManager;
@@ -35,4 +38,28 @@ contract MockStakeupStaking is IStakeupStaking {
     function setRewardManager(address rewardManager) external {
         _rewardManager = rewardManager;
     }
+
+    function getStakupToken() external view override returns (IStakeupToken) {}
+
+    function getSupVestingContract()
+        external
+        view
+        override
+        returns (ISUPVesting)
+    {}
+
+    function getStUSD() external view override returns (IStUSD) {}
+
+    function totalStakeUpStaked() external view override returns (uint256) {}
+
+    function getRewardData()
+        external
+        view
+        override
+        returns (RewardData memory)
+    {}
+
+    function getUserStakingData(
+        address user
+    ) external view override returns (StakingData memory) {}
 }
