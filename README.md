@@ -30,8 +30,8 @@ stUSD solves TBYs composability issues by allowing users to deposit their TBYs o
 
 - **StakeupStaking**: Stakeup Staking is the heart of the reward system for stUSD. It allows users to stake their SUP to access the reward system of the protocol. `stUSD` from fees are sent to the contract and is used to generate yield for the users of the protocol. Below is the outline of the fee mechanism of stUSD.
 
-  - Mint Fees: .05%
-  - Redeem Fees: .05%
+  - Mint Fees: .15%
+  - Redeem Fees: .5%
   - Performance Fees: 10% of TBY yield
 
 ### Rewards
