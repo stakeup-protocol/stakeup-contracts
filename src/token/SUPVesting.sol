@@ -68,7 +68,7 @@ contract SUPVesting is ISUPVesting {
     /// @inheritdoc ISUPVesting
     function claimAvailableTokens() external returns (uint256) {
         VestedAllocation storage allocation = _tokenAllocations[msg.sender];
-        uint256 amount = (getAvailableTokens(msg.sender));
+        uint256 amount = getAvailableTokens(msg.sender);
 
         allocation.currentBalance -= amount;
 
