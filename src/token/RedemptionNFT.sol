@@ -35,7 +35,6 @@ contract RedemptionNFT is IRedemptionNFT, ONFT721 {
         _withdrawalRequests[tokenId] = WithdrawalRequest({
             amountOfShares: shares,
             owner: to,
-            timestamp: uint40(block.timestamp),
             claimed: false
         });
 
