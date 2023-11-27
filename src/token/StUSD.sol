@@ -53,13 +53,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     /// @notice Performance fee bps
     uint16 public immutable performanceBps;
 
-    uint16 public constant BPS = 10000;
+    uint16 private constant BPS = 10000;
 
-    uint16 public constant MAX_BPS = 200; // Max 2%
+    uint16 private constant MAX_BPS = 200; // Max 2%
 
-    uint256 public constant AUTO_STAKE_PHASE = 1 days;
+    uint256 private constant AUTO_STAKE_PHASE = 1 days;
 
-    uint256 public constant MINT_REWARD_CUTOFF = 200_000_000 * 10 ** 18;
+    uint256 private constant MINT_REWARD_CUTOFF = 200_000_000 * 10 ** 18;
 
     /// @dev Last deposit amount
     uint256 internal _lastDepositAmount;
