@@ -7,6 +7,9 @@ interface IStakeupToken {
     /// @notice Amount being minted is greater than the available tokens
     error ExceedsAvailableTokens();
 
+    ///@notice Amount being minted is greater than the allocation limit
+    error ExceedsMaxAllocationLimit();
+
     /// @notice Amount being minted is greater than the supply cap
     error ExceedsMaxSupply();
 
