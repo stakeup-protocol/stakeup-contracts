@@ -189,6 +189,13 @@ interface IStUSD {
      */
     function withdraw(address account, uint256 shares) external;
 
+    /**
+     * 
+     * @param remoteChainId The chainId of the remote chain
+     * @param path abi.encodePacked(remoteAddress, localAddress)
+     */
+    function setNftTrustedRemote(uint16 remoteChainId, bytes calldata path) external;
+
     /// @notice Returns the WstUSD contract
     function getWstUSD() external view returns (IWstUSD);
 
