@@ -49,7 +49,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     uint256 private _totalStakeUpStaked;
 
     // @dev Duration of a reward period
-    uint256 constant REWARD_DURATION = 1 weeks;
+    uint256 private constant REWARD_DURATION = 1 weeks;
 
     constructor(
         address stakeupToken,
@@ -128,8 +128,11 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         stakeupAmount = Math.min(stakeupAmount, userStakingData.amountStaked);
         harvestShares = Math.min(harvestShares, userStakingData.rewardsAccrued);
 
-        userStakingData.amountStaked -= uint128(stakeupAmount);
-        _totalStakeUpStaked -= stakeupAmount;
+        /// @dev cannot over/underflow due to lines above
+        unchecked {
+            userStakingData.amountStaked -= uint128(stakeupAmount);
+            _totalStakeUpStaked -= stakeupAmount;
+        }
 
         if (harvestShares > 0) {
             _harvest(userStakingData, harvestShares);
@@ -167,18 +170,21 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         
         RewardData storage rewards = _rewardData;
 
-        rewards.pendingRewards += uint128(shares);
-        // If the current reward period has ended, update the reward rate
-        // and add the leftover rewards to the next period's reward pool
-        if (block.timestamp >= rewards.periodFinished) {
-            rewards.availableRewards += rewards.pendingRewards;
-            rewards.pendingRewards = 0;
-            rewards.periodFinished = uint32(block.timestamp + REWARD_DURATION);
-            rewards.rewardRate = uint256(rewards.availableRewards).divWad(
-                REWARD_DURATION
-            );
+        unchecked {
+            rewards.pendingRewards += uint128(shares);
+        
+            // If the current reward period has ended, update the reward rate
+            // and add the leftover rewards to the next period's reward pool
+            if (block.timestamp >= rewards.periodFinished) {
+                rewards.availableRewards += rewards.pendingRewards;
+                rewards.pendingRewards = 0;
+                rewards.periodFinished = uint32(block.timestamp + REWARD_DURATION);
+                rewards.rewardRate = uint256(rewards.availableRewards).divWad(
+                    REWARD_DURATION
+                );
+            }
+            _rewardData.lastUpdate = uint32(block.timestamp);
         }
-        _rewardData.lastUpdate = uint32(block.timestamp);
     }
 
     /// @inheritdoc IStakeupStaking
@@ -228,8 +234,10 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
 
         if (amount == 0) revert ZeroTokensStaked();
 
-        userStakingData.amountStaked += uint128(amount);
-        _totalStakeUpStaked += amount;
+        unchecked {
+            userStakingData.amountStaked += uint128(amount);
+            _totalStakeUpStaked += amount;
+        }
 
         // If the reward manager is the sender, then there is no need to transfer tokens
         // as the tokens will be minted directly to the staking contract
@@ -248,9 +256,10 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         StakingData storage userStakingData,
         uint256 shares
     ) internal {
-        uint256 amount = _stUSD.getUsdByShares(shares);
-        userStakingData.rewardsAccrued -= uint128(shares);
-        IERC20(address(_stUSD)).safeTransfer(msg.sender, amount);
+        unchecked {
+            userStakingData.rewardsAccrued -= uint128(shares);
+        }
+        IERC20(address(_stUSD)).safeTransfer(msg.sender, _stUSD.getUsdByShares(shares));
         emit RewardsHarvested(msg.sender, shares);
     }
 
@@ -260,45 +269,48 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         return uint32(Math.min(block.timestamp, periodFinished));
     }
 
-    function _rewardPerToken() internal view returns (uint256) {
+    function _rewardPerToken() internal view returns (uint256 _reward) {
         RewardData memory rewards = _rewardData;
 
-        uint256 totalStakupLocked = _totalStakeUpStaked +
+        unchecked {
+            uint256 totalStakupLocked = _totalStakeUpStaked +
             _totalSupLockedInVesting();
+        
 
-        if (totalStakupLocked == 0) {
-            return rewards.rewardPerTokenStaked;
+            if (totalStakupLocked == 0) {
+                _reward = rewards.rewardPerTokenStaked;
+            } else {
+                _reward = 
+                    uint256(rewards.rewardPerTokenStaked) +
+                    (uint256(
+                        _lastTimeRewardApplicable(rewards.periodFinished)
+                    )
+                    - rewards.lastUpdate)
+                    .mulWad(rewards.rewardRate)
+                    .divWad(totalStakupLocked);
+            }
         }
-        uint256 timeElapsed = uint256(
-            _lastTimeRewardApplicable(_rewardData.periodFinished)
-        ) - rewards.lastUpdate;
-
-        return
-            uint256(rewards.rewardPerTokenStaked) +
-            timeElapsed.mulWad(_rewardData.rewardRate).divWad(totalStakupLocked);
     }
 
     /**
      * @dev There will be some dust left over due to precision loss within the
      *     FixedPointMathLib library. This dust will be added to the next reward period
      */
-    function _rewardsEarned(address account) internal view returns (uint256) {
-        StakingData storage userStakingData = _stakingData[account];
-        uint256 amountEligibleForRewards = uint256(
-            userStakingData.amountStaked
-        );
+    function _rewardsEarned(address account) internal view returns (uint256 _earned) {
+        StakingData memory userStakingData = _stakingData[account];
 
-        return
-            amountEligibleForRewards
+        unchecked {
+            _earned = userStakingData.amountStaked
                 .mulWad(
-                    _rewardPerToken() -
-                        uint256(userStakingData.rewardsPerTokenPaid)
-                )
+                _rewardPerToken() -
+                    uint256(userStakingData.rewardsPerTokenPaid)
+            )
                 .divWad(1e18) + uint256(userStakingData.rewardsAccrued);
+        }
     }
 
-    function _totalSupLockedInVesting() internal view returns (uint256) {
-        return
+    function _totalSupLockedInVesting() internal view returns (uint256 _locked) {
+        _locked =
             IERC20(address(_stakeupToken)).balanceOf(
                 address(_supVestingContract)
             );
