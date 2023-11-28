@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {OFT, IERC20, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
 import {IStUSD} from "../interfaces/IStUSD.sol";
