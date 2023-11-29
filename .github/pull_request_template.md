@@ -5,6 +5,7 @@
 
 ## Type of change
 
+- [ ] Audit fix <!-- (non-breaking change which addresses an audit item) -->
 - [ ] Bug fix <!-- (non-breaking change which fixes an issue) -->
 - [ ] New feature <!-- (non-breaking change which adds functionality) -->
 - [ ] Breaking change <!-- (would cause existing functionality to not work as expected) -->
