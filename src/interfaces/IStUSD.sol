@@ -26,7 +26,10 @@ interface IStUSD {
 
     /// @notice Invalid amount
     error InvalidAmount();
-
+    
+    /// @notice Invalid Underlying Token
+    error InvalidUnderlyingToken();
+    
     /// @notice TBY not active
     error TBYNotActive();
 
