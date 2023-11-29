@@ -31,7 +31,6 @@ contract RedemptionNFT is IRedemptionNFT, ONFT721 {
     ) external override onlyStUSD returns (uint256) {
         uint256 tokenId = _generateNextTokenId();
 
-        
         _withdrawalRequests[tokenId] = WithdrawalRequest({
             amountOfShares: shares,
             owner: to,
