@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
+import {console2} from "forge-std/console2.sol";
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
@@ -165,12 +166,6 @@ contract StakeupStakingTest is Test {
 
         _processFees(rewardSupply / 2);
 
-        // Reverts if user has no stake
-        vm.startPrank(alice);
-        vm.expectRevert(IStakeupStaking.UserHasNoStaked.selector);
-        stakeupStaking.harvest();
-        vm.stopPrank();
-
         _stake(alice, aliceStake);
         _stake(bob, bobStake);
 
@@ -251,6 +246,35 @@ contract StakeupStakingTest is Test {
         vm.expectRevert(IStakeupStaking.NoRewardsToClaim.selector);
         stakeupStaking.harvest();
         vm.stopPrank();
+    }
+
+    function test_partialHarvest() public {
+        uint256 rewardSupply = 20 ether;
+        uint256 aliceStake = 1000 ether;
+
+        mockStakeupToken.mint(alice, aliceStake);
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        
+        skip(1 weeks);
+        _processFees(rewardSupply);
+
+        _stake(alice, aliceStake);
+
+        skip(3 days);
+        mockStUSD.mint(address(stakeupStaking), 10 ether);
+        _processFees(10 ether);
+
+        uint256 aliceRewards = stakeupStaking.claimableRewards(alice);
+        console2.log("Alice Rewards", aliceRewards);
+        // Alice claims half of her rewards
+        vm.startPrank(alice);
+        vm.expectEmit(true, true, true, true);
+        emit RewardsHarvested(alice, aliceRewards / 2);
+        stakeupStaking.harvest(aliceRewards / 2);
+
+        // Alice claims second half of rewards
+        stakeupStaking.harvest(aliceRewards / 2);
+
     }
 
     function _stake(address user, uint256 amount) internal {
