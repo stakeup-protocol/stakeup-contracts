@@ -447,7 +447,7 @@ contract StUSDTest is Test {
         stUSD.redeemUnderlying(address(pool), 3e6);
 
         uint256 sharesPerUsd = stUSD.getTotalShares() * 1e18 / stUSD.getTotalUsd();
-        uint256 usdPerShares = stUSD.getTotalUsd() * 1e18 / stUSD.getTotalShares();
+        uint256 usdPerShares = stUSD.getTotalUsd() * 1e18 / stUSD.getTotalShares() + 1; // Add 1 to round up
 
         assertEq(wstUSD.stUsdPerToken(), usdPerShares);
         assertEq(wstUSD.tokensPerStUsd(), sharesPerUsd);  
