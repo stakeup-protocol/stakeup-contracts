@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
@@ -265,7 +264,7 @@ contract StakeupStakingTest is Test {
         _processFees(10 ether);
 
         uint256 aliceRewards = stakeupStaking.claimableRewards(alice);
-        console2.log("Alice Rewards", aliceRewards);
+
         // Alice claims half of her rewards
         vm.startPrank(alice);
         vm.expectEmit(true, true, true, true);
