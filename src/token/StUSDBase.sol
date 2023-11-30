@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+
 import {OFT, IERC20, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
 import {IStUSD} from "../interfaces/IStUSD.sol";
 
 /// @title Staked USD Base Contract
 abstract contract StUSDBase is IStUSD, OFT {
+    using FixedPointMathLib for uint256;
     // =================== Constants ===================
 
     uint256 internal constant INFINITE_ALLOWANCE = type(uint256).max;
@@ -190,7 +193,7 @@ abstract contract StUSDBase is IStUSD, OFT {
         if (totalShares == 0) {
             return usdAmount;
         }
-        return (usdAmount * totalShares) / _getTotalUsd();
+        return usdAmount.mulWad(totalShares).divWad(_getTotalUsd()); 
     }
     
     /// @inheritdoc IStUSD
@@ -199,7 +202,7 @@ abstract contract StUSDBase is IStUSD, OFT {
         if (totalShares == 0) {
             return sharesAmount;
         }
-        return (sharesAmount * _getTotalUsd()) / totalShares;
+        return sharesAmount.mulWadUp(_getTotalUsd()).divWadUp(totalShares);
     }
 
     /**
