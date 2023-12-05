@@ -183,7 +183,6 @@ contract StakeupStakingTest is Test {
             uint256 rewardRate = rewardData.rewardRate;
             uint96 rewardPerTokenStaked = rewardData.rewardPerTokenStaked;
             uint256 availableRewards = rewardData.availableRewards;
-            uint256 pendingRewards = rewardData.pendingRewards;
 
             assertEq(availableRewards, rewardSupply);
             assertEq(rewardRate, rewardSupply.divWad(1 weeks));
