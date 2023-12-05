@@ -8,7 +8,7 @@
 ╚═════╝░╚══════╝░╚════╝░░╚════╝░╚═╝░░░░░╚═╝
 */
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {IBloomFactory} from "src/interfaces/bloom/IBloomFactory.sol";
 

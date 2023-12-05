@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {IWstUSD} from "./IWstUSD.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -219,4 +219,13 @@ interface IStUSD {
 
     /// @notice Returns the RedemptionNFT contract.
     function getRedemptionNFT() external view returns (RedemptionNFT);
+
+    /// @notice Returns the mintBps.
+    function getMintBps() external view returns (uint256);
+
+    /// @notice Returns the redeemBps.
+    function getRedeemBps() external view returns (uint256);
+
+    /// @notice Returns the performanceBps.
+    function getPerformanceBps() external view returns (uint256);
 }

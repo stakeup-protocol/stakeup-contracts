@@ -8,7 +8,7 @@
 ╚═════╝░╚══════╝░╚════╝░░╚════╝░╚═╝░░░░░╚═╝
 */
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {IEmergencyHandler} from "src/interfaces/bloom/IEmergencyHandler.sol";
 import {IBloomPool} from "src/interfaces/bloom/IBloomPool.sol";

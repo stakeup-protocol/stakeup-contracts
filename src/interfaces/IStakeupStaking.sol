@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {IStakeupToken} from "./IStakeupToken.sol";
 import {IStUSD} from "./IStUSD.sol";

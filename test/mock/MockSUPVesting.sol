@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
 
