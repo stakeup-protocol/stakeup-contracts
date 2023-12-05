@@ -262,6 +262,11 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStUSD
+    function setNftTrustedRemote(uint16 remoteChainId, bytes calldata path) external onlyOwner {
+        _redemptionNFT.setTrustedRemote(remoteChainId, path);
+    }
+    
+    /// @inheritdoc IStUSD
     function getWstUSD() external view returns (IWstUSD) {
         return _wstUSD;
     }
