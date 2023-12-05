@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {ONFT721, ERC721} from "@layerzerolabs/token/onft721/ONFT721.sol";
 import {IRedemptionNFT} from "../interfaces/IRedemptionNFT.sol";
@@ -159,7 +159,7 @@ contract RedemptionNFT is IRedemptionNFT, ONFT721 {
 
         uint256[] memory amountOfShares = new uint256[](tokenLength);
 
-        for (uint256 i = 0; i < tokenLength; i++) {
+        for (uint256 i = 0; i < tokenLength; ++i) {
             // Save the data needed to send to the other chain and delete the withdrawal request from storage
             WithdrawalRequest memory request = _withdrawalRequests[_tokenIds[i]];
 
@@ -233,7 +233,7 @@ contract RedemptionNFT is IRedemptionNFT, ONFT721 {
 
             // Mint the new NFT on the dstChain with the overridden _creditTo function
             _mintTo(toAddress, tokenIds[i]);
-            i++;
+            ++i;
         }
 
         // indicates the next index to send of tokenIds,

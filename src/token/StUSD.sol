@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -45,13 +45,13 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     uint8 internal immutable _underlyingDecimals;
 
     /// @notice Mint fee bps
-    uint16 public immutable mintBps;
+    uint16 private immutable mintBps;
 
     /// @notice Redeem fee bps
-    uint16 public immutable redeemBps;
+    uint16 private immutable redeemBps;
 
     /// @notice Performance fee bps
-    uint16 public immutable performanceBps;
+    uint16 private immutable performanceBps;
 
     uint16 private constant BPS = 10000;
 
@@ -287,19 +287,34 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         return _registry;
     }
 
-    /// @notice Returns the address of the StakeupStaking contract.
+    /// @inheritdoc IStUSD
     function getStakeupStaking() external view returns (IStakeupStaking) {
         return _stakeupStaking;
     }
 
-    /// @notice Returns the address of the RewardManager contract.
+    /// @inheritdoc IStUSD
     function getRewardManager() external view returns (IRewardManager) {
         return _rewardManager;
     }
 
-    /// @notice Returns the address of the RedemptionNFT contract.
+    /// @inheritdoc IStUSD
     function getRedemptionNFT() external view returns (RedemptionNFT) {
         return _redemptionNFT;
+    }
+
+    /// @inheritdoc IStUSD
+    function getMintBps() external view returns (uint256) {
+        return mintBps;
+    }
+
+    /// @inheritdoc IStUSD
+    function getRedeemBps() external view returns (uint256) {
+        return redeemBps;
+    }
+
+    /// @inheritdoc IStUSD
+    function getPerformanceBps() external view returns (uint256) {
+        return performanceBps;
     }
 
     /**
@@ -519,7 +534,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
         uint256 length = tokens.length;
 
         uint256 usdValue;
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             uint256 tokenBalance = IERC20(tokens[i]).balanceOf(address(this));
 
             usdValue += tokenBalance

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -40,7 +40,7 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
 
         _lastSeedTimestamp = block.timestamp;
 
-        for (uint256 i=0; i < length; i++) {
+        for (uint256 i=0; i < length; ++i) {
             // Calculate the amount of rewards to mint
             uint256 amount = _calculateDripAmount(
                 curvePools[i].maxRewards,
@@ -71,7 +71,7 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
     function _setCurvePools(CurvePoolData[] memory curvePools) internal {
         uint256 length = curvePools.length;
 
-        for (uint i = 0; i < length; i++) {
+        for (uint i = 0; i < length; ++i) {
             if (curvePools[i].curveFactory == address(0)) revert InvalidAddress();
             if (curvePools[i].curvePool == address(0)) revert InvalidAddress();
             
@@ -84,7 +84,7 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
         uint256 length = curvePools.length;
         uint256 totalRewards = POOL_REWARDS;
 
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             // Deploy the Curve guage and register SUP as the reward token
             address gauge = ICurvePoolFactory(curvePools[i].curveFactory).deploy_gauge(curvePools[i].curvePool);
             ICurvePoolGauge(gauge).add_reward(_stakeupToken, address(this));

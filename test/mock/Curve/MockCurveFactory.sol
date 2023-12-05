@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {ICurvePoolFactory} from "src/interfaces/curve/ICurvePoolFactory.sol";
 import {MockCurveGauge} from "./MockCurveGauge.sol";

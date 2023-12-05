@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {OFT, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
@@ -39,7 +39,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
     /// @inheritdoc IStakeupToken
     function mintLpSupply(Allocation[] memory allocations) external onlyOwner {
         uint256 length = allocations.length;
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             _mintAndVest(allocations[i], _vestingContract);
         }
     }
@@ -54,7 +54,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
             DECIMAL_SCALING;
         uint256 tokensRemaining = tokenAllocation;
 
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             address recipient = recipients[i].recipient;
             uint256 amount = (recipients[i].percentOfAllocation *
                 tokenAllocation) / DECIMAL_SCALING;
@@ -80,7 +80,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         uint256 sharesRemaining = initialMintPercentage;
         uint256 length = allocations.length;
 
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             if (sharesRemaining < allocations[i].percentOfSupply) {
                 revert ExceedsAvailableTokens();               
             }
@@ -102,7 +102,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         uint256 allocationRemaining = tokensReserved;
         uint256 length = recipients.length;
 
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 0; i < length; ++i) {
             address recipient = recipients[i].recipient;
             uint256 amount = (tokensReserved *
                 recipients[i].percentOfAllocation) / DECIMAL_SCALING;

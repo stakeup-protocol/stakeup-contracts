@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
@@ -108,9 +108,9 @@ contract StUSDTest is Test {
 
         assertEq(stUSD.owner(), owner);
         assertEq(address(stUSD.getUnderlyingToken()), address(stableToken));
-        assertEq(stUSD.mintBps(), mintBps);
-        assertEq(stUSD.redeemBps(), redeemBps);
-        assertEq(stUSD.performanceBps(), performanceFeeBps);
+        assertEq(stUSD.getMintBps(), mintBps);
+        assertEq(stUSD.getRedeemBps(), redeemBps);
+        assertEq(stUSD.getPerformanceBps(), performanceFeeBps);
 
         wstUSD = new WstUSD(address(stUSD));
         vm.label(address(wstUSD), "WstUSD");
@@ -208,7 +208,7 @@ contract StUSDTest is Test {
         uint256 amount = 100e6;
         uint256 startingTBYAliceBalance = 1e6;
         uint256 stUSDMintAmount = 1e18;
-        uint256 aliceDepositFee = (stUSDMintAmount * stUSD.mintBps()) / BPS;
+        uint256 aliceDepositFee = (stUSDMintAmount * stUSD.getMintBps()) / BPS;
         uint256 expectedEndSharesAlice = stUSDMintAmount - aliceDepositFee;
         uint256 exchangeRate = 1.04e18;
         

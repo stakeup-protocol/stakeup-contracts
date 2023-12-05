@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.22;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -49,7 +49,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     uint256 private _totalStakeUpStaked;
 
     // @dev Duration of a reward period
-    uint256 constant REWARD_DURATION = 1 weeks;
+    uint256 private constant REWARD_DURATION = 1 weeks;
 
     constructor(
         address stakeupToken,
