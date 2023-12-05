@@ -4,10 +4,10 @@ pragma solidity 0.8.22;
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 import {OFT, IERC20, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
-import {IStUSD} from "../interfaces/IStUSD.sol";
+import {IStUSDBase} from "../interfaces/IStUSDBase.sol";
 
 /// @title Staked USD Base Contract
-abstract contract StUSDBase is IStUSD, OFT {
+contract StUSDBase is IStUSDBase, OFT {
     using FixedPointMathLib for uint256;
     // =================== Constants ===================
 
@@ -56,8 +56,8 @@ abstract contract StUSDBase is IStUSD, OFT {
         return _getTotalUsd();
     }
 
-    /// @inheritdoc IStUSD
-    function getTotalUsd() external view returns (uint256) {
+    /// @inheritdoc IStUSDBase
+    function getTotalUsd() external view override returns (uint256) {
         return _getTotalUsd();
     }
 
@@ -177,17 +177,17 @@ abstract contract StUSDBase is IStUSD, OFT {
         return true;
     }
 
-    /// @inheritdoc IStUSD
-    function getTotalShares() external view returns (uint256) {
+    /// @inheritdoc IStUSDBase
+    function getTotalShares() external view override returns (uint256) {
         return _getTotalShares();
     }
 
-    /// @inheritdoc IStUSD
-    function sharesOf(address account) external view returns (uint256) {
+    /// @inheritdoc IStUSDBase
+    function sharesOf(address account) external view override returns (uint256) {
         return _sharesOf(account);
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStUSDBase
     function getSharesByUsd(uint256 usdAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         uint256 totalUsd = _getTotalUsd();
@@ -202,7 +202,7 @@ abstract contract StUSDBase is IStUSD, OFT {
         return usdAmount.mulWad(totalShares).divWad(_getTotalUsd());
     }
     
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStUSDBase
     function getUsdByShares(uint256 sharesAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
