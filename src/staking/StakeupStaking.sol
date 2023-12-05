@@ -151,7 +151,6 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
     ) public nonReentrant updateReward(msg.sender) {
         StakingData storage userStakingData = _stakingData[msg.sender];
 
-        if (userStakingData.amountStaked == 0) revert UserHasNoStaked();
         if (userStakingData.rewardsAccrued == 0) revert NoRewardsToClaim();
 
         shares = Math.min(shares, userStakingData.rewardsAccrued);

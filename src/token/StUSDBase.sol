@@ -190,10 +190,16 @@ abstract contract StUSDBase is IStUSD, OFT {
     /// @inheritdoc IStUSD
     function getSharesByUsd(uint256 usdAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
+        uint256 totalUsd = _getTotalUsd();
+        
         if (totalShares == 0) {
             return usdAmount;
         }
-        return usdAmount.mulWad(totalShares).divWad(_getTotalUsd()); 
+        if (totalUsd == 0) {
+            return totalShares;
+        }
+
+        return usdAmount.mulWad(totalShares).divWad(_getTotalUsd());
     }
     
     /// @inheritdoc IStUSD
@@ -398,5 +404,27 @@ abstract contract StUSDBase is IStUSD, OFT {
     function _emitTransferEvents(address from, address to, uint256 tokenAmount, uint256 sharesAmount) internal {
         emit Transfer(from, to, tokenAmount);
         emit TransferShares(from, to, sharesAmount);
+    }
+
+    function _debitFrom(
+        address _from,
+        uint16,
+        bytes memory,
+        uint _amount
+    ) internal override returns (uint) {
+        address spender = _msgSender();
+        if (_from != spender) _spendAllowance(_from, spender, _amount);
+        uint256 shares = getSharesByUsd(_amount);
+        _burnShares(_from, shares);
+        return _amount;
+    }
+
+    function _creditTo(
+        uint16,
+        address _toAddress,
+        uint _amount
+    ) internal override returns (uint) {
+        _mintShares(_toAddress, getSharesByUsd(_amount));
+        return _amount;
     }
 }

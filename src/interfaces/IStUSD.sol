@@ -26,7 +26,10 @@ interface IStUSD {
 
     /// @notice Invalid amount
     error InvalidAmount();
-
+    
+    /// @notice Invalid Underlying Token
+    error InvalidUnderlyingToken();
+    
     /// @notice TBY not active
     error TBYNotActive();
 
@@ -188,6 +191,13 @@ interface IStUSD {
      * @dev Entrypoint for the withdrawl process is the RedemptionNFT contract
      */
     function withdraw(address account, uint256 shares) external;
+
+    /**
+     * 
+     * @param remoteChainId The chainId of the remote chain
+     * @param path abi.encodePacked(remoteAddress, localAddress)
+     */
+    function setNftTrustedRemote(uint16 remoteChainId, bytes calldata path) external;
 
     /// @notice Returns the WstUSD contract
     function getWstUSD() external view returns (IWstUSD);
