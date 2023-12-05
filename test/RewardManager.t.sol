@@ -21,6 +21,7 @@ contract RewardManagerTest is Test {
     MockCurveFactory public mockCurveFactory;
     StakeupStaking public stakeupStaking;
 
+    uint256 internal constant DECIMAL_SCALING = 1e18;
     uint256 constant MAX_POKE_REWARDS = 1_000_000_000e18 * 1e16 / 1e18;
     uint256 constant MAX_POOL_REWARDS = 1_000_000_000e18 * 2e17 / 1e18;
     uint256 constant MAX_MINT_REWARDS = 1_000_000_000e18 * 1e17 / 1e18;
@@ -103,7 +104,7 @@ contract RewardManagerTest is Test {
 
         skip(3 days);
         uint256 year = 1;
-        uint256 yearOneRewards = MAX_POKE_REWARDS * (1 - (1 / 2**year));
+        uint256 yearOneRewards = MAX_POKE_REWARDS * (DECIMAL_SCALING - (DECIMAL_SCALING / 2**year)) / DECIMAL_SCALING;
 
         uint256 expectedReward = 3 days * yearOneRewards / 365 days;
         
@@ -132,7 +133,7 @@ contract RewardManagerTest is Test {
         for (uint256 i = 0; i < data.length; i++) {
             uint256 week = 1 weeks;
             uint256 year = 1;
-            uint256 yearOneRewards = data[i].maxRewards * (1 - (1 / 2**year));
+            uint256 yearOneRewards = data[i].maxRewards * (DECIMAL_SCALING - (DECIMAL_SCALING / 2**year)) / DECIMAL_SCALING;
 
             uint256 expectedReward = week * yearOneRewards / 365 days;
 
