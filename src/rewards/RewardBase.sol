@@ -57,7 +57,7 @@ abstract contract RewardBase {
         }
 
         // Calculate total tokens unlocked using the formula for the sum of a geometric series
-        uint256 tokensUnlocked = rewardSupply * (1 - (1 / 2**year));
+        uint256 tokensUnlocked = rewardSupply * (DECIMAL_SCALING - (DECIMAL_SCALING / 2**year)) / DECIMAL_SCALING;
         uint256 yearlyAllocation = tokensUnlocked - rewardsPaid;
 
         return timeElapsed * yearlyAllocation / 365 days;

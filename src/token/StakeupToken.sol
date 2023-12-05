@@ -40,7 +40,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
     function mintLpSupply(Allocation[] memory allocations) external onlyOwner {
         uint256 length = allocations.length;
         for (uint256 i = 0; i < length; i++) {
-            _mintAndVest(allocations[i], _vestingContract, MAX_SUPPLY);
+            _mintAndVest(allocations[i], _vestingContract);
         }
     }
 
@@ -77,7 +77,6 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         Allocation[] memory allocations,
         uint256 initialMintPercentage
     ) external override onlyOwner {
-        uint256 maxSupply = MAX_SUPPLY;
         uint256 sharesRemaining = initialMintPercentage;
         uint256 length = allocations.length;
 
@@ -86,18 +85,19 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
                 revert ExceedsAvailableTokens();               
             }
             sharesRemaining -= allocations[i].percentOfSupply;
-            _mintAndVest(allocations[i], _vestingContract, maxSupply);
+            _mintAndVest(allocations[i], _vestingContract);
         }
+        if (totalSupply() > MAX_SUPPLY) revert ExceedsMaxAllocationLimit();
+
         if (sharesRemaining > 0) revert SharesNotFullyAllocated();
     }
 
     function _mintAndVest(
         Allocation memory allocation,
-        address vestingContract,
-        uint256 maxTokenSupply
+        address vestingContract
     ) internal {
         TokenRecipient[] memory recipients = allocation.recipients;
-        uint256 tokensReserved = (maxTokenSupply * allocation.percentOfSupply) /
+        uint256 tokensReserved = (MAX_SUPPLY * allocation.percentOfSupply) /
             DECIMAL_SCALING;
         uint256 allocationRemaining = tokensReserved;
         uint256 length = recipients.length;

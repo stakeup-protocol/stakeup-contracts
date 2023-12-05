@@ -22,7 +22,6 @@ interface IRedemptionNFT {
     struct WithdrawalRequest {
         uint256 amountOfShares;
         address owner;
-        uint40 timestamp;
         bool claimed;
     }
 

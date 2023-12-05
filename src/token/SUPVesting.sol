@@ -38,12 +38,13 @@ contract SUPVesting is ISUPVesting {
     function getAvailableTokens(address account) public view returns (uint256) {
         VestedAllocation memory allocation = _tokenAllocations[account];
         uint256 timeElapsed = _validateTimeElapsed(block.timestamp - allocation.vestingStartTime);
+        uint256 claimedTokens = allocation.startingBalance - allocation.currentBalance;
 
         if (timeElapsed < CLIFF_DURATION) {
             return 0;
         } else {
             return
-                allocation.startingBalance * timeElapsed / VESTING_DURATION;
+                allocation.startingBalance * timeElapsed / VESTING_DURATION - claimedTokens;
         }
     }
 
@@ -68,7 +69,7 @@ contract SUPVesting is ISUPVesting {
     /// @inheritdoc ISUPVesting
     function claimAvailableTokens() external returns (uint256) {
         VestedAllocation storage allocation = _tokenAllocations[msg.sender];
-        uint32 amount = uint32(getAvailableTokens(msg.sender));
+        uint256 amount = getAvailableTokens(msg.sender);
 
         allocation.currentBalance -= amount;
 

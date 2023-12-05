@@ -45,6 +45,8 @@ contract StUSDTest is Test {
     uint16 internal redeemBps = 50;
     uint16 internal performanceFeeBps = 1000;
 
+    uint16 internal constant BPS = 10000;
+
     bytes internal constant NOT_OWNER_ERROR = bytes("Ownable: caller is not the owner");
 
     // ============== Redefined Events ===============
@@ -206,7 +208,7 @@ contract StUSDTest is Test {
         uint256 amount = 100e6;
         uint256 startingTBYAliceBalance = 1e6;
         uint256 stUSDMintAmount = 1e18;
-        uint256 aliceDepositFee = (stUSDMintAmount * stUSD.mintBps()) / stUSD.BPS();
+        uint256 aliceDepositFee = (stUSDMintAmount * stUSD.mintBps()) / BPS;
         uint256 expectedEndSharesAlice = stUSDMintAmount - aliceDepositFee;
         uint256 exchangeRate = 1.04e18;
         
@@ -354,8 +356,8 @@ contract StUSDTest is Test {
         uint256 aliceMintedShares = .995e18;
         uint256 bobMintedShares = 1.99e18;
         uint256 mintedStakeupStakingShares = .015e18; // 0.5% of total minted shares
-        uint256 aliceRedeemFees = (aliceMintedShares * redeemBps) / stUSD.BPS();
-        uint256 bobRedeemFees = (bobMintedShares * redeemBps) / stUSD.BPS();
+        uint256 aliceRedeemFees = (aliceMintedShares * redeemBps) / BPS;
+        uint256 bobRedeemFees = (bobMintedShares * redeemBps) / BPS;
         uint256 expectedPerformanceFee = 3e16; // 10% of yield
         // ###########################################
 
@@ -412,6 +414,7 @@ contract StUSDTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Redeemed(alice, aliceShares, aliceBalance1 * .995e18 / 1e18);
         uint256 aliceNFTId = stUSD.redeemStUSD(aliceBalance1);
+        assertEq(aliceNFTId, _generateExpectedNftId(0));
         vm.stopPrank();
         
         uint256 bobWrappedAmount = wstUSD.balanceOf(bob);
@@ -421,6 +424,7 @@ contract StUSDTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Redeemed(bob, bobWrappedAmount, bobAmountReceived);
         uint256 bobNFTId = stUSD.redeemWstUSD(bobWrappedAmount);
+        assertEq(bobNFTId, _generateExpectedNftId(1));
         vm.stopPrank();
 
         // Verify state after redeems
@@ -506,5 +510,9 @@ contract StUSDTest is Test {
         assertEq(stUSD.sharesOf(address(staking)), stakeupStakingShares + performanceFeeInShares);
         assertEq(stUSD.balanceOf(address(redemptionNFT)), 0);
         // ###############################################
+    }
+
+    function _generateExpectedNftId(uint256 mintCount) internal view returns (uint256) {
+        return uint256(keccak256(abi.encode(block.chainid, 0x00, mintCount)));
     }
 }
