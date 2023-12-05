@@ -414,6 +414,7 @@ contract StUSDTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Redeemed(alice, aliceShares, aliceBalance1 * .995e18 / 1e18);
         uint256 aliceNFTId = stUSD.redeemStUSD(aliceBalance1);
+        assertEq(aliceNFTId, _generateExpectedNftId(0));
         vm.stopPrank();
         
         uint256 bobWrappedAmount = wstUSD.balanceOf(bob);
@@ -423,6 +424,7 @@ contract StUSDTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Redeemed(bob, bobWrappedAmount, bobAmountReceived);
         uint256 bobNFTId = stUSD.redeemWstUSD(bobWrappedAmount);
+        assertEq(bobNFTId, _generateExpectedNftId(1));
         vm.stopPrank();
 
         // Verify state after redeems
@@ -508,5 +510,9 @@ contract StUSDTest is Test {
         assertEq(stUSD.sharesOf(address(staking)), stakeupStakingShares + performanceFeeInShares);
         assertEq(stUSD.balanceOf(address(redemptionNFT)), 0);
         // ###############################################
+    }
+
+    function _generateExpectedNftId(uint256 mintCount) internal view returns (uint256) {
+        return uint256(keccak256(abi.encode(block.chainid, 0x00, mintCount)));
     }
 }
