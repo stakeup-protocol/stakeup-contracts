@@ -12,7 +12,7 @@ stUSD solves TBYs composability issues by allowing users to deposit their TBYs o
 
 ## Design
 
-![stUSD Design](./stUsd-architecture.png)
+![stUSD Design](./stUsd-architecture.jpeg)
 
 ### Tokens
 
