@@ -105,4 +105,8 @@ contract MockBloomPool is IBloomPool, MockERC20 {
     function emergencyBurn(uint256 amount) external {
         _burn(msg.sender, amount);
     }
+
+    function UNDERLYING_TOKEN() external view override returns (address) {
+        return address(underlyingToken);
+    }
 }

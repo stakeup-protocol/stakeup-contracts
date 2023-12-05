@@ -128,6 +128,7 @@ contract StUSD is StUSDBase, ReentrancyGuard {
     function depositTby(address tby, uint256 amount) external nonReentrant {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
         IBloomPool latestPool = _getLatestPool();
+        if (latestPool.UNDERLYING_TOKEN() != address(_underlyingToken)) revert InvalidUnderlyingToken();
 
         IERC20(tby).safeTransferFrom(msg.sender, address(this), amount);
 
