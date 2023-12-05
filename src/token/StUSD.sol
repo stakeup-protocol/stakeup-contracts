@@ -7,7 +7,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {RedemptionNFT} from "./RedemptionNFT.sol";
-import {StUSDBase, IStUSD} from "./StUSDBase.sol";
+import {StUSDBase} from "./StUSDBase.sol";
 
 import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/bloom/IBloomPool.sol";
@@ -15,10 +15,11 @@ import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+import {IStUSD} from "../interfaces/IStUSD.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
 
 /// @title Staked USD Contract
-contract StUSD is StUSDBase, ReentrancyGuard {
+contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IWstUSD;
