@@ -187,10 +187,17 @@ abstract contract StUSDBase is IStUSD, OFT {
     /// @inheritdoc IStUSD
     function getSharesByUsd(uint256 usdAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
+        uint256 totalUsd = _getTotalUsd();
+        
         if (totalShares == 0) {
             return usdAmount;
         }
-        return (usdAmount * totalShares) / _getTotalUsd();
+
+        if (totalUsd == 0) {
+            return totalShares;
+        }
+
+        return (usdAmount * totalShares) / totalUsd;
     }
     
     /// @inheritdoc IStUSD
