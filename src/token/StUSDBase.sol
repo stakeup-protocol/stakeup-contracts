@@ -396,4 +396,26 @@ abstract contract StUSDBase is IStUSD, OFT {
         emit Transfer(from, to, tokenAmount);
         emit TransferShares(from, to, sharesAmount);
     }
+
+    function _debitFrom(
+        address _from,
+        uint16,
+        bytes memory,
+        uint _amount
+    ) internal override returns (uint) {
+        address spender = _msgSender();
+        if (_from != spender) _spendAllowance(_from, spender, _amount);
+        uint256 shares = getSharesByUsd(_amount);
+        _burnShares(_from, shares);
+        return _amount;
+    }
+
+    function _creditTo(
+        uint16,
+        address _toAddress,
+        uint _amount
+    ) internal override returns (uint) {
+        _mintShares(_toAddress, getSharesByUsd(_amount));
+        return _amount;
+    }
 }
