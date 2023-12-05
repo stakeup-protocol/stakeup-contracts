@@ -87,6 +87,8 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
             sharesRemaining -= allocations[i].percentOfSupply;
             _mintAndVest(allocations[i], _vestingContract);
         }
+        if (totalSupply() > MAX_SUPPLY) revert ExceedsMaxAllocationLimit();
+
         if (sharesRemaining > 0) revert SharesNotFullyAllocated();
     }
 
