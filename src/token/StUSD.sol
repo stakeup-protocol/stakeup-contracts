@@ -23,8 +23,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IWstUSD;
-    event Log(string message, uint256 value);
-    event LogAddr(string message, address value);
+
     // =================== Storage ===================
 
     /// @notice WstUSD token
@@ -254,7 +253,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
 
         // If we haven't updated the values of TBYs in 24 hours, update it now
         if (block.timestamp - _lastRateUpdate >= 1 days) {
-            _lastRateUpdate = block.timestamp;            
+            _lastRateUpdate = block.timestamp;    
             _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
             eligableForReward = true;
         }
@@ -531,15 +530,13 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /**
      * @notice Calculates the current value of all TBYs that are staked in stUSD
      */
-    function _getCurrentTbyValue() internal returns (uint256) {
+    function _getCurrentTbyValue() internal view returns (uint256) {
         address[] memory tokens = _registry.getActiveTokens();
         uint256 length = tokens.length;
 
         uint256 usdValue;
         for (uint256 i = 0; i < length; ++i) {
-            emit LogAddr("token", tokens[i]);
             uint256 tokenBalance = IERC20(tokens[i]).balanceOf(address(this));
-            emit Log("tokenBalance", tokenBalance);
             usdValue += tokenBalance
                 .rawMul(_scalingFactor)
                 .mulWad(_registry.getExchangeRate(tokens[i]));
