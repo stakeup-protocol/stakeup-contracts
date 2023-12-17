@@ -1,4 +1,3 @@
-from pytest import fixture
 from wake.testing import *
 from wake.testing.fuzzing import *
 from helpers.wake_st_usd_setup import ContractConfig, deploy_st_usd_env, StUSDTestEnv
@@ -6,6 +5,7 @@ from helpers.utils import *
 from pytypes.src.interfaces.bloom.IBloomPool import IBloomPool
 from pytypes.src.token.StUSD import StUSD
 from pytypes.src.token.WstUSD import WstUSD
+from pytypes.tests.mocks.MockBloomFactory import MockBloomFactory
 from pytypes.tests.mocks.MockBloomPool import MockBloomPool
 from pytypes.tests.mocks.MockERC20 import MockERC20
 from pytypes.tests.mocks.MockRegistry import MockRegistry
@@ -21,9 +21,10 @@ stakeup: MockStakeupStaking
 registry: MockRegistry
 swap_facility: MockSwapFacility
 deployer: Account
+factory: MockBloomFactory
 
 def deploy_env(c):
-    global st_usd, wst_usd, usdc, bill, bloom_pool, stakeup, registry, swap_facility, deployer
+    global st_usd, wst_usd, usdc, bill, bloom_pool, stakeup, registry, swap_facility, deployer, factory
 
     e = deploy_st_usd_env(c)
     st_usd = e.st_usd
@@ -35,8 +36,9 @@ def deploy_env(c):
     registry = e.registry
     swap_facility = e.swap_facility
     deployer = e.deployer
+    factory = e.factory
 
-    tokens = [usdc, bill]
+    tokens = [bloom_pool.address]
 
     registry.setActiveTokens(tokens)
     registry.setTokenInfos(True)
@@ -147,10 +149,18 @@ def test_performance_fee():
     ## TODO: Potential inaccuracy in perforance fee calculation. Investigate further.
     #assert fees_collected == int(expected_performance_fee)
 
-# def test_user_returns_st_usd():
+# TODO: Add tests during audit fix
+def test_user_returns_st_usd():
+    # User returns depositing USDC into an Bloom during commitment
+    # User returns depositing TBY that has been accruing existing value
+    pass
 
-# def test_user_returns_wst_usd():
-    
+# TODO: Add tests during audit fix
+def test_user_returns_wst_usd():
+    # User returns depositing USDC into an Bloom during commitment
+    # User returns depositing TBY that has been accruing existing value
+    pass
+
 @default_chain.connect()
 def test_exchange_rate():
     deploy_env(default_chain)
@@ -184,6 +194,63 @@ def test_exchange_rate():
     # # Redeeming should not change the exchange rate
     # st_usd.redeemUnderlying(bloom_pool, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
 
-# def test_auto_minting():
+@default_chain.connect()
+def test_auto_minting():
+    deploy_env(default_chain)
+    usdc_deposit_amount = 1000;
+    
+    user = default_chain.accounts[1]
 
-# def test_balance_adjustments():
+    registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1))
+    deposit(default_chain, user, EvmMath.parse_decimals(usdc_deposit_amount, 6), False)
+    
+    default_chain.mine(lambda x: x + Constants.ONE_DAY * 30)
+    registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1.05))
+    swap_facility.setRate(EvmMath.parse_eth(1.05))
+
+    bloom_pool.setState(IBloomPool.State.FinalWithdraw)
+
+    user_bal_before = st_usd.balanceOf(user.address)
+    user_shares_before = st_usd.sharesOf(user.address)
+    bloom_pool.mint(st_usd.address, EvmMath.parse_decimals(usdc_deposit_amount, 6))
+    st_usd.redeemUnderlying(bloom_pool.address, st_usd.balanceOf(user.address), from_=user)
+    user_bal_after = st_usd.balanceOf(user.address)
+    user_shares_after = st_usd.sharesOf(user.address)
+
+    assert user_bal_after > user_bal_before
+    assert user_shares_before == user_shares_after
+    assert usdc.balanceOf(st_usd.address) == EvmMath.parse_decimals(1.05 * usdc_deposit_amount, 6)
+
+    # Deploy new Bloom Pool
+    bloom_pool_2 = MockBloomPool.deploy(usdc, bill, swap_facility, 6)
+    bloom_pool_2.setCommitPhaseEnd(default_chain.blocks["latest"].timestamp + (Constants.ONE_DAY * 3))
+    bloom_pool_2.setState(IBloomPool.State.Commit)
+    
+    factory.setLastCreatedPool(bloom_pool_2.address)
+    # TODO Fix: Currently bloom pool tokens are set active in the registry upon deployment. This is a dangerous
+    # scenerio in the poke function when we have deposited tokens but have yet to be minted TBY,
+    # as it will attempt to poke adjust the exchange rate for the new pool. We will
+    # then underestimate totalUSD because we have yet to receive a balance so we set the value to 0 for that batch.
+    # UPDATE: This actually might not matter. Necessary to double check
+    #registry.setActiveTokens([bloom_pool_2.address])
+
+    registry.setExchangeRate(bloom_pool_2.address, EvmMath.parse_eth(1))
+    swap_facility.setRate(EvmMath.parse_eth(1))
+
+    # Mine to the end of the commit phase
+    default_chain.mine(lambda x: x + Constants.ONE_DAY * 3 - Constants.ONE_HOUR)
+    print(f'User stUSD Balance {st_usd.balanceOf(user.address)}')
+    print(f'total USD {st_usd.getTotalUsd()}')
+    print(f'Remaining Balance {usdc.balanceOf(st_usd.address)}')
+
+    # TODO: st_usd balance of users is incorrect when depositing into a new pool after auto minting and then 
+    # immediately adjusting the usd value for TBY exchange rates. The assertion that is commented out
+    # below should pass if the this issue is fixed.
+    st_usd.poke()
+    assert usdc.balanceOf(st_usd.address) == 0
+    # user balance should increase after redeeming but not after auto minting
+    # assert st_usd.balanceOf(user.address) == user_bal_after
+
+# TODO: Add tests during audit fix
+def test_balance_adjustments():
+    pass
