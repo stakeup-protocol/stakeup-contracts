@@ -1,5 +1,41 @@
 # Staked USD (stUSD)
 
+## Repo Setup
+
+This repository uses Foundry as the main development and testing environment and Wake for testing cross-chain functionality, as well as verifying arithmetic accuracy of the contracts. Due to the lack of support for Wake in the current version of Foundry it is recommended to follow the steps below to setup the repository correctly.
+
+1. Setup a virtual environment for the repository
+
+```bash
+python3 -m venv venv
+```
+
+2. Activate the virtual environment
+
+```bash
+source venv/bin/activate
+```
+
+3. Install the dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+After this your environment should be setup correctly. You should be able to run `wake` and `foundry` commands without any issues. It is recommended to use the custom bash script to compile contracts so that all wake files are updated correctly. For testing users can use the standard commands for the respective frameworks to run individual tests. If you want to run all the tests at once you must use the custom bash script.
+
+Custom bash script for compiling contracts:
+
+```bash
+bash compile.sh
+```
+
+Custom bash script for running all tests:
+
+```bash
+bash test.sh
+```
+
 ## Overview
 
 stUSD is an omnichain stablecoin backed by receipt tokens called TBYs. TBYs, a product of Bloom Protocol, are a corporate debt token denominated in USDC and are over-collateralized with Backed Finances ib01 tracker certificate.
@@ -30,7 +66,7 @@ stUSD solves TBYs composability issues by allowing users to deposit their TBYs o
 
 - **StakeupStaking**: Stakeup Staking is the heart of the reward system for stUSD. It allows users to stake their SUP to access the reward system of the protocol. `stUSD` from fees are sent to the contract and is used to generate yield for the users of the protocol. Below is the outline of the fee mechanism of stUSD.
 
-  - Mint Fees: .15%
+  - Mint Fees: .01%
   - Redeem Fees: .5%
   - Performance Fees: 10% of TBY yield
 

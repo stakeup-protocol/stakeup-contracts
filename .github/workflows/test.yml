@@ -22,13 +22,14 @@ jobs:
         with:
           version: nightly
 
-      - name: Run Forge build
+      - name: Build
         run: |
           forge --version
           forge build --sizes
+          bash compile.sh
         id: build
 
-      - name: Run Forge tests
+      - name: Tests
         run: |
-          forge test -vvv
+          bash test.sh
         id: test

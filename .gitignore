@@ -12,3 +12,14 @@ docs/
 
 # Dotenv file
 .env
+
+# Python virtual environment
+venv/
+
+# Wake files
+.wake
+pytypes
+__pycache__/
+*.py[cod]
+.hypothesis/
+wake-coverage.cov

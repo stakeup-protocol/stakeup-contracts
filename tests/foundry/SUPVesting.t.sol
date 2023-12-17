@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {SUPVesting, ISUPVesting} from "src/token/SUPVesting.sol";
 import {IStakeupToken} from "src/interfaces/IStakeupToken.sol";
-import {MockERC20} from "./mock/MockERC20.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
 
 contract SUPVestingTest is Test {
     SUPVesting public supVesting;
