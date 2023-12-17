@@ -142,7 +142,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     }
     
     /// @inheritdoc IStUSD
-    function depostUnderlying(uint256 amount) external nonReentrant {
+    function depositUnderlying(uint256 amount) external nonReentrant {
         _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
         IBloomPool latestPool = _getLatestPool();
 
