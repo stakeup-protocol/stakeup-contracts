@@ -7,9 +7,9 @@ import {LibRLP} from "solady/utils/LibRLP.sol";
 import {RewardManager, IRewardManager} from "src/rewards/RewardManager.sol";
 import {ICurveGaugeDistributor} from "src/interfaces/ICurveGaugeDistributor.sol";
 
-import {MockERC20} from "./mock/MockERC20.sol";
-import {MockSUPVesting} from "./mock/MockSUPVesting.sol";
-import {MockCurveFactory} from "./mock/Curve/MockCurveFactory.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockSUPVesting} from "../mocks/MockSUPVesting.sol";
+import {MockCurveFactory} from "../mocks/Curve/MockCurveFactory.sol";
 
 import {StakeupStaking} from "src/staking/StakeupStaking.sol";
 

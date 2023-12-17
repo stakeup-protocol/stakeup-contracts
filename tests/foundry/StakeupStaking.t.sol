@@ -5,9 +5,9 @@ import {Test} from "forge-std/Test.sol";
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
-import {MockERC20} from "./mock/MockERC20.sol";
-import {MockSUPVesting} from "./mock/MockSUPVesting.sol";
-import {MockRewardManager} from "./mock/MockRewardManager.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockSUPVesting} from "../mocks/MockSUPVesting.sol";
+import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StakeupStakingTest is Test {
     using FixedPointMathLib for uint256;
