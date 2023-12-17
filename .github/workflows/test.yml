@@ -22,6 +22,11 @@ jobs:
         with:
           version: nightly
 
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+        id: install
+
       - name: Build
         run: |
           forge --version
