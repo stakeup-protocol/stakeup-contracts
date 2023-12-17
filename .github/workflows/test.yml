@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: true
 
-    name: Foundry project
+    name: CI Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

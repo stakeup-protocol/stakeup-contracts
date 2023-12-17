@@ -183,7 +183,7 @@ contract StUSDTest is Test {
         stableToken.approve(address(stUSD), amount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(alice, address(stableToken), amount, amountStUSD - fee);
-        stUSD.depostUnderlying(amount);
+        stUSD.depositUnderlying(amount);
         vm.stopPrank();
 
         assertEq(stUSD.balanceOf(alice), amountStUSD - fee);
@@ -196,7 +196,7 @@ contract StUSDTest is Test {
         stableToken.approve(address(stUSD), amount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(bob, address(stableToken), amount, amountStUSD - fee);
-        stUSD.depostUnderlying(amount);
+        stUSD.depositUnderlying(amount);
         vm.stopPrank();
 
         assertEq(stUSD.balanceOf(bob), amountStUSD - fee);
