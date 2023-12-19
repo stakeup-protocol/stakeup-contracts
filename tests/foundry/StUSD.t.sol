@@ -153,6 +153,16 @@ contract StUSDTest is Test {
         vm.stopPrank();
     }
 
+    function test_ensure_reverts_on_tby_invalidity() public {
+        address invalidTby = address(696969);
+
+        vm.expectRevert(IStUSD.TBYNotActive.selector);
+        stUSD.depositTby(invalidTby, 1 ether);
+    
+        vm.expectRevert(IStUSD.TBYNotActive.selector);
+        stUSD.redeemUnderlying(invalidTby, 1 ether);
+    }
+
     function test_depositTBY_success() public {
         uint256 amountTBY = 1.1e6;
         uint256 amountStUSD = 1.1e18;
