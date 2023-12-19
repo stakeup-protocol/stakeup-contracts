@@ -48,8 +48,8 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
                 curvePools[i].rewardsRemaining,
                 true
             );
-            
-            if (amount != 0) {
+
+            if (amount > 0) {
                 amount = Math.min(amount, curvePools[i].rewardsRemaining);
                 _curvePools[i].rewardsRemaining -= amount;
 
