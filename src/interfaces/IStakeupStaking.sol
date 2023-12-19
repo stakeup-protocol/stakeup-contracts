@@ -22,6 +22,9 @@ interface IStakeupStaking {
     // @notice No Fees were sent to the contract
     error NoFeesToProcess();
 
+    // @notice Not enough rewards available to claim
+    error NotEnoughRewardsAvailable();
+
     // =================== Structs ====================
     /**
      * @notice Data structure containing information pertaining to a user's stake
