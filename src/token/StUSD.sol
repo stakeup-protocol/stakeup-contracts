@@ -125,9 +125,15 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         );
     }
 
-    /// @inheritdoc IStUSD
-    function depositTby(address tby, uint256 amount) external nonReentrant {
+    /// @notice ensures that the TBY is active
+    /// @param tby TBY address
+    modifier tbyActive(address tby) {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
+        _;
+    }
+
+    /// @inheritdoc IStUSD
+    function depositTby(address tby, uint256 amount) external nonReentrant tbyActive(tby) {
         IBloomPool latestPool = _getLatestPool();
         if (latestPool.UNDERLYING_TOKEN() != address(_underlyingToken)) revert InvalidUnderlyingToken();
 
@@ -199,9 +205,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
      * @notice Redeem underlying token from TBY
      * @param tby TBY address
      */
-    function redeemUnderlying(address tby, uint256 amount) external nonReentrant {
-        if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
-        
+    function redeemUnderlying(address tby, uint256 amount) external nonReentrant tbyActive(tby) {
         IBloomPool pool = IBloomPool(tby);
         
         amount = Math.min(amount, IERC20(tby).balanceOf(address(this)));

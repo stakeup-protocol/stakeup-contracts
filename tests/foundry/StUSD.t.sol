@@ -154,13 +154,19 @@ contract StUSDTest is Test {
     }
 
     function test_ensure_reverts_on_tby_invalidity() public {
-        address invalidTby = address(696969);
+        MockBloomPool unverifiedPool = new MockBloomPool(
+            address(stableToken),
+            address(billyToken),
+            address(swap),
+            6
+        );
+        vm.label(address(unverifiedPool), "UnverifiedBloomPool");
 
         vm.expectRevert(IStUSD.TBYNotActive.selector);
-        stUSD.depositTby(invalidTby, 1 ether);
+        stUSD.depositTby(address(unverifiedPool), 1 ether);
     
         vm.expectRevert(IStUSD.TBYNotActive.selector);
-        stUSD.redeemUnderlying(invalidTby, 1 ether);
+        stUSD.redeemUnderlying(address(unverifiedPool), 1 ether);
     }
 
     function test_depositTBY_success() public {
