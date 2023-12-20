@@ -80,6 +80,11 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         _;
     }
 
+    modifier tbyActive(address tby) {
+        if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
+        _;
+    }
+
     // =================== Functions ===================
     constructor(
         address underlyingToken,
@@ -123,13 +128,6 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             address(this),
             layerZeroEndpoint
         );
-    }
-
-    /// @notice ensures that the TBY is active
-    /// @param tby TBY address
-    modifier tbyActive(address tby) {
-        if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
-        _;
     }
 
     /// @inheritdoc IStUSD
