@@ -23,4 +23,10 @@ contract MockCurveGauge is ICurvePoolGauge {
         if (msg.sender != _distributor) revert("Invalid caller");
         IERC20(reward_token).transferFrom(msg.sender, address(this), amount);
     }
+
+    function set_gauge_manager(address _gauge_manager) external override {}
+
+    function reward_tokens(
+        uint256 index
+    ) external view override returns (address) {}
 }

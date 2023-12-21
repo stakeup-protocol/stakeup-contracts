@@ -1,6 +1,7 @@
 [compiler.solc]
 exclude_paths = ["node_modules", "venv", ".venv", "lib", "script", "test"]
 include_paths = ["node_modules"]
+
 remappings = [
     "solmate/=lib/solmate/src/",
     "@openzeppelin/=lib/openzeppelin-contracts/",

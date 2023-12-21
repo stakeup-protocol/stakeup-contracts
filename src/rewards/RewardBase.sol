@@ -24,7 +24,6 @@ abstract contract RewardBase {
         (SUP_MAX_SUPPLY * 1e16) / DECIMAL_SCALING; // 1% of total supply
     
     uint256 internal constant ONE_YEAR = 52 weeks;
-    uint256 internal constant FIVE_YEARS = 5 * ONE_YEAR;
 
     constructor(
         address stUsd,

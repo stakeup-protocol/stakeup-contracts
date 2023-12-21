@@ -1,3 +1,4 @@
+from eth_account import Account
 from wake.testing import *
 from wake.testing.fuzzing import *
 from helpers.wake_st_usd_setup import ContractConfig, deploy_st_usd_env, StUSDTestEnv
@@ -60,8 +61,8 @@ def deposit(c: Chain, u: Account, a: int, tby: bool):
 def test_deployment():
     deploy_env(default_chain)
 
-    assert st_usd.address != Address.ZERO
-    assert wst_usd.address != Address.ZERO
+    assert st_usd.address != Address(0)
+    assert wst_usd.address != Address(0)
     assert st_usd.owner() == deployer.address
     assert st_usd.getWstUSD().address == wst_usd.address
     assert st_usd.circulatingSupply() == 0
