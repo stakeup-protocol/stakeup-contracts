@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {RewardBase} from "./RewardBase.sol";
 
 import {ICurveGaugeDistributor} from "../interfaces/ICurveGaugeDistributor.sol";
@@ -11,15 +12,15 @@ import {ICurvePoolFactory} from "../interfaces/curve/ICurvePoolFactory.sol";
 import {ICurvePoolGauge} from "../interfaces//curve/ICurvePoolGauge.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 
-abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
+abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     CurvePoolData[] internal _curvePools;
     uint256 private _poolDeploymentTimestamp;
     uint256 private _lastSeedTimestamp;
 
-    // Can only seed during the last 12 hours of the gauge epoch
-    uint256 internal constant SEED_INTERVAL = 1 weeks - 12 hours;
+    // Curve Reward gauges will be seeded every week
+    uint256 internal constant SEED_INTERVAL = 1 weeks;
 
     constructor(
         address stUsd,
@@ -31,16 +32,19 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
     }
 
     /// @inheritdoc ICurveGaugeDistributor
-    function seedGauges() external {
+    function seedGauges() external nonReentrant {
         CurvePoolData[] memory curvePools = _curvePools;
         uint256 length = curvePools.length;
         
         uint256 timeElapsed = block.timestamp - _lastSeedTimestamp;
         if (_lastSeedTimestamp != 0 && timeElapsed < SEED_INTERVAL) revert TooEarlyToSeed();
 
-        _lastSeedTimestamp = block.timestamp;
-
         for (uint256 i=0; i < length; ++i) {
+            // If this is the first time seeding the gauge, then register SUP as the reward token
+            if (_lastSeedTimestamp == 0) {
+                ICurvePoolGauge(curvePools[i].curveGauge).add_reward(_stakeupToken, address(this));
+            }
+
             // Calculate the amount of rewards to mint
             uint256 amount = _calculateDripAmount(
                 curvePools[i].maxRewards,
@@ -61,6 +65,8 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
                 emit GaugeSeeded(curvePools[i].curveGauge, amount);
             }
         }
+
+        _lastSeedTimestamp = block.timestamp;
     }
     
     /// @inheritdoc ICurveGaugeDistributor
@@ -87,9 +93,8 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase {
         for (uint256 i = 0; i < length; ++i) {
             // Deploy the Curve guage and register SUP as the reward token
             address gauge = ICurvePoolFactory(curvePools[i].curveFactory).deploy_gauge(curvePools[i].curvePool);
-            ICurvePoolGauge(gauge).add_reward(_stakeupToken, address(this));
             curvePools[i].curveGauge = gauge;
-
+            
             totalRewards -= curvePools[i].maxRewards;
 
             emit GaugeDeployed(gauge, curvePools[i].curvePool);

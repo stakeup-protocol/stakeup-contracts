@@ -1,33 +1,25 @@
+import os
+
+from eth_typing import Address
+from dotenv import load_dotenv
+from dataclasses import dataclass
+from pytypes.src.interfaces.curve.ICurvePoolFactory import ICurvePoolFactory
+from pytypes.src.interfaces.ICurveGaugeDistributor import ICurveGaugeDistributor
+from pytypes.src.interfaces.curve.ICurvePoolGauge import ICurvePoolGauge
+from pytypes.tests.mocks.MockRewardManager import MockRewardManager
+from pytypes.tests.mocks.MockSUPVesting import MockSUPVesting
 from tests.wake_testing.helpers.utils import Constants, EvmMath
 from wake.testing import *
 from wake.testing.fuzzing import *
 from pytypes.tests.mocks.MockDripRewarder import MockDripRewarder
 from pytypes.tests.mocks.MockERC20 import MockERC20
+from pytypes.tests.mocks.MockStakeupStaking import MockStakeupStaking
+from pytypes.src.rewards.RewardManager import RewardManager
+from pytypes.src.token.StUSDBase import StUSDBase
+from pytypes.src.token.StakeupToken import StakeupToken
+load_dotenv()
 
-# class DripRewards(FuzzTest):
-#     dripRewarder: MockDripRewarder
-#     stUsdMock: MockERC20
-#     stakeupMock: MockERC20
-#     rewards_dripped = 0
-
-#     def pre_sequence(self) -> None:
-#         random_address = random_address()
-#         self.stUsdMock = MockERC20.deploy(6)
-#         self.stakeupMock = MockERC20.deploy(18)
-#         self.dripRewarder = MockDripRewarder.deploy(
-#             self.stUsdMock.address,
-#             self.stakeupMock.address,
-#             random_address
-#         )
-
-#     def flow_drip(self, time_between_drips) -> None:
-#         self.dripRewarder.calculateDripRewards()
-#     pass
-
-# @default_chain.connect()
-# def test_drip_fuzz():
-#     DripRewards().run(sequences_count=10, flows_count=100)
-
+MAINNET_FORK_URL = os.getenv("MAINNET_FORK_URL")
 
 def deploy_dripRewarder():
     dripRewarder = MockDripRewarder.deploy(
@@ -67,3 +59,86 @@ def test_yearly_allocations():
         amount_claimed += amount_dripped
 
         assert amount_dripped == expected_amount_scaled
+
+
+mainnet_fork = Chain()
+
+def revert_handler(e: TransactionRevertedError):
+    if e.tx is not None:
+        print(e.tx.call_trace)
+
+@default_chain.connect(
+    accounts=20,
+    chain_id=1,
+    fork='https://eth-mainnet.g.alchemy.com/v2/waUcKF6YeMpPaJIlXm-auQhLUVZQxkno@18830568'
+)
+@on_revert(revert_handler)
+def test_consistent_gauge_rewards():
+    total_rewards = 200000000
+    assert default_chain.connected is True
+
+    curve_factory = ICurvePoolFactory(Constants.CURVE_STABLE_POOL_FACTORY)
+    
+    curve_pool = curve_factory.deploy_plain_pool(
+        "curve pool one",
+        "cp1",
+        [Constants.MAINNET_FRAX, Constants.MAINNET_USDC],
+        1500,
+        1000000,
+        50000000000,
+        800,
+        0,
+        [0, 0],
+        [bytes(0), bytes(0)],
+        [Address(0), Address(0)]
+    ).return_value
+
+    account = default_chain.accounts[0]
+
+    vesting = MockSUPVesting.deploy(from_=account, request_type="tx", chain=default_chain)
+    
+    stable = MockERC20.deploy(6, from_=account, request_type="tx", chain=default_chain)
+
+    stakeup = MockStakeupStaking.deploy(request_type="tx", chain=default_chain)
+    
+    curvePoolData: ICurveGaugeDistributor.CurvePoolData = ICurveGaugeDistributor.CurvePoolData(
+        curve_pool,
+        Address(0),
+        curve_factory.address,
+        EvmMath.parse_eth(total_rewards),
+        EvmMath.parse_eth(total_rewards)
+    )
+
+    # Deploy Reward Manager
+    rewardManager = RewardManager.deploy(
+        stable.address,
+        get_create_address(account, account.nonce + 1),
+        stakeup.address,
+        [curvePoolData],
+        from_=account,
+        request_type="tx",
+        chain=default_chain
+    )
+
+    sup_token = StakeupToken.deploy(
+        random_address(),
+        vesting.address,
+        rewardManager.address,
+        account.address,
+        from_=account,
+        request_type="tx",
+        chain=default_chain
+    )
+
+    gauge = rewardManager.getCurvePoolData()[0].curveGauge
+
+    # The tx.orgin is the account that executed the original call that triggered gauge deployment
+    # Due to protections on adding tokens to the gauge, the reward manager cannot add rewards to the gauge
+    # unless the original gauge manager transfers the manager role to the reward manager
+    ICurvePoolGauge(gauge).set_gauge_manager(rewardManager.address, from_=account, request_type="tx")
+
+    assert rewardManager.getCurvePoolData()[0].curveGauge == gauge
+
+    rewardManager.seedGauges(from_=account, request_type="tx")
+
+    assert ICurvePoolGauge(gauge).reward_tokens(0) == sup_token.address
