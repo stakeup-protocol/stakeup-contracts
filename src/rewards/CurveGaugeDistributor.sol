@@ -42,9 +42,9 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase, R
         for (uint256 i=0; i < length; ++i) {
             // If this is the first time seeding the gauge, then register SUP as the reward token
             if (_lastSeedTimestamp == 0) {
+                _poolDeploymentTimestamp = block.timestamp;
                 ICurvePoolGauge(curvePools[i].curveGauge).add_reward(_stakeupToken, address(this));
             }
-
             // Calculate the amount of rewards to mint
             uint256 amount = _calculateDripAmount(
                 curvePools[i].maxRewards,
@@ -101,8 +101,6 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase, R
         }
         if (totalRewards != 0) revert RewardAllocationNotMet();
         
-        _poolDeploymentTimestamp = block.timestamp;
-
         return totalRewards;
     }
 }
