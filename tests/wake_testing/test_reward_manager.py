@@ -76,7 +76,8 @@ def revert_handler(e: TransactionRevertedError):
 def test_consistent_gauge_rewards():
     total_rewards = 200000000
     assert default_chain.connected is True
-
+    default_chain.tx_callback = lambda tx: print(tx.console_logs)
+    
     curve_factory = ICurvePoolFactory(Constants.CURVE_STABLE_POOL_FACTORY)
     
     curve_pool = curve_factory.deploy_plain_pool(
@@ -139,6 +140,22 @@ def test_consistent_gauge_rewards():
 
     assert rewardManager.getCurvePoolData()[0].curveGauge == gauge
 
-    rewardManager.seedGauges(from_=account, request_type="tx")
+    #rewardManager.seedGauges(from_=account, request_type="tx")
+
+    expected_reward_per_epoch = total_rewards / 2 / 52 # 50% of total rewards over 52 weeks
+    print("Expected Reward Per Epoch: ", EvmMath.parse_eth(expected_reward_per_epoch))
+    print("Max Rewards: ", EvmMath.parse_eth(total_rewards))
+    prev_reward = sup_token.balanceOf(ICurvePoolGauge(gauge))
+    for (i, epoch) in enumerate(range(0, 52)):
+        print(f"Epoch: {i + 1}")
+        rewardManager.seedGauges(from_=account, request_type="tx")
+        new_balance = sup_token.balanceOf(ICurvePoolGauge(gauge))
+        default_chain.mine(lambda x: x + Constants.ONE_WEEK)
+        reward = new_balance - prev_reward
+        print(f'Gauge Rewards: {reward}')
+        prev_reward = new_balance
+        print("Total Rewards: ", sup_token.balanceOf(ICurvePoolGauge(gauge)))
+        print('Reward remaining: ', rewardManager.getCurvePoolData()[0].rewardsRemaining)
 
     assert ICurvePoolGauge(gauge).reward_tokens(0) == sup_token.address
+    print("Total Rewards: ", sup_token.balanceOf(ICurvePoolGauge(gauge)))

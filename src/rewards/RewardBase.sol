@@ -2,8 +2,11 @@
 pragma solidity 0.8.22;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 abstract contract RewardBase {
+    using FixedPointMathLib for uint256;
+
     address internal immutable _stUsd;
     address internal immutable _stakeupToken;
     address internal immutable _stakeupStaking;
@@ -42,6 +45,8 @@ abstract contract RewardBase {
         bool isRewardGauge
     ) internal view returns (uint256) {
         uint256 tokensUnlocked;
+        uint256 previousYearAllocation;
+
         uint256 timeElapsed = block.timestamp - startTimestamp;
         // Reward gauges will be seeded immediately after deployment
         // with 1 weeks worth of rewards
@@ -59,10 +64,15 @@ abstract contract RewardBase {
             // Calculate total tokens unlocked using the formula for the sum of a geometric series
             tokensUnlocked = rewardSupply * (DECIMAL_SCALING - (DECIMAL_SCALING / 2**year)) / DECIMAL_SCALING;
         }
+        
+        if (year > 1 && timeElapsed % ONE_YEAR != 0) {
+            // Get previous year's tokens unlocked
+            uint256 previousYear = year - 1;
+            previousYearAllocation = rewardSupply * (DECIMAL_SCALING - (DECIMAL_SCALING / 2**previousYear)) / DECIMAL_SCALING;
+        }
 
-        uint256 yearlyAllocation = tokensUnlocked - rewardsPaid;
-        uint256 timeElapsedInYear = timeElapsed % ONE_YEAR == 0 ? ONE_YEAR : timeElapsed % ONE_YEAR; 
+        uint256 timeElapsedInYear = timeElapsed % ONE_YEAR == 0 ? ONE_YEAR : timeElapsed % ONE_YEAR;
 
-        return timeElapsedInYear * yearlyAllocation / ONE_YEAR;
+        return (timeElapsedInYear * tokensUnlocked / ONE_YEAR) + previousYearAllocation - rewardsPaid;
     }
 }
