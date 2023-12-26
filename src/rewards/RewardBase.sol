@@ -55,7 +55,7 @@ abstract contract RewardBase {
         }
 
         uint256 rewardsPaid = rewardSupply - rewardsRemaining;
-        uint256 year = Math.max(1, Math.ceilDiv(timeElapsed, ONE_YEAR));
+        uint256 year = Math.ceilDiv(timeElapsed, ONE_YEAR);
         // If the time elapsed is greater than 5 years, then the reward supply
         // is fully unlocked
         if (year > 5) {
