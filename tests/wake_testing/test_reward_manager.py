@@ -1,27 +1,25 @@
 import os
-
+from pytest import approx
 from eth_typing import Address
 from dotenv import load_dotenv
-from dataclasses import dataclass
 
-from pytest import approx
+from wake.testing import *
+from wake.testing.fuzzing import *
+from tests.wake_testing.helpers.utils import Constants, EvmMath
+
 from pytypes.src.interfaces.curve.ICurvePoolFactory import ICurvePoolFactory
 from pytypes.src.interfaces.ICurveGaugeDistributor import ICurveGaugeDistributor
 from pytypes.src.interfaces.curve.ICurvePoolGauge import ICurvePoolGauge
-from pytypes.tests.mocks.MockRewardManager import MockRewardManager
-from pytypes.tests.mocks.MockSUPVesting import MockSUPVesting
-from tests.wake_testing.helpers.utils import Constants, EvmMath
-from wake.testing import *
-from wake.testing.fuzzing import *
+from pytypes.src.rewards.RewardManager import RewardManager
+from pytypes.src.token.StakeupToken import StakeupToken
+
 from pytypes.tests.mocks.MockDripRewarder import MockDripRewarder
+from pytypes.tests.mocks.MockSUPVesting import MockSUPVesting
 from pytypes.tests.mocks.MockERC20 import MockERC20
 from pytypes.tests.mocks.MockStakeupStaking import MockStakeupStaking
-from pytypes.src.rewards.RewardManager import RewardManager
-from pytypes.src.token.StUSDBase import StUSDBase
-from pytypes.src.token.StakeupToken import StakeupToken
+
 load_dotenv()
 
-MAINNET_FORK_URL = os.getenv("MAINNET_FORK_URL")
 ALCHEMY_API_KEY = os.getenv("ALCHEMY_API_KEY")
 
 def deploy_dripRewarder():
@@ -31,6 +29,10 @@ def deploy_dripRewarder():
         random_address()
     )
     return dripRewarder
+
+def revert_handler(e: TransactionRevertedError):
+    if e.tx is not None:
+        print(e.tx.call_trace)
 
 @default_chain.connect()
 def test_yearly_allocations():
@@ -63,17 +65,10 @@ def test_yearly_allocations():
 
         assert amount_dripped == expected_amount_scaled
 
-
-mainnet_fork = Chain()
-
-def revert_handler(e: TransactionRevertedError):
-    if e.tx is not None:
-        print(e.tx.call_trace)
-
 @default_chain.connect(
     accounts=20,
     chain_id=1,
-fork=f'https://eth-mainnet.g.alchemy.com/v2/{os.getenv("ALCHEMY_API_KEY")}'
+    fork=f'https://eth-mainnet.g.alchemy.com/v2/{ALCHEMY_API_KEY}@18830568'
 )
 @on_revert(revert_handler)
 def test_consistent_gauge_rewards():
