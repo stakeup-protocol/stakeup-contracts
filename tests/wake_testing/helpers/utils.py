@@ -1,5 +1,4 @@
 from decimal import Decimal
-
 from wake.testing import Address
 from pytypes.src.interfaces.ICurveGaugeDistributor import ICurveGaugeDistributor
 
