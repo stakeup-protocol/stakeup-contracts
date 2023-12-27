@@ -22,6 +22,7 @@ from pytypes.src.token.StakeupToken import StakeupToken
 load_dotenv()
 
 MAINNET_FORK_URL = os.getenv("MAINNET_FORK_URL")
+ALCHEMY_API_KEY = os.getenv("ALCHEMY_API_KEY")
 
 def deploy_dripRewarder():
     dripRewarder = MockDripRewarder.deploy(
@@ -72,7 +73,7 @@ def revert_handler(e: TransactionRevertedError):
 @default_chain.connect(
     accounts=20,
     chain_id=1,
-    fork='https://eth-mainnet.g.alchemy.com/v2/waUcKF6YeMpPaJIlXm-auQhLUVZQxkno@18830568'
+fork=f'https://eth-mainnet.g.alchemy.com/v2/{os.getenv("ALCHEMY_API_KEY")}'
 )
 @on_revert(revert_handler)
 def test_consistent_gauge_rewards():
