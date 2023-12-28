@@ -252,8 +252,6 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
 
         // Subtract the rewards from the available rewards
         RewardData storage rewards = _rewardData;
-        if (rewards.availableRewards < shares)
-            revert NotEnoughRewardsAvailable();
         rewards.availableRewards -= uint128(shares);
 
         IERC20(address(_stUSD)).safeTransfer(msg.sender, amount);
