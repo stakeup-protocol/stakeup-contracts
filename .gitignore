@@ -23,3 +23,6 @@ __pycache__/
 *.py[cod]
 .hypothesis/
 wake-coverage.cov
+
+# vs code
+.vscode/
