@@ -159,6 +159,7 @@ contract StUSDTest is Test {
         uint256 fee = 0.0055e18; // 0.5% of mint
         pool.mint(alice, amountTBY);
         registry.setTokenInfos(true);
+        registry.setExchangeRate(address(pool), 1e18);
 
         vm.startPrank(alice);
         pool.approve(address(stUSD), amountTBY);
@@ -283,6 +284,7 @@ contract StUSDTest is Test {
     function testEmergencyHandlerWithdraw() public {
         uint256 amount = 100e6;
         registry.setTokenInfos(true);
+        registry.setExchangeRate(address(pool), 1e18);
 
         pool.setState(IBloomPool.State.Commit);
         pool.setCommitPhaseEnd(2 days);
@@ -304,13 +306,14 @@ contract StUSDTest is Test {
             address(swap),
             6
         );
+        factory.setLastCreatedPool(address(newPool));
+        registry.setExchangeRate(address(newPool), 1e18);
 
         newPool.mint(alice, amount);
         vm.startPrank(alice);
         newPool.approve(address(stUSD), amount);
         stUSD.depositTby(address(newPool), amount);
         newPool.setEmergencyHandler(address(emergencyHandler));
-        factory.setLastCreatedPool(address(newPool));
         
         newPool.setCommitPhaseEnd(1 days);
         skip(5 days);
@@ -352,6 +355,7 @@ contract StUSDTest is Test {
         pool.mint(bob, 2e6);
         registry.setTokenInfos(true);
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
+        registry.setExchangeRate(address(pool), 1e18);
         /// ########## High Level Initial Share Math ##########
         uint256 aliceMintedShares = .995e18;
         uint256 bobMintedShares = 1.99e18;
