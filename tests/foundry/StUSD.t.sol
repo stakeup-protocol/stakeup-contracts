@@ -10,14 +10,14 @@ import {RedemptionNFT, IRedemptionNFT} from "src/token/RedemptionNFT.sol";
 
 import {IStUSD} from "src/interfaces/IStUSD.sol";
 
-import {MockERC20} from "./mock/MockERC20.sol";
-import {MockSwapFacility} from "./mock/MockSwapFacility.sol";
-import {MockBloomPool, IBloomPool} from "./mock/MockBloomPool.sol";
-import {MockBloomFactory} from "./mock/MockBloomFactory.sol";
-import {MockEmergencyHandler} from "./mock/MockEmergencyHandler.sol";
-import {MockRegistry} from "./mock/MockRegistry.sol";
-import {MockStakeupStaking} from "./mock/MockStakeupStaking.sol";
-import {MockRewardManager} from "./mock/MockRewardManager.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockSwapFacility} from "../mocks/MockSwapFacility.sol";
+import {MockBloomPool, IBloomPool} from "../mocks/MockBloomPool.sol";
+import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
+import {MockEmergencyHandler} from "../mocks/MockEmergencyHandler.sol";
+import {MockRegistry} from "../mocks/MockRegistry.sol";
+import {MockStakeupStaking} from "../mocks/MockStakeupStaking.sol";
+import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StUSDTest is Test {
 
@@ -183,7 +183,7 @@ contract StUSDTest is Test {
         stableToken.approve(address(stUSD), amount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(alice, address(stableToken), amount, amountStUSD - fee);
-        stUSD.depostUnderlying(amount);
+        stUSD.depositUnderlying(amount);
         vm.stopPrank();
 
         assertEq(stUSD.balanceOf(alice), amountStUSD - fee);
@@ -196,7 +196,7 @@ contract StUSDTest is Test {
         stableToken.approve(address(stUSD), amount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(bob, address(stableToken), amount, amountStUSD - fee);
-        stUSD.depostUnderlying(amount);
+        stUSD.depositUnderlying(amount);
         vm.stopPrank();
 
         assertEq(stUSD.balanceOf(bob), amountStUSD - fee);
@@ -351,7 +351,7 @@ contract StUSDTest is Test {
         pool.mint(alice, 1e6);
         pool.mint(bob, 2e6);
         registry.setTokenInfos(true);
-
+        pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         /// ########## High Level Initial Share Math ##########
         uint256 aliceMintedShares = .995e18;
         uint256 bobMintedShares = 1.99e18;
@@ -447,7 +447,7 @@ contract StUSDTest is Test {
         // ####### Verify performance fee #################
         uint256 stakeupStakingShares = stUSD.sharesOf(address(staking));
         uint256 performanceFeeInShares = stUSD.getSharesByUsd(expectedPerformanceFee);
-
+        stUSD.poke();
         stUSD.redeemUnderlying(address(pool), 3e6);
 
         uint256 sharesPerUsd = stUSD.getTotalShares() * 1e18 / stUSD.getTotalUsd();

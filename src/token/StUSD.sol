@@ -141,7 +141,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     }
     
     /// @inheritdoc IStUSD
-    function depostUnderlying(uint256 amount) external nonReentrant {
+    function depositUnderlying(uint256 amount) external nonReentrant {
         _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
         IBloomPool latestPool = _getLatestPool();
 
@@ -198,9 +198,10 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /**
      * @notice Redeem underlying token from TBY
      * @param tby TBY address
-     * @param amount Redeem amount
      */
     function redeemUnderlying(address tby, uint256 amount) external nonReentrant {
+        if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
+        
         IBloomPool pool = IBloomPool(tby);
         
         amount = Math.min(amount, IERC20(tby).balanceOf(address(this)));
@@ -253,7 +254,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
 
         // If we haven't updated the values of TBYs in 24 hours, update it now
         if (block.timestamp - _lastRateUpdate >= 1 days) {
-            _lastRateUpdate = block.timestamp;            
+            _lastRateUpdate = block.timestamp;    
             _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
             eligableForReward = true;
         }
@@ -537,7 +538,6 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         uint256 usdValue;
         for (uint256 i = 0; i < length; ++i) {
             uint256 tokenBalance = IERC20(tokens[i]).balanceOf(address(this));
-
             usdValue += tokenBalance
                 .rawMul(_scalingFactor)
                 .mulWad(_registry.getExchangeRate(tokens[i]));

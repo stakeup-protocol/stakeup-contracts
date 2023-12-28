@@ -2,6 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+test = "tests"
 
 solc = "0.8.22"
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

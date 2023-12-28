@@ -48,9 +48,7 @@ contract MockRegistry is IExchangeRateRegistry {
     }
 
     function setActiveTokens(address[] memory tokens) public {
-        for (uint256 i = 0; i < tokens.length; i++) {
-            activeTokens.push(tokens[i]);
-        }
+        activeTokens = tokens;
     }
 
     function getExchangeRate(
