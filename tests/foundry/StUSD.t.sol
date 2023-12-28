@@ -62,7 +62,9 @@ contract StUSDTest is Test {
         vm.label(address(stableToken), "StableToken");
         billyToken = new MockERC20(18);
         vm.label(address(billyToken), "BillyToken");
-
+        supToken = new MockERC20(18);
+        vm.label(address(supToken), "SupToken");
+        
         swap = new MockSwapFacility(stableToken, billyToken);
         vm.label(address(swap), "MockSwapFacility");
 
@@ -92,8 +94,6 @@ contract StUSDTest is Test {
 
         staking = new MockStakeupStaking();
         staking.setRewardManager(address(rewardsManager));
-
-        supToken = new MockERC20(18);
 
         rewardsManager.setStakeupStaking(address(staking));
         rewardsManager.setStakeupToken(address(supToken));
