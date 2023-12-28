@@ -241,9 +241,6 @@ def test_auto_minting():
 
     # Mine to the end of the commit phase
     default_chain.mine(lambda x: x + Constants.ONE_DAY * 3 - Constants.ONE_HOUR)
-    print(f'User stUSD Balance {st_usd.balanceOf(user.address)}')
-    print(f'total USD {st_usd.getTotalUsd()}')
-    print(f'Remaining Balance {usdc.balanceOf(st_usd.address)}')
 
     # Poke should deposit the remaining balance of usdc into the new bloom pool
     st_usd.poke()
@@ -254,7 +251,6 @@ def test_auto_minting():
     default_chain.mine(lambda x: x + Constants.ONE_HOUR * 2)
     bloom_pool_2.setState(IBloomPool.State.PendingPreHoldSwap)
     st_usd.poke()
-    print(f'Remaining Balance5 {st_usd.getRemainingBalance()}')
     assert st_usd.getRemainingBalance() == 0
     
 
