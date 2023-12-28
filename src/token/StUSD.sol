@@ -60,13 +60,16 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
 
     uint256 private constant AUTO_STAKE_PHASE = 1 days;
 
-    uint256 private constant MINT_REWARD_CUTOFF = 200_000_000 * 10 ** 18;
+    uint256 private constant MINT_REWARD_CUTOFF = 200_000_000e18;
 
     /// @dev Last deposit amount
     uint256 internal _lastDepositAmount;
 
     /// @dev Remaining underlying token balance
     uint256 internal _remainingBalance;
+
+    /// @dev Mint rewards remaining
+    uint256 internal _mintRewardsRemaining;
 
     /// @dev Last rate update timestamp
     uint256 internal _lastRateUpdate;
@@ -114,6 +117,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
         _lastRateUpdate = block.timestamp;
+        _mintRewardsRemaining = MINT_REWARD_CUTOFF;
 
         _wstUSD = IWstUSD(wstUSD);
 
@@ -341,14 +345,15 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         _mintShares(msg.sender, sharesAmount);
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
 
-        uint256 totalUsd = _getTotalUsd();
+        uint256 mintRewardsRemaining = _mintRewardsRemaining;
 
-        if (totalUsd <= MINT_REWARD_CUTOFF) {
-            uint256 elegibleAmount = Math.min(amountScaled, MINT_REWARD_CUTOFF - totalUsd);
+        if (mintRewardsRemaining > 0) {
+            uint256 elegibleAmount = Math.min(amountScaled, mintRewardsRemaining);
+            _mintRewardsRemaining -= elegibleAmount;
             _rewardManager.distributeMintRewards(msg.sender, elegibleAmount);
         }
 
-        _setTotalUsd(totalUsd + amountScaled);
+        _setTotalUsd(_getTotalUsd() + amountScaled);
 
         emit Deposit(msg.sender, token, amount, sharesAmount);
     }
