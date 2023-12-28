@@ -20,9 +20,9 @@ class Constants():
 class EvmMath():
     
     def parse_eth(value) -> int:
-        d = Decimal(value)
+        d = Decimal(str(value))
         return int(d * Constants.FIXED_POINT_ONE)
     
     def parse_decimals(value: any, decimals: int) -> int:
-        d = Decimal(value)
+        d = Decimal(str(value))
         return int(d * 10 ** decimals)
