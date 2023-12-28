@@ -283,8 +283,14 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
      */
     function _rewardsEarned(address account) internal view returns (uint256) {
         StakingData storage userStakingData = _stakingData[account];
+        
         uint256 amountEligibleForRewards = uint256(
             userStakingData.amountStaked
+        );
+
+        // Add the amount of SUP locked in the vesting contract to the amount eligible for rewards
+        amountEligibleForRewards += _supVestingContract.getCurrentBalance(
+            account
         );
 
         return

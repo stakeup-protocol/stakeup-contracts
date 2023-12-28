@@ -5,16 +5,17 @@ import {Test} from "forge-std/Test.sol";
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
+import {SUPVesting} from "src/token/SUPVesting.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockSUPVesting} from "../mocks/MockSUPVesting.sol";
 import {MockRewardManager} from "../mocks/MockRewardManager.sol";
+
 
 contract StakeupStakingTest is Test {
     using FixedPointMathLib for uint256;
 
     StakeupStaking public stakeupStaking;
     MockERC20 public mockStakeupToken;
-    MockSUPVesting public mockSUPVesting;
+    SUPVesting public supVesting;
     MockERC20 public mockStUSD;
     MockRewardManager public rewardManager;
 
@@ -29,15 +30,15 @@ contract StakeupStakingTest is Test {
         mockStakeupToken = new MockERC20(18);
         vm.label(address(mockStakeupToken), "mockStakeupToken");
 
-        mockSUPVesting = new MockSUPVesting();
-        vm.label(address(mockSUPVesting), "mockSUPVesting");
+        supVesting = new SUPVesting(address(mockStakeupToken));
+        vm.label(address(supVesting), "SUPVesting");
 
         mockStUSD = new MockERC20(18);
         vm.label(address(mockStUSD), "mockStUSD");
 
         stakeupStaking = new StakeupStaking(
            address(mockStakeupToken),
-           address(mockSUPVesting),
+           address(supVesting),
            address(rewardManager),
            address(mockStUSD)
         );
@@ -244,6 +245,28 @@ contract StakeupStakingTest is Test {
         vm.expectRevert(IStakeupStaking.NoRewardsToClaim.selector);
         stakeupStaking.harvest();
         vm.stopPrank();
+
+        // Allow users who have tokens in the vesting contract to claim rewards
+        address vestedUser = makeAddr("vestedUser");
+        vm.prank(address(mockStakeupToken));
+        supVesting.vestTokens(vestedUser, 1000 ether);
+        vm.stopPrank();
+
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        skip(1 weeks);
+
+        _processFees(rewardSupply);
+
+        uint256 vestedUser2Claim = stakeupStaking.claimableRewards(vestedUser);
+
+        vm.startPrank(vestedUser);
+        vm.expectEmit(true, true, true, true);
+        emit RewardsHarvested(vestedUser, vestedUser2Claim);
+        stakeupStaking.harvest();
+        vm.stopPrank();
+
+        assertApproxEqRel(mockStUSD.balanceOf(address(vestedUser)), 10 ether, .99e18);
+        assertEq(stakeupStaking.claimableRewards(vestedUser), 0);
     }
 
     function test_partialHarvest() public {
