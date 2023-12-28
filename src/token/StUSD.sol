@@ -202,9 +202,10 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /**
      * @notice Redeem underlying token from TBY
      * @param tby TBY address
-
      */
     function redeemUnderlying(address tby, uint256 amount) external nonReentrant {
+        if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
+        
         IBloomPool pool = IBloomPool(tby);
         
         amount = Math.min(amount, IERC20(tby).balanceOf(address(this)));
