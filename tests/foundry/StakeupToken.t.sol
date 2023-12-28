@@ -7,8 +7,8 @@ import {StakeupToken, IStakeupToken} from "src/token/StakeupToken.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {MockSUPVesting} from "./mock/MockSUPVesting.sol";
-import {MockRewardManager} from "./mock/MockRewardManager.sol";
+import {MockSUPVesting} from "../mocks/MockSUPVesting.sol";
+import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StakeupTokenTest is Test {
     StakeupToken public stakeupToken;

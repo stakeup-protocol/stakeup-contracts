@@ -109,7 +109,7 @@ interface IStUSD is IStUSDBase {
      * @notice Deposit underlying tokens and get stUSD minted
      * @param amount Amount of underlying tokens to deposit
      */
-    function depostUnderlying(uint256 amount) external;
+    function depositUnderlying(uint256 amount) external;
 
     /**
      * @notice Redeem stUSD in exchange for underlying tokens. Underlying

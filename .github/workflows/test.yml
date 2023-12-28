@@ -4,13 +4,15 @@ on: [push]
 
 env:
   FOUNDRY_PROFILE: ci
+  ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+  PHALCON_RPC_URL: ${{ secrets.PHALCON_RPC_URL }}
 
 jobs:
   check:
     strategy:
       fail-fast: true
 
-    name: Foundry project
+    name: CI Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -22,13 +24,19 @@ jobs:
         with:
           version: nightly
 
-      - name: Run Forge build
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+        id: install
+
+      - name: Build
         run: |
           forge --version
           forge build --sizes
+          bash compile.sh
         id: build
 
-      - name: Run Forge tests
+      - name: Tests
         run: |
-          forge test -vvv
+          bash test.sh
         id: test
