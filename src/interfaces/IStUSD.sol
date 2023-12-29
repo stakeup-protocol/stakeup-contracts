@@ -28,6 +28,9 @@ interface IStUSD is IStUSDBase {
 
     /// @notice Invalid amount
     error InvalidAmount();
+
+    /// @notice Invalid Redemption of Underlying Tokens
+    error InvalidRedemption();
     
     /// @notice Invalid Underlying Token
     error InvalidUnderlyingToken();
@@ -131,8 +134,13 @@ interface IStUSD is IStUSDBase {
      */
     function redeemWstUSD(uint256 wstUSDAmount) external returns (uint256);
  
-    /// @notice Get the total amount of underlying tokens in the pool
-    function getRemainingBalance() external view returns (uint256);
+    /**
+     * @notice Redeems the underlying token from a Bloom Pool in exchange for TBYs
+     * @dev Underlying tokens can only be redeemed if stUSD contains a TBY which is
+     *     in its FinalWithdrawal state.
+     * @param tby TBY address
+     */
+    function redeemUnderlying(address tby) external;
 
     /**
      * @notice Withdraw redeemed underlying tokens
@@ -147,6 +155,9 @@ interface IStUSD is IStUSDBase {
      * @param path abi.encodePacked(remoteAddress, localAddress)
      */
     function setNftTrustedRemote(uint16 remoteChainId, bytes calldata path) external;
+
+    /// @notice Get the total amount of underlying tokens in the pool
+    function getRemainingBalance() external view returns (uint256);
 
     /// @notice Returns the WstUSD contract
     function getWstUSD() external view returns (IWstUSD);
