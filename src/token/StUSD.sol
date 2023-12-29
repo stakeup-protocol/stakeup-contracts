@@ -195,16 +195,13 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         emit Withdrawn(msg.sender, amount);
     }
 
-    /**
-     * @notice Redeem underlying token from TBY
-     * @param tby TBY address
-     */
-    function redeemUnderlying(address tby, uint256 amount) external nonReentrant {
+    /// @inheritdoc IStUSD
+    function redeemUnderlying(address tby) external override nonReentrant {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
         
         IBloomPool pool = IBloomPool(tby);
         
-        amount = Math.min(amount, IERC20(tby).balanceOf(address(this)));
+        uint256 amount = IERC20(tby).balanceOf(address(this));
 
         uint256 beforeUnderlyingBalance = _underlyingToken.balanceOf(address(this));
         
@@ -215,13 +212,16 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         } else {
             pool.withdrawLender(amount);
         }
-
+        
         uint256 withdrawn = _underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
+
+        if (withdrawn == 0) revert InvalidRedemption();
+
         uint256 yieldFromPool = withdrawn - amount;
         
         _processProceeds(withdrawn, yieldFromPool);
 
-        if (amount > 0) {
+        if (yieldFromPool > 0) {
             _rewardManager.distributePokeRewards(msg.sender);
         }
     }
