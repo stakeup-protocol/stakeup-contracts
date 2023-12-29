@@ -238,28 +238,19 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     function poke() external nonReentrant {
         IBloomPool lastCreatedPool = _getLatestPool();
         IBloomPool.State currentState = lastCreatedPool.state();
-        bool eligableForReward = false;
 
         if (_within24HoursOfCommitPhaseEnd(lastCreatedPool, currentState)) {
-            if (_autoMintTBY(lastCreatedPool) > 0) {
-                eligableForReward = true;
-            }
+            _autoMintTBY(lastCreatedPool);
         }
 
         if (_isElegibleForAdjustment(currentState)) {
-            if (_adjustRemainingBalance(lastCreatedPool) > 0) {
-                eligableForReward = true;
-            }
+            _adjustRemainingBalance(lastCreatedPool);
         }
 
-        // If we haven't updated the values of TBYs in 24 hours, update it now
-        if (block.timestamp - _lastRateUpdate >= 1 days) {
-            _lastRateUpdate = block.timestamp;    
+        // If we haven't updated the values of TBYs in 12 hours, update it now
+        if (block.timestamp - _lastRateUpdate >= 12 hours) {
+            _lastRateUpdate = block.timestamp;
             _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
-            eligableForReward = true;
-        }
-
-        if (eligableForReward) {
             _rewardManager.distributePokeRewards(msg.sender);
         }
     }
