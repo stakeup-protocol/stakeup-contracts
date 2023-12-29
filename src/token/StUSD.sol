@@ -209,6 +209,8 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             IEmergencyHandler emergencyHandler = IEmergencyHandler(pool.EMERGENCY_HANDLER());
             IERC20(pool).safeApprove(address(emergencyHandler), amount);
             emergencyHandler.redeem(pool);
+            // Update amount in the case that users cannot redeem all of their TBYs
+            amount = IERC20(tby).balanceOf(address(this));
         } else {
             pool.withdrawLender(amount);
         }
