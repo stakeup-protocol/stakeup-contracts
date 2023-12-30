@@ -74,6 +74,9 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /// @dev Scaling factor for underlying token
     uint256 private immutable _scalingFactor;
 
+    /// @dev Mapping of TBYs that have been redeemed
+    mapping(address => bool) private _tbyRedeemed;
+
     // =================== Modifiers ===================
     modifier onlyUnStUSD() {
         if (_msgSender() != address(_redemptionNFT)) revert CallerNotUnStUSD();
@@ -223,7 +226,8 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         
         _processProceeds(withdrawn, yieldFromPool);
 
-        if (yieldFromPool > 0) {
+        if (yieldFromPool > 0 && !_tbyRedeemed[tby]) {
+            _tbyRedeemed[tby] = true;
             _rewardManager.distributePokeRewards(msg.sender);
         }
     }
@@ -310,6 +314,11 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /// @inheritdoc IStUSD
     function getPerformanceBps() external view returns (uint256) {
         return performanceBps;
+    }
+
+    /// @inheritdoc IStUSD
+    function isTbyRedeemed(address tby) external view returns (bool) {
+        return _tbyRedeemed[tby];
     }
 
     /**

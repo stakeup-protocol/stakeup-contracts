@@ -188,4 +188,7 @@ interface IStUSD is IStUSDBase {
 
     /// @notice Returns the performanceBps.
     function getPerformanceBps() external view returns (uint256);
+
+    /// @notice Returns if underlying tokens have been redeemed.
+    function isTbyRedeemed(address tby) external view returns (bool);
 }
