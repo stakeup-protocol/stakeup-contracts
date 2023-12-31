@@ -1,4 +1,5 @@
 import os
+import math
 from pytest import approx
 from eth_typing import Address
 from dotenv import load_dotenv
@@ -140,14 +141,23 @@ def test_consistent_gauge_rewards():
     expected_reward_per_epoch = EvmMath.parse_eth(total_rewards / 2 / 52) # 50% of total rewards over 52 weeks
     default_chain.change_automine(False)
 
-    prev_reward = sup_token.balanceOf(ICurvePoolGauge(gauge))
+    prev_balance = sup_token.balanceOf(ICurvePoolGauge(gauge))
+    weeks_in_6_years = 52 * 6
 
-    for (i, epoch) in enumerate(range(0, 52)):
+    year_num = 1
+    for (i, epoch) in enumerate(range(0, weeks_in_6_years)):
         rewardManager.seedGauges(from_=account, request_type="tx")
         default_chain.mine(lambda x: x + Constants.ONE_WEEK - 1)
+        
+        if (((i + 1) / 52) > year_num):
+            year_num += 1
+            if year_num != 6:
+                expected_reward_per_epoch = expected_reward_per_epoch / 2
+
         sup_balance = sup_token.balanceOf(ICurvePoolGauge(gauge))
-        assert sup_balance == approx(prev_reward + expected_reward_per_epoch, rel=1e-16)
-        prev_reward = sup_balance
+        reward = sup_balance - prev_balance
+        assert reward == approx(expected_reward_per_epoch, rel=1e-16)
+        prev_balance = sup_balance
 
     assert ICurvePoolGauge(gauge).reward_tokens(0) == sup_token.address
-    assert sup_token.balanceOf(ICurvePoolGauge(gauge)) == EvmMath.parse_eth(total_rewards / 2)
+    assert sup_token.balanceOf(ICurvePoolGauge(gauge)) == EvmMath.parse_eth(total_rewards)

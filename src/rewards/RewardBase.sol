@@ -45,6 +45,7 @@ abstract contract RewardBase {
         bool isRewardGauge
     ) internal view returns (uint256) {
         uint256 tokensUnlocked;
+        uint256 leftoverRewards;
         uint256 previousYearAllocation;
 
         uint256 timeElapsed = block.timestamp - startTimestamp;
@@ -66,13 +67,19 @@ abstract contract RewardBase {
         }
         
         if (year > 1 && timeElapsed % ONE_YEAR != 0) {
-            // Get previous year's tokens unlocked
             uint256 previousYear = year - 1;
             previousYearAllocation = rewardSupply * (DECIMAL_SCALING - (DECIMAL_SCALING / 2**previousYear)) / DECIMAL_SCALING;
+
+            if (rewardsPaid > 0) {
+                uint256 previousYearsRewardsPaid = Math.min(rewardsPaid, previousYearAllocation);
+                leftoverRewards = previousYearAllocation - previousYearsRewardsPaid;
+                rewardsPaid -= previousYearsRewardsPaid;
+            }
         }
 
+        uint256 allocationForYear = tokensUnlocked - previousYearAllocation;
         uint256 timeElapsedInYear = timeElapsed % ONE_YEAR == 0 ? ONE_YEAR : timeElapsed % ONE_YEAR;
-
-        return (timeElapsedInYear * tokensUnlocked / ONE_YEAR) + previousYearAllocation - rewardsPaid;
+        
+        return (timeElapsedInYear * allocationForYear / ONE_YEAR) + leftoverRewards - rewardsPaid;
     }
 }
