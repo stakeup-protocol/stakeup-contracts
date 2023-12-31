@@ -48,6 +48,8 @@ abstract contract RewardBase {
         uint256 leftoverRewards;
         uint256 previousYearAllocation;
 
+        if (rewardsRemaining == 0) return 0;
+
         uint256 timeElapsed = block.timestamp - startTimestamp;
         // Reward gauges will be seeded immediately after deployment
         // with 1 weeks worth of rewards
@@ -79,7 +81,7 @@ abstract contract RewardBase {
 
         uint256 allocationForYear = tokensUnlocked - previousYearAllocation;
         uint256 timeElapsedInYear = timeElapsed % ONE_YEAR == 0 ? ONE_YEAR : timeElapsed % ONE_YEAR;
-        
+
         return (timeElapsedInYear * allocationForYear / ONE_YEAR) + leftoverRewards - rewardsPaid;
     }
 }
