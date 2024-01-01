@@ -169,11 +169,11 @@ def test_exchange_rate():
     user = default_chain.accounts[1]
     bloom_pool.mint(user.address, EvmMath.parse_decimals(tby_deposit_amount, 6))
     bloom_pool.approve(st_usd.address, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
-
-    st_usd.depositTby(bloom_pool.address, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
     
     registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1))
 
+    st_usd.depositTby(bloom_pool.address, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
+    
     default_chain.mine(lambda x: x + Constants.ONE_WEEK)
 
     rate = st_usd.getTotalUsd() * 1e18 / st_usd.getTotalShares()
@@ -239,9 +239,6 @@ def test_auto_minting():
 
     # Mine to the end of the commit phase
     default_chain.mine(lambda x: x + Constants.ONE_DAY * 3 - Constants.ONE_HOUR)
-    print(f'User stUSD Balance {st_usd.balanceOf(user.address)}')
-    print(f'total USD {st_usd.getTotalUsd()}')
-    print(f'Remaining Balance {usdc.balanceOf(st_usd.address)}')
 
     # TODO: st_usd balance of users is incorrect when depositing into a new pool after auto minting and then 
     # immediately adjusting the usd value for TBY exchange rates. The assertion that is commented out
@@ -250,6 +247,28 @@ def test_auto_minting():
     assert usdc.balanceOf(st_usd.address) == 0
     # user balance should increase after redeeming but not after auto minting
     # assert st_usd.balanceOf(user.address) == user_bal_after
+
+@default_chain.connect()
+def test_deposit_existing_tby():
+    deploy_env(default_chain)
+    user = default_chain.accounts[1]
+
+    mint_amount = 1000
+    exchange_rate = 1.04
+
+    mint_fee = EvmMath.parse_eth(mint_amount * st_usd.getMintBps() / 10000)
+    print(f'Mint Fee {mint_fee}')
+    registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(exchange_rate))
+    print(f'Expected Tokens {EvmMath.parse_eth(mint_amount * exchange_rate)}')
+    expected_user_balance = EvmMath.parse_eth(mint_amount * exchange_rate) - mint_fee
+
+    bloom_pool.mint(user.address, EvmMath.parse_decimals(mint_amount, 6))
+    bloom_pool.approve(st_usd.address, EvmMath.parse_decimals(mint_amount, 6), from_=user)
+
+    st_usd.depositTby(bloom_pool.address, EvmMath.parse_decimals(mint_amount, 6), from_=user)
+
+    assert st_usd.balanceOf(user.address) == expected_user_balance
+    assert st_usd.getTotalUsd() == EvmMath.parse_eth(mint_amount * exchange_rate)
 
 @default_chain.connect()
 def test_deposit_fee():
@@ -266,6 +285,3 @@ def test_deposit_fee():
 
     assert st_usd.balanceOf(stakeup.address) == EvmMath.parse_eth(deposit_fee)
     assert stakeup.isFeeProcessed() == True
-
-
-
