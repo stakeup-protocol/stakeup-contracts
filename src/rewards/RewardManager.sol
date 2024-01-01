@@ -71,11 +71,11 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
         address rewardReceiver,
         uint256 stUSDAmount
     ) external override initialized onlyStUsd {
-        if (stUSDAmount > 0) {
-            // Mint a proportional amount of rewards to the user
-            uint256 rewardAmount = (LAUNCH_MINT_REWARDS * stUSDAmount) /
-                STUSD_MINT_THREASHOLD;
+        // Mint a proportional amount of rewards to the user
+        uint256 rewardAmount = (LAUNCH_MINT_REWARDS * stUSDAmount) /
+            STUSD_MINT_THREASHOLD;
 
+        if (rewardAmount > 0) {
             _executeDelegateStake(rewardReceiver, rewardAmount);
         }
     }
