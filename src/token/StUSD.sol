@@ -341,6 +341,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
 
         _mintShares(msg.sender, sharesAmount);
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
+        _stakeupStaking.processFees(sharesFeeAmount);
 
         uint256 totalUsd = _getTotalUsd();
 
