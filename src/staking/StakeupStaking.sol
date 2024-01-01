@@ -292,8 +292,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
                 .mulWad(
                     _rewardPerToken() -
                         uint256(userStakingData.rewardsPerTokenPaid)
-                )
-                .divWad(1e18) + uint256(userStakingData.rewardsAccrued);
+                ) + uint256(userStakingData.rewardsAccrued);
     }
 
     function _totalSupLockedInVesting() internal view returns (uint256) {
