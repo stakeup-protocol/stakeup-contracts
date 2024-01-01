@@ -251,6 +251,21 @@ def test_auto_minting():
     # user balance should increase after redeeming but not after auto minting
     # assert st_usd.balanceOf(user.address) == user_bal_after
 
-# TODO: Add tests during audit fix
-def test_balance_adjustments():
-    pass
+@default_chain.connect()
+def test_deposit_fee():
+    deploy_env(default_chain)
+    stakeup.setFeeProcessed(False)
+
+    user = default_chain.accounts[1]
+
+    deposit_amount = 1000
+    deposit_fee = st_usd.getMintBps() * deposit_amount / 10000
+
+    registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1))
+    deposit(default_chain, user, EvmMath.parse_decimals(deposit_amount, 6), False)
+
+    assert st_usd.balanceOf(stakeup.address) == EvmMath.parse_eth(deposit_fee)
+    assert stakeup.isFeeProcessed() == True
+
+
+

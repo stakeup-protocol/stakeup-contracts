@@ -8,8 +8,11 @@ import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
 
 contract MockStakeupStaking is IStakeupStaking {
     address private _rewardManager;
+    bool private _feeProcessed;
 
-    function processFees(uint256 amount) external override {}
+    function processFees(uint256 amount) external override {
+        _feeProcessed = true;
+    }
 
     function stake(uint256 stakeupAmount) external override {}
 
@@ -62,4 +65,14 @@ contract MockStakeupStaking is IStakeupStaking {
     function getUserStakingData(
         address user
     ) external view override returns (StakingData memory) {}
+
+    // This function is only used for unit testing
+    function setFeeProcessed(bool feeProcessed) external {
+        _feeProcessed = feeProcessed;
+    }
+    
+    // This function is only used for unit testing
+    function isFeeProcessed() external view returns (bool) {
+        return _feeProcessed;
+    }
 }
