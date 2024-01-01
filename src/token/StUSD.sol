@@ -137,7 +137,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             _lastDepositAmount += amount;
         }
         
-        _deposit(tby, amount);
+        _deposit(tby, amount, true);
     }
     
     /// @inheritdoc IStUSD
@@ -153,7 +153,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             _remainingBalance += amount;
         }
         
-        _deposit(address(_underlyingToken), amount);
+        _deposit(address(_underlyingToken), amount, false);
     }
 
     /// @inheritdoc IStUSD
@@ -323,8 +323,9 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
      * @notice Deposit tokens into stUSD
      * @param token Token being deposited
      * @param amount The amount of tokens being deposited
+     * @param isTby True if the token being deposited is a TBY
      */
-    function _deposit(address token, uint256 amount) internal {   
+    function _deposit(address token, uint256 amount, bool isTby) internal {   
         // TBYs will always have the same underlying decimals as the underlying token
         uint256 amountScaled = amount * _scalingFactor;
 
@@ -335,6 +336,14 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             sharesFeeAmount = getSharesByUsd(mintFee);
 
             emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
+        }
+
+        // If the token is a TBY, we need to get the current exchange rate of the token
+        //     to accurately calculate the amount of stUSD to mint.
+        // We calculate the mint fee prior to getting the exchange rate to avoid punishing
+        //     users for depositing TBYs once they have accrued interest.
+        if (isTby) {
+            amountScaled = _registry.getExchangeRate(token).mulWad(amountScaled); 
         }
 
         uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
