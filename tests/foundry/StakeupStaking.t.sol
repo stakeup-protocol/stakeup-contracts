@@ -235,7 +235,6 @@ contract StakeupStakingTest is Test {
         stakeupStaking.harvest();
         vm.stopPrank();
                 
-                
         // Dust will be left over due to percision loss
         assertApproxEqRel(mockStUSD.balanceOf(address(stakeupStaking)), 10 ether, .99e18);
         // Dont allow alice to claim more than she has been allocated
@@ -244,6 +243,28 @@ contract StakeupStakingTest is Test {
         vm.expectRevert(IStakeupStaking.NoRewardsToClaim.selector);
         stakeupStaking.harvest();
         vm.stopPrank();
+
+        // Allow users who have tokens in the vesting contract to claim rewards
+        address vestedUser = makeAddr("vestedUser");
+        vm.prank(address(mockStakeupToken));
+        stakeupStaking.vestTokens(vestedUser, 1000 ether);
+        vm.stopPrank();
+
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        skip(1 weeks);
+
+        _processFees(rewardSupply);
+
+        uint256 vestedUser2Claim = stakeupStaking.claimableRewards(vestedUser);
+
+        vm.startPrank(vestedUser);
+        vm.expectEmit(true, true, true, true);
+        emit RewardsHarvested(vestedUser, vestedUser2Claim);
+        stakeupStaking.harvest();
+        vm.stopPrank();
+
+        assertApproxEqRel(mockStUSD.balanceOf(address(vestedUser)), 10 ether, .99e18);
+        assertEq(stakeupStaking.claimableRewards(vestedUser), 0);
     }
 
     function test_partialHarvest() public {
@@ -331,6 +352,32 @@ contract StakeupStakingTest is Test {
         // skip to past the end of the vesting period and check if available tokens are correct
         skip(2 * 52 weeks);
         assertEq(stakeupStaking.getAvailableTokens(alice), vestAmount + addonAmount);
+    }
+
+    function test_harvestAfterClaimingTokens() public {
+        uint256 rewardSupply = 20 ether;
+
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        skip(1 weeks);
+
+        _processFees(rewardSupply);
+
+        mockStakeupToken.mint(address(stakeupStaking), vestAmount); 
+
+        vm.startPrank(address(mockStakeupToken));
+        stakeupStaking.vestTokens(alice, vestAmount);
+        vm.stopPrank();
+
+        skip(104 weeks); // Skip 2 years. 2/3 of tokens should be available
+        uint256 availableTokens = stakeupStaking.getAvailableTokens(alice);
+        uint256 claimableRewards = stakeupStaking.claimableRewards(alice);
+
+        // Remove tokens from vesting contract
+        vm.startPrank(alice);
+        stakeupStaking.claimAvailableTokens();
+
+        assertEq(mockStakeupToken.balanceOf(address(alice)), availableTokens);
+        assertEq(mockStUSD.balanceOf(address(alice)), claimableRewards);
     }
 
     function _stake(address user, uint256 amount) internal {

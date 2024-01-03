@@ -25,7 +25,7 @@ contract SUPVesting is ISUPVesting {
     // @notice Total amount of STAKEUP locked in vesting
     uint256 internal _totalStakeUpVesting;
 
-    mapping(address => VestedAllocation) private _tokenAllocations;
+    mapping(address => VestedAllocation) internal _tokenAllocations;
 
     uint256 private constant CLIFF_DURATION = 52 weeks;
     uint256 private constant VESTING_DURATION = 3 * CLIFF_DURATION;
@@ -71,11 +71,16 @@ contract SUPVesting is ISUPVesting {
             _tokenAllocations[account].currentBalance =
                 allocation.currentBalance + amount;
         }
+
+        _vestTokens(account);
     }
 
     /// @inheritdoc ISUPVesting
     function claimAvailableTokens() external returns (uint256) {
         VestedAllocation storage allocation = _tokenAllocations[msg.sender];
+
+        _claimTokens(msg.sender);
+
         uint256 amount = getAvailableTokens(msg.sender);
 
         allocation.currentBalance -= amount;
@@ -99,4 +104,8 @@ contract SUPVesting is ISUPVesting {
     function _validateTimeElapsed(uint256 timeUnderVesting) internal pure returns (uint256) {
         return Math.min(timeUnderVesting, VESTING_DURATION);
     }
+
+    function _vestTokens(address user) internal virtual {}
+
+    function _claimTokens(address user) internal virtual {}
 }
