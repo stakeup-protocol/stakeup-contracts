@@ -38,10 +38,4 @@ interface ISUPVesting {
      * @param account The account to check
      */
     function getCurrentBalance(address account) external view returns (uint256);
-
-    /**
-     * @notice Get address of the SUP token
-     */
-    function getSUPToken() external view returns (address);
-
 }

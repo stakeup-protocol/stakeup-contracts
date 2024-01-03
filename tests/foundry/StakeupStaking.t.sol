@@ -5,8 +5,10 @@ import {Test} from "forge-std/Test.sol";
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
+
+import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
+
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockSUPVesting} from "../mocks/MockSUPVesting.sol";
 import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StakeupStakingTest is Test {
@@ -14,12 +16,14 @@ contract StakeupStakingTest is Test {
 
     StakeupStaking public stakeupStaking;
     MockERC20 public mockStakeupToken;
-    MockSUPVesting public mockSUPVesting;
     MockERC20 public mockStUSD;
     MockRewardManager public rewardManager;
 
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
+
+    uint256 public vestAmount = 1_000_000e18;
+    uint256 constant VESTING_DURATION = 3 * 365 days;
 
     event StakeupStaked(address indexed user, uint256 amount);
     event StakeupUnstaked(address indexed user, uint256 amount);
@@ -29,15 +33,11 @@ contract StakeupStakingTest is Test {
         mockStakeupToken = new MockERC20(18);
         vm.label(address(mockStakeupToken), "mockStakeupToken");
 
-        mockSUPVesting = new MockSUPVesting();
-        vm.label(address(mockSUPVesting), "mockSUPVesting");
-
         mockStUSD = new MockERC20(18);
         vm.label(address(mockStUSD), "mockStUSD");
 
         stakeupStaking = new StakeupStaking(
            address(mockStakeupToken),
-           address(mockSUPVesting),
            address(rewardManager),
            address(mockStUSD)
         );
@@ -273,6 +273,64 @@ contract StakeupStakingTest is Test {
         // Alice claims second half of rewards
         stakeupStaking.harvest(aliceRewards / 2);
 
+    }
+    
+    function test_InvalidCaller() public {
+        mockStakeupToken.mint(address(stakeupStaking), vestAmount); 
+        vm.expectRevert(ISUPVesting.CallerNotSUP.selector);
+        stakeupStaking.vestTokens(address(this), vestAmount);
+    }
+
+    function test_FullVestingFlow() public {
+        uint256 elapsedTime = 0;
+        mockStakeupToken.mint(address(stakeupStaking), vestAmount); 
+
+        vm.startPrank(address(mockStakeupToken));
+        stakeupStaking.vestTokens(alice, vestAmount);
+        vm.stopPrank();
+
+        assertEq(mockStakeupToken.balanceOf(address(stakeupStaking)), vestAmount);
+        assertEq(mockStakeupToken.balanceOf(alice), 0);
+
+        // Check initial view functions
+        uint256 firstAliceBalance = stakeupStaking.getCurrentBalance(alice);
+        assertEq(firstAliceBalance, vestAmount);
+        assertEq(stakeupStaking.getAvailableTokens(alice), 0);
+
+        // Add additional tokens to vesting contract
+        uint256 addonAmount = 100e18;
+        mockStakeupToken.mint(address(stakeupStaking), addonAmount);
+        vm.startPrank(address(mockStakeupToken));
+        stakeupStaking.vestTokens(alice, addonAmount);
+        vm.stopPrank();
+
+        uint256 newAliceBalance = stakeupStaking.getCurrentBalance(alice);
+
+        assertEq(mockStakeupToken.balanceOf(address(stakeupStaking)), vestAmount + addonAmount);
+        assertEq(mockStakeupToken.balanceOf(alice), 0);
+        assertEq(newAliceBalance, vestAmount + addonAmount);
+
+        // Fast Forward 30 days and check if available tokens are correct
+        skip(30 days); 
+        elapsedTime += 30 days;
+        assertEq(stakeupStaking.getAvailableTokens(alice), 0);
+
+        // Skip to the end of the cliff and check if available tokens are correct
+        skip(335 days);
+        elapsedTime += 335 days;
+        uint256 expectedCliffBalance = (vestAmount + addonAmount) / 3;
+        assertEq(stakeupStaking.getAvailableTokens(alice), expectedCliffBalance);
+
+        // Skip to somewhere in the middle of the vesting period and check if available tokens are correct
+        skip(100 days);
+        elapsedTime += 100 days;
+
+        uint256 expectedVestingBalance = (vestAmount + addonAmount) * elapsedTime / VESTING_DURATION;
+        assertEq(stakeupStaking.getAvailableTokens(alice), expectedVestingBalance);
+
+        // skip to past the end of the vesting period and check if available tokens are correct
+        skip(2 * 365 days);
+        assertEq(stakeupStaking.getAvailableTokens(alice), vestAmount + addonAmount);
     }
 
     function _stake(address user, uint256 amount) internal {

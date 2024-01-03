@@ -5,7 +5,7 @@ import {IStakeupToken} from "./IStakeupToken.sol";
 import {IStUSD} from "./IStUSD.sol";
 import {ISUPVesting} from "./ISUPVesting.sol";
 
-interface IStakeupStaking {
+interface IStakeupStaking is ISUPVesting {
 
     // @notice Token amount is 0
     error ZeroTokensStaked();
@@ -120,9 +120,6 @@ interface IStakeupStaking {
     /// @notice Returns the Stakeup Token
     function getStakupToken() external view returns (IStakeupToken);
     
-    // @returns the SUP Vesting contract
-    function getSupVestingContract() external view returns (ISUPVesting);
-
     /// @notice Returns the stUSD token
     function getStUSD() external view returns (IStUSD);
 
