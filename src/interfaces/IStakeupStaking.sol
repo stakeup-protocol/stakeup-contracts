@@ -22,7 +22,6 @@ interface IStakeupStaking {
     // @notice No Fees were sent to the contract
     error NoFeesToProcess();
 
-
     // =================== Structs ====================
     /**
      * @notice Data structure containing information pertaining to a user's stake
