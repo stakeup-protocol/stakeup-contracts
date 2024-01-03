@@ -89,30 +89,53 @@ To run tests and generate coverage reports for the wake and forge tests side-by-
 
 - **Linux** (Debian/Ubuntu based systems):
 
-````sudo apt-get update
-sudo apt-get install lcov```
+```bash
+sudo apt-get update
+sudo apt-get install lcov
+```
 
 - **Linux (Fedora/RHEL/CentOS)**:
-```sudo dnf install lcov```
+
+```bash
+sudo dnf install lcov
+```
 
 - **Linux (arch-based)**:
-```sudo pacman -S lcov```
+
+```bash
+sudo pacman -S lcov
+```
 
 - **macOS**:
-```brew install lcov```
+
+```bash
+brew install lcov
+```
+
 (Assumes Homebrew is installed. Visit https://brew.sh/ for Homebrew installation instructions.)
 
 - **Windows**: `lcov`` is not natively available for Windows. However, you can use it within the Windows Subsystem for Linux (WSL). Follow the Linux instructions after setting up WSL. For WSL setup, refer to Microsoft's WSL Installation Guide.
-````
 
 ### Running the Tests
 
 - **Run coverage.sh**
 
-Open a terminal and navigate to the directory containing test.sh. Run the script by typing:
-`./test.sh`
+Open a terminal and navigate to the directory containing coverage.sh. Run the script by typing:
+
+```bash
+./coverage.sh
+```
+
 This script will execute the necessary tests and generate a coverage report.
 
 #### Viewing the Coverage Report
 
 - If the script completes successfully, it will generate coverage reports in the specified output directory. You can view these reports by opening the index.html file in your web browser.
+
+#### View in HTML Format
+
+- To view the coverage report in your browser use the flag `--html` e.g
+
+```bash
+./coverage.sh --html
+```

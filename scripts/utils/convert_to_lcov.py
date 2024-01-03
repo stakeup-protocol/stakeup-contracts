@@ -7,7 +7,14 @@ def process_json_to_lcov(json_file, lcov_file):
     with open(lcov_file, 'w') as file:
         for filepath, filedata in data['data'].items():
             file.write(f'SF:{filepath}\n')
+
+            first_element_skipped = False
             for item in filedata:
+                # Skip the first element
+                if not first_element_skipped:
+                    first_element_skipped = True
+                    continue
+
                 start_line = item['startLine']
                 hits = item['coverageHits']
                 file.write(f'DA:{start_line},{hits}\n')
