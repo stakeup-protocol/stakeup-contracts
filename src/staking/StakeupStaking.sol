@@ -278,14 +278,27 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
      *     FixedPointMathLib library. This dust will be added to the next reward period
      */
     function _rewardsEarned(address account) internal view returns (uint256) {
-        StakingData storage userStakingData = _stakingData[account];
-        uint256 amountEligibleForRewards = uint256(
-            userStakingData.amountStaked
-        );
+        StakingData memory userStakingData = _stakingData[account];
+        VestedAllocation memory userVestingData = _tokenAllocations[account];
+
+        uint256 amountEligibleForRewards = userStakingData.amountStaked +
+            userVestingData.currentBalance;
 
         return
             amountEligibleForRewards.mulWad(
                 _rewardPerToken() - uint256(userStakingData.rewardsPerTokenPaid)
             ) + uint256(userStakingData.rewardsAccrued);
+    }
+
+    function _vestTokens(address account) internal override updateReward(account) {
+        // solhint-ignore-next-line no-empty-blocks
+    }
+
+    function _claimTokens(address account) internal override updateReward(account) {
+        uint256 rewards = _rewardsEarned(account);
+
+        if (rewards > 0) {
+            _harvest(_stakingData[account], rewards);
+        }
     }
 }
