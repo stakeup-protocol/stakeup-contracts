@@ -44,13 +44,6 @@ contract MockStakeupStaking is IStakeupStaking {
 
     function getStakupToken() external view override returns (IStakeupToken) {}
 
-    function getSupVestingContract()
-        external
-        view
-        override
-        returns (ISUPVesting)
-    {}
-
     function getStUSD() external view override returns (IStUSD) {}
 
     function totalStakeUpStaked() external view override returns (uint256) {}
@@ -70,9 +63,21 @@ contract MockStakeupStaking is IStakeupStaking {
     function setFeeProcessed(bool feeProcessed) external {
         _feeProcessed = feeProcessed;
     }
-    
+
     // This function is only used for unit testing
     function isFeeProcessed() external view returns (bool) {
         return _feeProcessed;
     }
+
+    function getAvailableTokens(
+        address account
+    ) external view override returns (uint256) {}
+
+    function vestTokens(address account, uint256 amount) external override {}
+
+    function claimAvailableTokens() external override returns (uint256) {}
+
+    function getCurrentBalance(
+        address account
+    ) external view override returns (uint256) {}
 }

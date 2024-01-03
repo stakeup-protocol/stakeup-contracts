@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 
 /**
@@ -18,20 +19,24 @@ import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 contract SUPVesting is ISUPVesting {
     using SafeERC20 for IERC20;
 
-    IERC20 private immutable _token;
+    // @notice The STAKEUP token
+    IStakeupToken internal immutable _stakeupToken;
+
+    // @notice Total amount of STAKEUP locked in vesting
+    uint256 internal _totalStakeUpVesting;
+
+    mapping(address => VestedAllocation) private _tokenAllocations;
 
     uint256 private constant CLIFF_DURATION = 365 days;
     uint256 private constant VESTING_DURATION = 3 * 365 days;
 
-    mapping(address => VestedAllocation) private _tokenAllocations;
-
     modifier onlySUP() {
-        if (msg.sender != address(_token)) revert CallerNotSUP();
+        if (msg.sender != address(_stakeupToken)) revert CallerNotSUP();
         _;
     }
 
-    constructor(address token) {
-        _token = IERC20(token);
+    constructor(address stakeupToken) {
+        _stakeupToken = IStakeupToken(stakeupToken);
     }
 
     /// @inheritdoc ISUPVesting
@@ -52,6 +57,8 @@ contract SUPVesting is ISUPVesting {
     function vestTokens(address account, uint256 amount) external onlySUP {
         VestedAllocation storage allocation = _tokenAllocations[account];
 
+        _totalStakeUpVesting += amount;
+        
         // If this is the first time vesting for this account, set initial vesting state
         // Otherwise, update the vesting state
         if (allocation.vestingStartTime == 0) {
@@ -77,7 +84,7 @@ contract SUPVesting is ISUPVesting {
             delete _tokenAllocations[msg.sender];
         }
 
-        _token.safeTransfer(msg.sender, amount);
+        IERC20(address(_stakeupToken)).safeTransfer(msg.sender, amount);
 
         return amount;
     }
@@ -87,11 +94,6 @@ contract SUPVesting is ISUPVesting {
         address account
     ) external view override returns (uint256) {
         return _tokenAllocations[account].currentBalance;
-    }
-
-    /// @inheritdoc ISUPVesting
-    function getSUPToken() external view override returns (address) {
-        return address(_token);
     }
 
     function _validateTimeElapsed(uint256 timeUnderVesting) internal pure returns (uint256) {
