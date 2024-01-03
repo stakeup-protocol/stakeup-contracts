@@ -78,3 +78,41 @@ stUSD solves TBYs composability issues by allowing users to deposit their TBYs o
   - wstUSD/wstETH
   - wstUSD/CHAI
   - stUSD/SUP
+
+### Testing
+
+To run tests and generate coverage reports for the wake and forge tests side-by-side, follow these instructions:
+
+### Prerequisites
+
+- **Install lcov**: Before running the script, you need to have lcov installed on your system.
+
+- **Linux** (Debian/Ubuntu based systems):
+
+````sudo apt-get update
+sudo apt-get install lcov```
+
+- **Linux (Fedora/RHEL/CentOS)**:
+```sudo dnf install lcov```
+
+- **Linux (arch-based)**:
+```sudo pacman -S lcov```
+
+- **macOS**:
+```brew install lcov```
+(Assumes Homebrew is installed. Visit https://brew.sh/ for Homebrew installation instructions.)
+
+- **Windows**: `lcov`` is not natively available for Windows. However, you can use it within the Windows Subsystem for Linux (WSL). Follow the Linux instructions after setting up WSL. For WSL setup, refer to Microsoft's WSL Installation Guide.
+````
+
+### Running the Tests
+
+- **Run coverage.sh**
+
+Open a terminal and navigate to the directory containing test.sh. Run the script by typing:
+`./test.sh`
+This script will execute the necessary tests and generate a coverage report.
+
+#### Viewing the Coverage Report
+
+- If the script completes successfully, it will generate coverage reports in the specified output directory. You can view these reports by opening the index.html file in your web browser.
