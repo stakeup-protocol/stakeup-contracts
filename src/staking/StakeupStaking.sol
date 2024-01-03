@@ -170,7 +170,7 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         // If the current reward period has ended, update the reward rate
         // and add the leftover rewards to the next period's reward pool
         if (block.timestamp >= rewards.periodFinished) {
-            rewards.availableRewards = rewards.pendingRewards;
+            rewards.availableRewards += rewards.pendingRewards;
             rewards.pendingRewards = 0;
             rewards.periodFinished = uint32(block.timestamp + REWARD_DURATION);
             rewards.rewardRate = uint256(rewards.availableRewards).divWad(
@@ -247,8 +247,12 @@ contract StakeupStaking is IStakeupStaking, ReentrancyGuard {
         StakingData storage userStakingData,
         uint256 shares
     ) internal {
+        RewardData storage rewards = _rewardData;
         uint256 amount = _stUSD.getUsdByShares(shares);
         userStakingData.rewardsAccrued -= uint128(shares);
+
+        // Subtract the rewards from the available rewards
+        rewards.availableRewards -= uint128(shares);
 
         IERC20(address(_stUSD)).safeTransfer(msg.sender, amount);
         emit RewardsHarvested(msg.sender, shares);

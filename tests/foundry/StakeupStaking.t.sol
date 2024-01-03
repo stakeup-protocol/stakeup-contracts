@@ -2,7 +2,6 @@
 pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import "forge-std/console.sol";
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
@@ -312,7 +311,7 @@ contract StakeupStakingTest is Test {
 
         // Ensure the available rewards are properly decreased, since a week has passed
         // and all rewards have been claimed, the available rewards should be 0 (or near 0 due to percision loss)
-        assertEq(stakeupStaking.getRewardData().availableRewards, rewardSupply);
+        assertEq(stakeupStaking.getRewardData().availableRewards, rewardSupply - (aliceRewards + bobRewards));
 
         // Ensure the rewardRate is properly adjusted after next fees are processed
         skip(1 weeks);
@@ -331,6 +330,53 @@ contract StakeupStakingTest is Test {
         // 10 ether is divided by 4 because since the last fee process, 1/2 of the week has passed and alice has 1/2 of the stake
         // 2000 is passed into the delta to account for precision loss
         assertApproxEqAbs(mockStUSD.balanceOf(alice), rewardSupply / 2 + 10 ether / 4, 2000);
+    }
+
+    function test_persistent_rewards(uint256 stakeAmount) public {
+        vm.assume(stakeAmount > 1 ether);
+        vm.assume(stakeAmount < 1000 ether);
+
+        uint256 rewardSupply = 20 ether;
+        uint256 aliceStake = stakeAmount;
+        uint256 bobStake = stakeAmount;
+
+        mockStakeupToken.mint(alice, aliceStake);
+        mockStakeupToken.mint(bob, bobStake);
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        
+        skip(1 weeks);
+        _processFees(rewardSupply);
+
+        _stake(alice, aliceStake);
+        _stake(bob, bobStake);
+
+        skip(1 weeks);
+
+        uint256 aliceRewards = stakeupStaking.claimableRewards(alice);
+        uint256 bobRewards = stakeupStaking.claimableRewards(bob);
+
+        assertEq(aliceRewards, bobRewards);
+
+        assertEq(stakeupStaking.getRewardData().availableRewards, rewardSupply);
+
+        // Alice claims her rewards
+        vm.startPrank(alice);
+        emit RewardsHarvested(alice, aliceRewards / 2);
+        stakeupStaking.harvest(aliceRewards / 2);
+
+        // Ensure the rewardRate is properly adjusted after next fees are processed
+        skip(1 weeks);
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        _processFees(rewardSupply);
+
+        uint256 aliceRewards2 = stakeupStaking.claimableRewards(alice);
+        uint256 bobRewards2 = stakeupStaking.claimableRewards(bob);
+
+        /* Delta is derived from alice having 1/2 of the first epoch
+        and 1/4 of the second, vice versa */
+        uint256 rewardDelta = (23 ether + 1 ether / 3) / (12 ether - 1 ether / 3);
+
+        assertApproxEqAbs(rewardDelta * 1e18, (bobRewards2 * 1e18 / aliceRewards2), 100);
     }
 
     function _stake(address user, uint256 amount) internal {
