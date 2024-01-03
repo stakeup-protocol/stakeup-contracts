@@ -1,2 +1,0 @@
-tests/mocks/MockRewardManager.sol
-tests/mocks/MockSUPVesting.sol
