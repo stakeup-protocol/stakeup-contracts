@@ -201,7 +201,6 @@ else
 fi
 
 echo "Cleaning up temporary files..."
-# rm lcov.info files_with_lines_coverage_wake.txt files_with_lines_coverage_foundry.txt lcov_wake.info merged-lcov.info wake-coverage.cov
-# rm -rf venv
+rm lcov.info files_with_lines_coverage_wake.txt files_with_lines_coverage_foundry.txt lcov_wake.info merged-lcov.info wake-coverage.cov
 
 echo "Coverage script completed."
