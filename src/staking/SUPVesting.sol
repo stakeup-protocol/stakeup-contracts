@@ -27,8 +27,8 @@ contract SUPVesting is ISUPVesting {
 
     mapping(address => VestedAllocation) private _tokenAllocations;
 
-    uint256 private constant CLIFF_DURATION = 365 days;
-    uint256 private constant VESTING_DURATION = 3 * 365 days;
+    uint256 private constant CLIFF_DURATION = 52 weeks;
+    uint256 private constant VESTING_DURATION = 3 * CLIFF_DURATION;
 
     modifier onlySUP() {
         if (msg.sender != address(_stakeupToken)) revert CallerNotSUP();

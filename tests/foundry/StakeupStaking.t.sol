@@ -23,7 +23,7 @@ contract StakeupStakingTest is Test {
     address public bob = makeAddr("bob");
 
     uint256 public vestAmount = 1_000_000e18;
-    uint256 constant VESTING_DURATION = 3 * 365 days;
+    uint256 constant VESTING_DURATION = 3 * 52 weeks;
 
     event StakeupStaked(address indexed user, uint256 amount);
     event StakeupUnstaked(address indexed user, uint256 amount);
@@ -311,13 +311,13 @@ contract StakeupStakingTest is Test {
         assertEq(newAliceBalance, vestAmount + addonAmount);
 
         // Fast Forward 30 days and check if available tokens are correct
-        skip(30 days); 
-        elapsedTime += 30 days;
+        skip(4 weeks); 
+        elapsedTime += 4 weeks;
         assertEq(stakeupStaking.getAvailableTokens(alice), 0);
 
         // Skip to the end of the cliff and check if available tokens are correct
-        skip(335 days);
-        elapsedTime += 335 days;
+        skip(48 weeks);
+        elapsedTime += 48 weeks;
         uint256 expectedCliffBalance = (vestAmount + addonAmount) / 3;
         assertEq(stakeupStaking.getAvailableTokens(alice), expectedCliffBalance);
 
@@ -329,7 +329,7 @@ contract StakeupStakingTest is Test {
         assertEq(stakeupStaking.getAvailableTokens(alice), expectedVestingBalance);
 
         // skip to past the end of the vesting period and check if available tokens are correct
-        skip(2 * 365 days);
+        skip(2 * 52 weeks);
         assertEq(stakeupStaking.getAvailableTokens(alice), vestAmount + addonAmount);
     }
 
