@@ -16,7 +16,7 @@ import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
  * @dev All SUP tokens held in this vesting contract are considered to be 
  * automatically staked in the StakeUp protocol
  */
-contract SUPVesting is ISUPVesting {
+abstract contract SUPVesting is ISUPVesting {
     using SafeERC20 for IERC20;
 
     // @notice The STAKEUP token
