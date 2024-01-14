@@ -261,7 +261,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             _autoMintTBY(lastCreatedPool);
         }
 
-        if (_isElegibleForAdjustment(currentState)) {
+        if (_isEligibleForAdjustment(currentState)) {
             _adjustRemainingBalance(lastCreatedPool);
         }
 
