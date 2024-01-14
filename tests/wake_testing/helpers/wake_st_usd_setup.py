@@ -1,3 +1,4 @@
+from eth_typing import Address
 from wake.testing import *
 from pytypes.src.token.StUSD import StUSD
 from pytypes.tests.mocks.MockERC20 import MockERC20
@@ -30,6 +31,7 @@ class StUSDTestEnv:
         self.stablecoin = self.__setup_token(t1, 6)
         self.bill_token = self.__setup_token(t2, 18)
         self.sup_token = self.__setup_token(t3, 18)
+
         self.deployer = c.accounts[0]
 
         self.swap_facility = MockSwapFacility.deploy(self.stablecoin, self.bill_token)

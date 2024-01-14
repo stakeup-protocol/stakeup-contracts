@@ -3,6 +3,9 @@ src = "src"
 out = "out"
 libs = ["lib"]
 test = "tests"
+via_ir = true
+optimizer = true
+optimizer-runs = 15_000
 
 solc = "0.8.22"
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
