@@ -369,9 +369,9 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
 
         if (mintRewardsRemaining > 0) {
-            uint256 elegibleAmount = Math.min(amountScaled, mintRewardsRemaining);
-            _mintRewardsRemaining -= elegibleAmount;
-            _rewardManager.distributeMintRewards(msg.sender, elegibleAmount);
+            uint256 eligibleAmount = Math.min(amountScaled, mintRewardsRemaining);
+            _mintRewardsRemaining -= eligibleAmount;
+            _rewardManager.distributeMintRewards(msg.sender, eligibleAmount);
         }
 
         _setTotalUsd(_getTotalUsd() + amountScaled);
