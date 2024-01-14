@@ -198,7 +198,7 @@ def test_exchange_rate():
 @default_chain.connect()
 def test_auto_minting():
     deploy_env(default_chain)
-    usdc_deposit_amount = 1000;
+    usdc_deposit_amount = 1000
     
     user = default_chain.accounts[1]
 
@@ -228,6 +228,8 @@ def test_auto_minting():
     bloom_pool_2.setState(IBloomPool.State.Commit)
     
     factory.setLastCreatedPool(bloom_pool_2.address)
+    st_usd.poke()
+
     # TODO Fix: Currently bloom pool tokens are set active in the registry upon deployment. This is a dangerous
     # scenerio in the poke function when we have deposited tokens but have yet to be minted TBY,
     # as it will attempt to poke adjust the exchange rate for the new pool. We will
@@ -241,13 +243,17 @@ def test_auto_minting():
     # Mine to the end of the commit phase
     default_chain.mine(lambda x: x + Constants.ONE_DAY * 3 - Constants.ONE_HOUR)
 
-    # TODO: st_usd balance of users is incorrect when depositing into a new pool after auto minting and then 
-    # immediately adjusting the usd value for TBY exchange rates. The assertion that is commented out
-    # below should pass if the this issue is fixed.
+    # Poke should deposit the remaining balance of usdc into the new bloom pool
     st_usd.poke()
+    assert st_usd.getRemainingBalance() == 0
     assert usdc.balanceOf(st_usd.address) == 0
-    # user balance should increase after redeeming but not after auto minting
-    # assert st_usd.balanceOf(user.address) == user_bal_after
+
+    # Mine to past the end of the commit phase and initiate the pending prehold swap
+    default_chain.mine(lambda x: x + Constants.ONE_HOUR * 2)
+    bloom_pool_2.setState(IBloomPool.State.PendingPreHoldSwap)
+    st_usd.poke()
+    assert st_usd.getRemainingBalance() == 0
+    
 
 @default_chain.connect()
 def test_deposit_existing_tby():
