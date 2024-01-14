@@ -77,6 +77,9 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /// @dev Scaling factor for underlying token
     uint256 private immutable _scalingFactor;
 
+    /// @dev Mapping of TBYs that have been redeemed
+    mapping(address => bool) private _tbyRedeemed;
+
     // =================== Modifiers ===================
     modifier onlyUnStUSD() {
         if (_msgSender() != address(_redemptionNFT)) revert CallerNotUnStUSD();
@@ -207,16 +210,13 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         emit Withdrawn(msg.sender, amount);
     }
 
-    /**
-     * @notice Redeem underlying token from TBY
-     * @param tby TBY address
-     */
-    function redeemUnderlying(address tby, uint256 amount) external nonReentrant {
+    /// @inheritdoc IStUSD
+    function redeemUnderlying(address tby) external override nonReentrant {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
         
         IBloomPool pool = IBloomPool(tby);
         
-        amount = Math.min(amount, IERC20(tby).balanceOf(address(this)));
+        uint256 amount = IERC20(tby).balanceOf(address(this));
 
         uint256 beforeUnderlyingBalance = _underlyingToken.balanceOf(address(this));
         
@@ -224,16 +224,22 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             IEmergencyHandler emergencyHandler = IEmergencyHandler(pool.EMERGENCY_HANDLER());
             IERC20(pool).safeApprove(address(emergencyHandler), amount);
             emergencyHandler.redeem(pool);
+            // Update amount in the case that users cannot redeem all of their TBYs
+            amount = IERC20(tby).balanceOf(address(this));
         } else {
             pool.withdrawLender(amount);
         }
-
+        
         uint256 withdrawn = _underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
+
+        if (withdrawn == 0) revert InvalidRedemption();
+
         uint256 yieldFromPool = withdrawn - amount;
         
         _processProceeds(withdrawn, yieldFromPool);
 
-        if (amount > 0) {
+        if (yieldFromPool > 0 && !_tbyRedeemed[tby]) {
+            _tbyRedeemed[tby] = true;
             _rewardManager.distributePokeRewards(msg.sender);
         }
     }
@@ -250,28 +256,19 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     function poke() external nonReentrant {
         IBloomPool lastCreatedPool = _getLatestPool();
         IBloomPool.State currentState = lastCreatedPool.state();
-        bool eligableForReward = false;
 
         if (_within24HoursOfCommitPhaseEnd(lastCreatedPool, currentState)) {
-            if (_autoMintTBY(lastCreatedPool) > 0) {
-                eligableForReward = true;
-            }
+            _autoMintTBY(lastCreatedPool);
         }
 
         if (_isElegibleForAdjustment(currentState)) {
-            if (_adjustRemainingBalance(lastCreatedPool) > 0) {
-                eligableForReward = true;
-            }
+            _adjustRemainingBalance(lastCreatedPool);
         }
 
-        // If we haven't updated the values of TBYs in 24 hours, update it now
-        if (block.timestamp - _lastRateUpdate >= 1 days) {
-            _lastRateUpdate = block.timestamp;    
+        // If we haven't updated the values of TBYs in 12 hours, update it now
+        if (block.timestamp - _lastRateUpdate >= 12 hours) {
+            _lastRateUpdate = block.timestamp;
             _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
-            eligableForReward = true;
-        }
-
-        if (eligableForReward) {
             _rewardManager.distributePokeRewards(msg.sender);
         }
     }
@@ -329,6 +326,11 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /// @inheritdoc IStUSD
     function getPerformanceBps() external view returns (uint256) {
         return performanceBps;
+    }
+
+    /// @inheritdoc IStUSD
+    function isTbyRedeemed(address tby) external view returns (bool) {
+        return _tbyRedeemed[tby];
     }
 
     /**

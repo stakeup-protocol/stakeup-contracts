@@ -401,7 +401,7 @@ contract StUSDTest is Test {
         
         vm.startPrank(alice);
         emergencyHandler.setNumTokensToRedeem(amount);
-        stUSD.redeemUnderlying(address(newPool), amount);
+        stUSD.redeemUnderlying(address(newPool));
 
         assertEq(stableToken.balanceOf(address(emergencyHandler)), 0);
         assertEq(stableToken.balanceOf(address(stUSD)), amount);
@@ -512,7 +512,7 @@ contract StUSDTest is Test {
         uint256 stakeupStakingShares = stUSD.sharesOf(address(staking));
         uint256 performanceFeeInShares = stUSD.getSharesByUsd(expectedPerformanceFee);
         stUSD.poke();
-        stUSD.redeemUnderlying(address(pool), 3e6);
+        stUSD.redeemUnderlying(address(pool));
 
         uint256 sharesPerUsd = stUSD.getTotalShares() * 1e18 / stUSD.getTotalUsd();
         uint256 usdPerShares = stUSD.getTotalUsd() * 1e18 / stUSD.getTotalShares() + 1; // Add 1 to round up

@@ -139,7 +139,7 @@ def test_performance_fee():
     bloom_pool.setState(IBloomPool.State.FinalWithdraw)
 
     bal_before = st_usd.balanceOf(stakeup.address)
-    st_usd.redeemUnderlying(bloom_pool.address, st_usd.balanceOf(user.address), from_=user)
+    st_usd.redeemUnderlying(bloom_pool.address, from_=user)
     fees_collected = st_usd.balanceOf(stakeup.address) - bal_before
 
     expected_performance_fee = (EvmMath.parse_eth(yield_gained)) * performance_fee
@@ -192,7 +192,7 @@ def test_exchange_rate():
     # bloom_pool.setState(IBloomPool.State.FinalWithdraw)
 
     # # Redeeming should not change the exchange rate
-    # st_usd.redeemUnderlying(bloom_pool, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
+    # st_usd.redeemUnderlying(bloom_pool, from_=user)
 
 @default_chain.connect()
 def test_auto_minting():
@@ -213,7 +213,7 @@ def test_auto_minting():
     user_bal_before = st_usd.balanceOf(user.address)
     user_shares_before = st_usd.sharesOf(user.address)
     bloom_pool.mint(st_usd.address, EvmMath.parse_decimals(usdc_deposit_amount, 6))
-    st_usd.redeemUnderlying(bloom_pool.address, st_usd.balanceOf(user.address), from_=user)
+    st_usd.redeemUnderlying(bloom_pool.address, from_=user)
     user_bal_after = st_usd.balanceOf(user.address)
     user_shares_after = st_usd.sharesOf(user.address)
 
