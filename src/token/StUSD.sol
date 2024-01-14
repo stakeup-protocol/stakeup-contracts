@@ -261,7 +261,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             _autoMintTBY(lastCreatedPool);
         }
 
-        if (_isElegibleForAdjustment(currentState)) {
+        if (_isEligibleForAdjustment(currentState)) {
             _adjustRemainingBalance(lastCreatedPool);
         }
 
@@ -369,9 +369,9 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
 
         if (mintRewardsRemaining > 0) {
-            uint256 elegibleAmount = Math.min(amountScaled, mintRewardsRemaining);
-            _mintRewardsRemaining -= elegibleAmount;
-            _rewardManager.distributeMintRewards(msg.sender, elegibleAmount);
+            uint256 eligibleAmount = Math.min(amountScaled, mintRewardsRemaining);
+            _mintRewardsRemaining -= eligibleAmount;
+            _rewardManager.distributeMintRewards(msg.sender, eligibleAmount);
         }
 
         _setTotalUsd(_getTotalUsd() + amountScaled);
@@ -505,12 +505,13 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     }
 
     /**
-     * @notice Check if the pool is elegible for adjustment
+     * @notice Check if the pool is eligible for adjustment
      * @param state Pool state
      * @return bool True if the pool is in a state that allows for adjustment
      */
-    function _isElegibleForAdjustment(IBloomPool.State state) internal pure returns (bool) {
+    function _isEligibleForAdjustment(IBloomPool.State state) internal pure returns (bool) {
         return state != IBloomPool.State.Commit
+            && state != IBloomPool.State.PendingPreHoldSwap
             && state != IBloomPool.State.FinalWithdraw
             && state != IBloomPool.State.EmergencyExit;
     }
