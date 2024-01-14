@@ -1,3 +1,4 @@
+from eth_account import Account
 from wake.testing import *
 from wake.testing.fuzzing import *
 from helpers.wake_st_usd_setup import ContractConfig, deploy_st_usd_env, StUSDTestEnv
@@ -139,7 +140,7 @@ def test_performance_fee():
     bloom_pool.setState(IBloomPool.State.FinalWithdraw)
 
     bal_before = st_usd.balanceOf(stakeup.address)
-    st_usd.redeemUnderlying(bloom_pool.address, st_usd.balanceOf(user.address), from_=user)
+    st_usd.redeemUnderlying(bloom_pool.address, from_=user)
     fees_collected = st_usd.balanceOf(stakeup.address) - bal_before
 
     expected_performance_fee = (EvmMath.parse_eth(yield_gained)) * performance_fee
@@ -169,11 +170,11 @@ def test_exchange_rate():
     user = default_chain.accounts[1]
     bloom_pool.mint(user.address, EvmMath.parse_decimals(tby_deposit_amount, 6))
     bloom_pool.approve(st_usd.address, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
-
-    st_usd.depositTby(bloom_pool.address, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
     
     registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1))
 
+    st_usd.depositTby(bloom_pool.address, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
+    
     default_chain.mine(lambda x: x + Constants.ONE_WEEK)
 
     rate = st_usd.getTotalUsd() * 1e18 / st_usd.getTotalShares()
@@ -192,7 +193,7 @@ def test_exchange_rate():
     # bloom_pool.setState(IBloomPool.State.FinalWithdraw)
 
     # # Redeeming should not change the exchange rate
-    # st_usd.redeemUnderlying(bloom_pool, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
+    # st_usd.redeemUnderlying(bloom_pool, from_=user)
 
 @default_chain.connect()
 def test_auto_minting():
@@ -213,7 +214,7 @@ def test_auto_minting():
     user_bal_before = st_usd.balanceOf(user.address)
     user_shares_before = st_usd.sharesOf(user.address)
     bloom_pool.mint(st_usd.address, EvmMath.parse_decimals(usdc_deposit_amount, 6))
-    st_usd.redeemUnderlying(bloom_pool.address, st_usd.balanceOf(user.address), from_=user)
+    st_usd.redeemUnderlying(bloom_pool.address, from_=user)
     user_bal_after = st_usd.balanceOf(user.address)
     user_shares_after = st_usd.sharesOf(user.address)
 
@@ -254,6 +255,40 @@ def test_auto_minting():
     assert st_usd.getRemainingBalance() == 0
     
 
-# TODO: Add tests during audit fix
-def test_balance_adjustments():
-    pass
+@default_chain.connect()
+def test_deposit_existing_tby():
+    deploy_env(default_chain)
+    user = default_chain.accounts[1]
+
+    mint_amount = 1000
+    exchange_rate = 1.04
+
+    mint_fee = EvmMath.parse_eth(mint_amount * st_usd.getMintBps() / 10000)
+    print(f'Mint Fee {mint_fee}')
+    registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(exchange_rate))
+    print(f'Expected Tokens {EvmMath.parse_eth(mint_amount * exchange_rate)}')
+    expected_user_balance = EvmMath.parse_eth(mint_amount * exchange_rate) - mint_fee
+
+    bloom_pool.mint(user.address, EvmMath.parse_decimals(mint_amount, 6))
+    bloom_pool.approve(st_usd.address, EvmMath.parse_decimals(mint_amount, 6), from_=user)
+
+    st_usd.depositTby(bloom_pool.address, EvmMath.parse_decimals(mint_amount, 6), from_=user)
+
+    assert st_usd.balanceOf(user.address) == expected_user_balance
+    assert st_usd.getTotalUsd() == EvmMath.parse_eth(mint_amount * exchange_rate)
+
+@default_chain.connect()
+def test_deposit_fee():
+    deploy_env(default_chain)
+    stakeup.setFeeProcessed(False)
+
+    user = default_chain.accounts[1]
+
+    deposit_amount = 1000
+    deposit_fee = st_usd.getMintBps() * deposit_amount / 10000
+
+    registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1))
+    deposit(default_chain, user, EvmMath.parse_decimals(deposit_amount, 6), False)
+
+    assert st_usd.balanceOf(stakeup.address) == EvmMath.parse_eth(deposit_fee)
+    assert stakeup.isFeeProcessed() == True
