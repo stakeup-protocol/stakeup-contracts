@@ -175,5 +175,11 @@ contract RewardManagerTest is Test {
         
         uint256 amountStaked = stakeupStaking.getUserStakingData(address(this)).amountStaked;
         assertEq(amountStaked, expectedReward);
+
+        // Verify that if the rewardAmount is 0 due to precision loss, the function does not revert
+        vm.startPrank(address(mockStUSD));
+        rewardManager.distributeMintRewards(address(this), 1);
+        vm.stopPrank();
+
     }
 }

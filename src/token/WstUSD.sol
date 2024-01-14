@@ -2,13 +2,11 @@
 pragma solidity 0.8.22;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IStUSD} from "../interfaces/IStUSD.sol";
 import {IWstUSD} from "../interfaces/IWstUSD.sol";
 
 contract WstUSD is IWstUSD, ERC20 {
-    using SafeERC20 for ERC20;
     // =================== Constants ===================
 
     IStUSD private immutable _stUSD;
@@ -24,7 +22,7 @@ contract WstUSD is IWstUSD, ERC20 {
         if (stUSDAmount == 0) revert ZeroAmount();
         uint256 wstUSDAmount = _stUSD.getSharesByUsd(stUSDAmount);
         _mint(msg.sender, wstUSDAmount);
-        ERC20(address(_stUSD)).safeTransferFrom(
+        ERC20(address(_stUSD)).transferFrom(
             msg.sender,
             address(this),
             stUSDAmount
@@ -37,7 +35,7 @@ contract WstUSD is IWstUSD, ERC20 {
         if (wstUSDAmount == 0) revert ZeroAmount();
         uint256 stUSDAmount = _stUSD.getUsdByShares(wstUSDAmount);
         _burn(msg.sender, wstUSDAmount);
-        ERC20(address(_stUSD)).safeTransfer(msg.sender, stUSDAmount);
+        ERC20(address(_stUSD)).transfer(msg.sender, stUSDAmount);
         return stUSDAmount;
     }
 
