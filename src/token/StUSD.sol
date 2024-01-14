@@ -132,8 +132,12 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /// @inheritdoc IStUSD
     function depositTby(address tby, uint256 amount) external nonReentrant {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
+        
+        if (IBloomPool(tby).UNDERLYING_TOKEN() != address(_underlyingToken)) {
+            revert InvalidUnderlyingToken();
+        }
+
         IBloomPool latestPool = _getLatestPool();
-        if (latestPool.UNDERLYING_TOKEN() != address(_underlyingToken)) revert InvalidUnderlyingToken();
 
         IERC20(tby).safeTransferFrom(msg.sender, address(this), amount);
 
@@ -148,6 +152,10 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     function depositUnderlying(uint256 amount) external nonReentrant {
         _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
         IBloomPool latestPool = _getLatestPool();
+
+        if (latestPool.UNDERLYING_TOKEN() != address(_underlyingToken)) {
+            revert InvalidUnderlyingToken();
+        }
 
         if (latestPool.state() == IBloomPool.State.Commit) {
             _lastDepositAmount += amount;
