@@ -1,3 +1,4 @@
+from eth_typing import Address
 from wake.testing import *
 from pytypes.src.token.StUSD import StUSD
 from pytypes.tests.mocks.MockERC20 import MockERC20
@@ -24,11 +25,13 @@ class StUSDTestEnv:
         c: Chain, 
         t1: ContractConfig,
         t2: ContractConfig,
+        t3: ContractConfig,
         stakeup: ContractConfig
     ):
         self.stablecoin = self.__setup_token(t1, 6)
         self.bill_token = self.__setup_token(t2, 18)
-        print(c.connect())
+        self.sup_token = self.__setup_token(t3, 18)
+
         self.deployer = c.accounts[0]
 
         self.swap_facility = MockSwapFacility.deploy(self.stablecoin, self.bill_token)
@@ -41,6 +44,8 @@ class StUSDTestEnv:
         self.stakeup = self.__setup_stakeup(stakeup)
         self.st_usd = self.__setup_st_usd()
         self.wst_usd = WstUSD.deploy(self.st_usd.address)
+
+        self.__init_rewards_manager(self.stakeup, self.sup_token)
 
     def __setup_token(self, config: ContractConfig, d=18):
         if config.is_mock:
@@ -78,10 +83,15 @@ class StUSDTestEnv:
             Address.ZERO,
             wrapper_address
         )
+    
+    def __init_rewards_manager(self, stakeup, sup_token):
+        self.rewards_manager.setStakeupStaking(stakeup.address)
+        self.rewards_manager.setStakeupToken(sup_token.address)
 
 def deploy_st_usd_env(c) -> StUSDTestEnv:
     env = StUSDTestEnv(
         c,
+        ContractConfig(True),
         ContractConfig(True),
         ContractConfig(True),
         ContractConfig(True)

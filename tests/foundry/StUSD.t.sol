@@ -27,6 +27,7 @@ contract StUSDTest is Test {
 
     MockERC20 internal stableToken;
     MockERC20 internal billyToken;
+    MockERC20 internal supToken;
     MockSwapFacility internal swap;
     MockBloomPool internal pool;
     MockBloomFactory internal factory;
@@ -61,6 +62,9 @@ contract StUSDTest is Test {
         vm.label(address(stableToken), "StableToken");
         billyToken = new MockERC20(18);
         vm.label(address(billyToken), "BillyToken");
+        supToken = new MockERC20(18);
+        vm.label(address(supToken), "SupToken");
+        
         swap = new MockSwapFacility(stableToken, billyToken);
         vm.label(address(swap), "MockSwapFacility");
 
@@ -90,6 +94,9 @@ contract StUSDTest is Test {
 
         staking = new MockStakeupStaking();
         staking.setRewardManager(address(rewardsManager));
+
+        rewardsManager.setStakeupStaking(address(staking));
+        rewardsManager.setStakeupToken(address(supToken));
         
         address expectedWrapperAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
 
@@ -159,6 +166,7 @@ contract StUSDTest is Test {
         uint256 fee = 0.0055e18; // 0.5% of mint
         pool.mint(alice, amountTBY);
         registry.setTokenInfos(true);
+        registry.setExchangeRate(address(pool), 1e18);
 
         vm.startPrank(alice);
         pool.approve(address(stUSD), amountTBY);
@@ -202,6 +210,59 @@ contract StUSDTest is Test {
         assertEq(stUSD.balanceOf(bob), amountStUSD - fee);
 
         assertEq(stUSD.balanceOf(address(staking)), fee * 2);
+    }
+
+    function testMintRewards() public {
+        // Properly mint rewards for the first 200M stUSD
+        uint256 amount = 200_000_000e6;
+        uint256 amount_scaled = amount * 1e12;
+        pool.mint(alice, amount);
+        registry.setTokenInfos(true);
+
+        vm.startPrank(alice);
+        pool.approve(address(stUSD), amount);
+        stUSD.depositTby(address(pool), amount);
+        vm.stopPrank();
+
+        // Verify that the staking contract received the rewards
+        assertEq(supToken.balanceOf(address(staking)), amount_scaled);
+
+        // Fail to mint rewards for the next mint of stUSD
+        pool.mint(bob, 100e6);
+        vm.startPrank(bob);
+        pool.approve(address(stUSD), 100e6);
+        stUSD.depositTby(address(pool), 100e6);
+        vm.stopPrank();
+
+        // Verify that the staking contract did not receive any additional rewards
+        assertEq(supToken.balanceOf(address(staking)), amount_scaled);
+        // Verify that bob still received his stUSD
+        assertTrue(stUSD.balanceOf(bob) > 0);
+
+        // Burn some stUSD to decrease the total supply below 200M and try to mint rewards again
+        uint256 burnAmount = 100_000_000e18;
+        stableToken.mint(address(stUSD), 100_000_000e6);
+        vm.startPrank(alice);
+        stUSD.approve(address(stUSD), UINT256_MAX);
+        uint256 redemptionId = stUSD.redeemStUSD(burnAmount);
+        redemptionNFT.claimWithdrawal(redemptionId);
+        vm.stopPrank();
+
+        // Verify that the total USD in stUSD is now below 200M
+        assertTrue(stUSD.getTotalUsd() < 200_000_000e18);
+
+        uint256 aliceBalancePreMint = stUSD.balanceOf(alice);
+        // Fail to mint rewards for the next mint of stUSD but do not revert
+        pool.mint(alice, 100e6);
+        vm.startPrank(alice);
+        pool.approve(address(stUSD), 100e6);
+        stUSD.depositTby(address(pool), 100e6);
+        vm.stopPrank();
+
+        // Verify that the staking contract did not receive any additional rewards
+        assertEq(supToken.balanceOf(address(staking)), amount_scaled);
+        // Verify that alice still received her stUSD
+        assertTrue(stUSD.balanceOf(alice) > aliceBalancePreMint);
     }
 
     function testAutoMint() public {
@@ -283,6 +344,7 @@ contract StUSDTest is Test {
     function testEmergencyHandlerWithdraw() public {
         uint256 amount = 100e6;
         registry.setTokenInfos(true);
+        registry.setExchangeRate(address(pool), 1e18);
 
         pool.setState(IBloomPool.State.Commit);
         pool.setCommitPhaseEnd(2 days);
@@ -304,13 +366,14 @@ contract StUSDTest is Test {
             address(swap),
             6
         );
+        factory.setLastCreatedPool(address(newPool));
+        registry.setExchangeRate(address(newPool), 1e18);
 
         newPool.mint(alice, amount);
         vm.startPrank(alice);
         newPool.approve(address(stUSD), amount);
         stUSD.depositTby(address(newPool), amount);
         newPool.setEmergencyHandler(address(emergencyHandler));
-        factory.setLastCreatedPool(address(newPool));
         
         newPool.setCommitPhaseEnd(1 days);
         skip(5 days);
@@ -338,7 +401,7 @@ contract StUSDTest is Test {
         
         vm.startPrank(alice);
         emergencyHandler.setNumTokensToRedeem(amount);
-        stUSD.redeemUnderlying(address(newPool), amount);
+        stUSD.redeemUnderlying(address(newPool));
 
         assertEq(stableToken.balanceOf(address(emergencyHandler)), 0);
         assertEq(stableToken.balanceOf(address(stUSD)), amount);
@@ -352,6 +415,7 @@ contract StUSDTest is Test {
         pool.mint(bob, 2e6);
         registry.setTokenInfos(true);
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
+        registry.setExchangeRate(address(pool), 1e18);
         /// ########## High Level Initial Share Math ##########
         uint256 aliceMintedShares = .995e18;
         uint256 bobMintedShares = 1.99e18;
@@ -448,7 +512,7 @@ contract StUSDTest is Test {
         uint256 stakeupStakingShares = stUSD.sharesOf(address(staking));
         uint256 performanceFeeInShares = stUSD.getSharesByUsd(expectedPerformanceFee);
         stUSD.poke();
-        stUSD.redeemUnderlying(address(pool), 3e6);
+        stUSD.redeemUnderlying(address(pool));
 
         uint256 sharesPerUsd = stUSD.getTotalShares() * 1e18 / stUSD.getTotalUsd();
         uint256 usdPerShares = stUSD.getTotalUsd() * 1e18 / stUSD.getTotalShares() + 1; // Add 1 to round up

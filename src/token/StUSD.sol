@@ -60,7 +60,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
 
     uint256 private constant AUTO_STAKE_PHASE = 1 days;
 
-    uint256 private constant MINT_REWARD_CUTOFF = 200_000_000 * 10 ** 18;
+    uint256 private constant MINT_REWARD_CUTOFF = 200_000_000e18;
 
     /// @dev Last deposit amount
     uint256 internal _lastDepositAmount;
@@ -68,11 +68,17 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /// @dev Remaining underlying token balance
     uint256 internal _remainingBalance;
 
+    /// @dev Mint rewards remaining
+    uint256 internal _mintRewardsRemaining;
+
     /// @dev Last rate update timestamp
     uint256 internal _lastRateUpdate;
 
     /// @dev Scaling factor for underlying token
     uint256 private immutable _scalingFactor;
+
+    /// @dev Mapping of TBYs that have been redeemed
+    mapping(address => bool) private _tbyRedeemed;
 
     // =================== Modifiers ===================
     modifier onlyUnStUSD() {
@@ -114,6 +120,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
         _lastRateUpdate = block.timestamp;
+        _mintRewardsRemaining = MINT_REWARD_CUTOFF;
 
         _wstUSD = IWstUSD(wstUSD);
 
@@ -128,8 +135,12 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /// @inheritdoc IStUSD
     function depositTby(address tby, uint256 amount) external nonReentrant {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
+        
+        if (IBloomPool(tby).UNDERLYING_TOKEN() != address(_underlyingToken)) {
+            revert InvalidUnderlyingToken();
+        }
+
         IBloomPool latestPool = _getLatestPool();
-        if (latestPool.UNDERLYING_TOKEN() != address(_underlyingToken)) revert InvalidUnderlyingToken();
 
         IERC20(tby).safeTransferFrom(msg.sender, address(this), amount);
 
@@ -137,13 +148,17 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             _lastDepositAmount += amount;
         }
         
-        _deposit(tby, amount);
+        _deposit(tby, amount, true);
     }
     
     /// @inheritdoc IStUSD
     function depositUnderlying(uint256 amount) external nonReentrant {
         _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
         IBloomPool latestPool = _getLatestPool();
+
+        if (latestPool.UNDERLYING_TOKEN() != address(_underlyingToken)) {
+            revert InvalidUnderlyingToken();
+        }
 
         if (latestPool.state() == IBloomPool.State.Commit) {
             _lastDepositAmount += amount;
@@ -153,7 +168,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             _remainingBalance += amount;
         }
         
-        _deposit(address(_underlyingToken), amount);
+        _deposit(address(_underlyingToken), amount, false);
     }
 
     /// @inheritdoc IStUSD
@@ -195,16 +210,13 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         emit Withdrawn(msg.sender, amount);
     }
 
-    /**
-     * @notice Redeem underlying token from TBY
-     * @param tby TBY address
-     */
-    function redeemUnderlying(address tby, uint256 amount) external nonReentrant {
+    /// @inheritdoc IStUSD
+    function redeemUnderlying(address tby) external override nonReentrant {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
         
         IBloomPool pool = IBloomPool(tby);
         
-        amount = Math.min(amount, IERC20(tby).balanceOf(address(this)));
+        uint256 amount = IERC20(tby).balanceOf(address(this));
 
         uint256 beforeUnderlyingBalance = _underlyingToken.balanceOf(address(this));
         
@@ -212,16 +224,22 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             IEmergencyHandler emergencyHandler = IEmergencyHandler(pool.EMERGENCY_HANDLER());
             IERC20(pool).safeApprove(address(emergencyHandler), amount);
             emergencyHandler.redeem(pool);
+            // Update amount in the case that users cannot redeem all of their TBYs
+            amount = IERC20(tby).balanceOf(address(this));
         } else {
             pool.withdrawLender(amount);
         }
-
+        
         uint256 withdrawn = _underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
+
+        if (withdrawn == 0) revert InvalidRedemption();
+
         uint256 yieldFromPool = withdrawn - amount;
         
         _processProceeds(withdrawn, yieldFromPool);
 
-        if (amount > 0) {
+        if (yieldFromPool > 0 && !_tbyRedeemed[tby]) {
+            _tbyRedeemed[tby] = true;
             _rewardManager.distributePokeRewards(msg.sender);
         }
     }
@@ -238,28 +256,19 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     function poke() external nonReentrant {
         IBloomPool lastCreatedPool = _getLatestPool();
         IBloomPool.State currentState = lastCreatedPool.state();
-        bool eligableForReward = false;
 
         if (_within24HoursOfCommitPhaseEnd(lastCreatedPool, currentState)) {
-            if (_autoMintTBY(lastCreatedPool) > 0) {
-                eligableForReward = true;
-            }
+            _autoMintTBY(lastCreatedPool);
         }
 
-        if (_isEligibleForAdjustment(currentState)) {
-            if (_adjustRemainingBalance(lastCreatedPool) > 0) {
-                eligableForReward = true;
-            }
+        if (_isElegibleForAdjustment(currentState)) {
+            _adjustRemainingBalance(lastCreatedPool);
         }
 
-        // If we haven't updated the values of TBYs in 24 hours, update it now
-        if (block.timestamp - _lastRateUpdate >= 1 days) {
-            _lastRateUpdate = block.timestamp;    
+        // If we haven't updated the values of TBYs in 12 hours, update it now
+        if (block.timestamp - _lastRateUpdate >= 12 hours) {
+            _lastRateUpdate = block.timestamp;
             _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
-            eligableForReward = true;
-        }
-
-        if (eligableForReward) {
             _rewardManager.distributePokeRewards(msg.sender);
         }
     }
@@ -319,12 +328,18 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         return performanceBps;
     }
 
+    /// @inheritdoc IStUSD
+    function isTbyRedeemed(address tby) external view returns (bool) {
+        return _tbyRedeemed[tby];
+    }
+
     /**
      * @notice Deposit tokens into stUSD
      * @param token Token being deposited
      * @param amount The amount of tokens being deposited
+     * @param isTby True if the token being deposited is a TBY
      */
-    function _deposit(address token, uint256 amount) internal {   
+    function _deposit(address token, uint256 amount, bool isTby) internal {   
         // TBYs will always have the same underlying decimals as the underlying token
         uint256 amountScaled = amount * _scalingFactor;
 
@@ -337,19 +352,29 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             emit FeeCaptured(FeeType.Mint, sharesFeeAmount);
         }
 
+        // If the token is a TBY, we need to get the current exchange rate of the token
+        //     to accurately calculate the amount of stUSD to mint.
+        // We calculate the mint fee prior to getting the exchange rate to avoid punishing
+        //     users for depositing TBYs once they have accrued interest.
+        if (isTby) {
+            amountScaled = _registry.getExchangeRate(token).mulWad(amountScaled); 
+        }
+
         uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
 
         _mintShares(msg.sender, sharesAmount);
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
+        _stakeupStaking.processFees(sharesFeeAmount);
 
-        uint256 totalUsd = _getTotalUsd();
+        uint256 mintRewardsRemaining = _mintRewardsRemaining;
 
-        if (totalUsd <= MINT_REWARD_CUTOFF) {
-            uint256 eligibleAmount = Math.min(amountScaled, MINT_REWARD_CUTOFF - totalUsd);
-            _rewardManager.distributeMintRewards(msg.sender, eligibleAmount);
+        if (mintRewardsRemaining > 0) {
+            uint256 elegibleAmount = Math.min(amountScaled, mintRewardsRemaining);
+            _mintRewardsRemaining -= elegibleAmount;
+            _rewardManager.distributeMintRewards(msg.sender, elegibleAmount);
         }
 
-        _setTotalUsd(totalUsd + amountScaled);
+        _setTotalUsd(_getTotalUsd() + amountScaled);
 
         emit Deposit(msg.sender, token, amount, sharesAmount);
     }

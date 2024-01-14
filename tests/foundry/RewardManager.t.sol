@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.22;
 
-import {Test} from "forge-std/Test.sol";
+import {Test,console2} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
 
 import {RewardManager, IRewardManager} from "src/rewards/RewardManager.sol";
@@ -106,7 +106,7 @@ contract RewardManagerTest is Test {
         uint256 year = 1;
         uint256 yearOneRewards = MAX_POKE_REWARDS * (DECIMAL_SCALING - (DECIMAL_SCALING / 2**year)) / DECIMAL_SCALING;
 
-        uint256 expectedReward = 3 days * yearOneRewards / 365 days;
+        uint256 expectedReward = 3 days * yearOneRewards / 52 weeks;
         
         // distribution succeeds if called by SUP
         vm.startPrank(address(mockStUSD));
@@ -122,6 +122,7 @@ contract RewardManagerTest is Test {
     function test_SeedGauges() public {
         // Initialize the contract to deploy the gauges
         vm.startPrank(address(mockStakeupToken));
+        uint256 intializationTimestamp = block.timestamp;
         rewardManager.initialize();
         vm.stopPrank();
 
@@ -131,11 +132,10 @@ contract RewardManagerTest is Test {
         ICurveGaugeDistributor.CurvePoolData[] memory data =  rewardManager.getCurvePoolData();
 
         for (uint256 i = 0; i < data.length; i++) {
-            uint256 week = 1 weeks;
-            uint256 year = 1;
-            uint256 yearOneRewards = data[i].maxRewards * (DECIMAL_SCALING - (DECIMAL_SCALING / 2**year)) / DECIMAL_SCALING;
+            uint256 yearOneRewards = data[i].maxRewards / 2 ;
 
-            uint256 expectedReward = week * yearOneRewards / 365 days;
+            uint256 timeElapsed = block.timestamp - intializationTimestamp;
+            uint256 expectedReward = (1 weeks + timeElapsed) * yearOneRewards / 52 weeks;
 
             assertEq(data[i].rewardsRemaining, data[i].maxRewards - expectedReward);
             assertEq(mockStakeupToken.balanceOf(data[i].curveGauge), expectedReward);
@@ -175,5 +175,11 @@ contract RewardManagerTest is Test {
         
         uint256 amountStaked = stakeupStaking.getUserStakingData(address(this)).amountStaked;
         assertEq(amountStaked, expectedReward);
+
+        // Verify that if the rewardAmount is 0 due to precision loss, the function does not revert
+        vm.startPrank(address(mockStUSD));
+        rewardManager.distributeMintRewards(address(this), 1);
+        vm.stopPrank();
+
     }
 }
