@@ -16,6 +16,7 @@ interface ISUPVesting {
     /**
      * @notice Get the amount of tokens available to be claimed by an account
      * @param account The account to check
+     * @return The amount of tokens available to be claimed
      */
     function getAvailableTokens(address account) external view returns (uint256);
 
@@ -29,6 +30,7 @@ interface ISUPVesting {
 
     /**
      * @notice Claim available vested tokens for an account
+     * @return The amount of tokens claimed
      */
     function claimAvailableTokens() external returns (uint256);
 
@@ -36,6 +38,7 @@ interface ISUPVesting {
      * @notice Get the amount of tokens that are currently locked in the vesting contract
      * for an account
      * @param account The account to check
+     * @return The amount of tokens locked in the vesting contract
      */
     function getCurrentBalance(address account) external view returns (uint256);
 }

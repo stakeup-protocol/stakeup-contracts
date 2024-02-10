@@ -55,6 +55,8 @@ abstract contract SUPVesting is ISUPVesting {
 
     /// @inheritdoc ISUPVesting
     function vestTokens(address account, uint256 amount) external onlySUP {
+        _vestTokens(account);
+
         VestedAllocation storage allocation = _tokenAllocations[account];
 
         _totalStakeUpVesting += amount;
@@ -71,8 +73,6 @@ abstract contract SUPVesting is ISUPVesting {
             _tokenAllocations[account].currentBalance =
                 allocation.currentBalance + amount;
         }
-
-        _vestTokens(account);
     }
 
     /// @inheritdoc ISUPVesting
@@ -83,6 +83,7 @@ abstract contract SUPVesting is ISUPVesting {
 
         uint256 amount = getAvailableTokens(msg.sender);
 
+        _totalStakeUpVesting -= amount;
         allocation.currentBalance -= amount;
 
         if (allocation.currentBalance == 0) {
@@ -101,10 +102,18 @@ abstract contract SUPVesting is ISUPVesting {
         return _tokenAllocations[account].currentBalance;
     }
 
+    /**
+     * @notice Returns the time that has elapsed that is valid for vesting purposes
+     * @param timeUnderVesting The time that has elapsed since the vesting start time
+     */
     function _validateTimeElapsed(uint256 timeUnderVesting) internal pure returns (uint256) {
         return Math.min(timeUnderVesting, VESTING_DURATION);
     }
 
+    /**
+     * @notice A hook that is called at the beginning of the `vestTokens` function
+     * @param user The user to vest tokens for
+     */
     function _vestTokens(address user) internal virtual {}
 
     function _claimTokens(address user) internal virtual {}

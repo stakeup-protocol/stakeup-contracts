@@ -242,8 +242,12 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
         StakingData storage userStakingData,
         uint256 shares
     ) internal {
+        RewardData storage rewards = _rewardData;
         uint256 amount = _stUSD.getUsdByShares(shares);
+
         userStakingData.rewardsAccrued -= uint128(shares);
+        rewards.availableRewards -= uint128(shares);
+
         IERC20(address(_stUSD)).safeTransfer(msg.sender, amount);
         emit RewardsHarvested(msg.sender, shares);
     }
