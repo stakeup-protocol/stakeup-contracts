@@ -294,11 +294,15 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
             ) + uint256(userStakingData.rewardsAccrued);
     }
 
-    function _vestTokens(address account) internal override updateReward(account) {
+    function _vestTokens(
+        address account
+    ) internal override updateReward(account) {
         // solhint-ignore-next-line no-empty-blocks
     }
 
-    function _claimTokens(address account) internal override updateReward(account) {
+    function _claimTokens(
+        address account
+    ) internal override updateReward(account) {
         uint256 rewards = _rewardsEarned(account);
 
         if (rewards > 0) {
