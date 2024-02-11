@@ -381,7 +381,7 @@ contract StakeupStakingTest is Test {
         assertEq(mockStUSD.balanceOf(address(alice)), claimableRewards);
     }
 
-    function test_available_rewards_properly_adjust_after_harvests() public {
+    function test_AvailableRewardsPostHarvest() public {
         uint256 rewardSupply = 20 ether;
         uint256 aliceStake = 1000 ether;
         uint256 bobStake = 1000 ether;
@@ -437,7 +437,7 @@ contract StakeupStakingTest is Test {
         assertApproxEqAbs(mockStUSD.balanceOf(alice), rewardSupply / 2 + 10 ether / 4, 2000);
     }
 
-    function test_persistent_rewards(uint256 stakeAmount) public {
+    function test_PersistentRewards(uint256 stakeAmount) public {
         vm.assume(stakeAmount > 1 ether);
         vm.assume(stakeAmount < 1000 ether);
 
@@ -482,6 +482,28 @@ contract StakeupStakingTest is Test {
         uint256 rewardDelta = (23 ether + 1 ether / 3) / (12 ether - 1 ether / 3);
 
         assertApproxEqAbs(rewardDelta * 1e18, (bobRewards2 * 1e18 / aliceRewards2), 100);
+    }
+
+    function test_TestRewardMultipleEpochs() public {
+        uint256 rewardSupply = 20 ether;
+        uint256 aliceStake = 1000 ether;
+        uint256 bobStake = 1000 ether;
+
+        mockStakeupToken.mint(alice, aliceStake);
+        mockStakeupToken.mint(bob, bobStake);
+
+        _stake(alice, aliceStake);
+        _stake(bob, bobStake);
+
+        // Process 200 worth of rewards into the contract
+        for (uint256 i = 0; i < 10; i++) {
+            skip(1 weeks);
+            mockStUSD.mint(address(stakeupStaking), rewardSupply);
+            _processFees(rewardSupply);
+        }
+
+        IStakeupStaking.RewardData memory rewards = stakeupStaking.getRewardData();
+        assertEq(rewards.availableRewards, 200 ether);
     }
 
     function _stake(address user, uint256 amount) internal {
