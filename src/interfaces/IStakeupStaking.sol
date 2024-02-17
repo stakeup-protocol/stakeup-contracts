@@ -22,36 +22,32 @@ interface IStakeupStaking is ISUPVesting {
     // @notice No Fees were sent to the contract
     error NoFeesToProcess();
 
+    // @notice The address is 0
+    error ZeroAddress();
+
     // =================== Structs ====================
     /**
      * @notice Data structure containing information pertaining to a user's stake
      * @dev All rewards are denominated in stUSD shares due to the token's rebasing nature
      * @param amountStaked The amount of STAKEUP tokens currently staked
+     * @param index The last index that the users rewards were updated
      * @param rewardsAccrued The amount of stUSD rewards that have accrued to the stake
      */
     struct StakingData {
         uint256 amountStaked;
-        uint256 rewardsPerTokenPaid;
-        uint256 rewardsAccrued;
+        uint128 index;
+        uint128 rewardsAccrued;
     }
 
     /**
      * @notice Data structure containing information pertaining to a reward period
      * @dev All rewards are denominated in stUSD shares due to the token's rebasing nature
-     * @param periodFinished The end time of the reward period
-     * @param lastUpdate The last time the staking rewards were updated
-     * @param rewardRate The amount of stUSD rewards per second for the reward period
-     * @param rewardPerTokenStaked The amount of stUSD rewards per STAKEUP staked
-     * @param availableRewards The amount of stUSD rewards available for the reward period
-     * @param pendingRewards The amount of stUSD rewards that have not been claimed
+     * @param index The last index that the rewards were updated
+     * @param lastBalance The last balance of rewards available in the contract
      */
     struct RewardData {
-        uint32 periodFinished;
-        uint32 lastUpdate;
-        uint256 rewardRate;
-        uint96 rewardPerTokenStaked;
-        uint128 availableRewards;
-        uint128 pendingRewards;
+        uint128 index;
+        uint128 lastBalance;
     }
 
     // =================== Events ====================
@@ -78,7 +74,7 @@ interface IStakeupStaking is ISUPVesting {
     event RewardsHarvested(address indexed user, uint256 shares);
 
 
-    function processFees(uint256 amount) external;
+    function processFees() external;
 
     /**
      * @notice Stake Stakeup Token's to earn stUSD rewards
@@ -96,20 +92,14 @@ interface IStakeupStaking is ISUPVesting {
     /**
      * @notice Unstakes the user's STAKEUP and sends it back to them, along with their accumulated stUSD gains
      * @param stakeupAmount Amount of STAKEUP to unstake
-     * @param harvestShares Number of stUSD shares to claim
+     * @param harvestRewards True if the user wants to claim their stUSD rewards
      */
-    function unstake(uint256 stakeupAmount, uint256 harvestShares) external;
+    function unstake(uint256 stakeupAmount, bool harvestRewards) external;
 
     /**
      * @notice Claim all stUSD rewards accrued by the user
      */
     function harvest() external;
-
-    /**
-     * @notice Claim a specific amount of stUSD rewards
-     * @param shares Shares of stUSD to claim
-     */
-    function harvest(uint256 shares) external;
 
     /**
      * @notice Adds stUSD rewards to the next period's reward pool
@@ -137,4 +127,7 @@ interface IStakeupStaking is ISUPVesting {
      * @param user Address of the user to get the staking data for
      */
     function getUserStakingData(address user) external view returns (StakingData memory);
+    
+    /// @notice Returns the last block that global reward data was updated
+    function getLastRewardBlock() external view returns (uint256);
 }
