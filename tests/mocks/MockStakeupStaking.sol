@@ -10,7 +10,7 @@ contract MockStakeupStaking is IStakeupStaking {
     address private _rewardManager;
     bool private _feeProcessed;
 
-    function processFees(uint256 amount) external override {
+    function processFees() external override {
         _feeProcessed = true;
     }
 
@@ -18,12 +18,10 @@ contract MockStakeupStaking is IStakeupStaking {
 
     function unstake(
         uint256 stakeupAmount,
-        uint256 harvestAmount
+        bool harvestRewards
     ) external override {}
 
     function harvest() external override {}
-
-    function harvest(uint256 amount) external override {}
 
     function claimableRewards(
         address account
@@ -80,4 +78,6 @@ contract MockStakeupStaking is IStakeupStaking {
     function getCurrentBalance(
         address account
     ) external view override returns (uint256) {}
+
+    function getLastRewardBlock() external view override returns (uint256) {}
 }

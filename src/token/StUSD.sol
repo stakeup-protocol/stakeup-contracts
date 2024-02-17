@@ -354,7 +354,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
 
         _mintShares(msg.sender, sharesAmount);
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
-        _stakeupStaking.processFees(sharesFeeAmount);
+        _stakeupStaking.processFees();
 
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
 
@@ -402,7 +402,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             underlyingAmount -= redeemFeeAmount;
 
             _transferShares(account, address(_stakeupStaking), redeemFee);
-            _stakeupStaking.processFees(redeemFee);
+            _stakeupStaking.processFees();
 
             emit FeeCaptured(FeeType.Redeem, redeemFee);
         }
@@ -429,7 +429,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
             uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
 
             _mintShares(address(_stakeupStaking), sharesFeeAmount);
-            _stakeupStaking.processFees(sharesFeeAmount);
+            _stakeupStaking.processFees();
 
             emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
         }

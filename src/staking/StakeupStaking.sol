@@ -17,7 +17,7 @@ import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
  * @title StakeupStaking
  * @notice Allows users to stake their STAKEUP tokens to earn stUSD rewards.
  *         Tokens can be staked for any amount of time and can be unstaked at any time.
- *         The rewards tracking system is based on the methods used by Convex Finance & 
+ *         The rewards tracking system is based on the methods used by Convex Finance &
  *         Aura Finance but have been modified to fit the needs of the StakeUp Protocol.
  * @dev There will be one week reward periods. This is to ensure that the reward rate
  *      is updated frequently enough to keep up with the changing amount of STAKEUP staked.
@@ -28,23 +28,48 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
     // =================== Storage ===================
 
-    // @notice The stUSD token
+    /// @notice The stUSD token
     IStUSD private immutable _stUSD;
 
-    // @notice Address of the reward manager
+    /// @notice Address of the reward manager
     IRewardManager private immutable _rewardManager;
 
-    // @dev Mapping of users to their staking data
-    mapping(address => StakingData) private _stakingData;
-
-    // @dev Data pertaining to the current reward period
+    /// @dev Global reward data
     RewardData private _rewardData;
 
-    // @notice Total amount of STAKEUP staked
+    /// @notice Total amount of STAKEUP staked
     uint256 private _totalStakeUpStaked;
 
-    // @dev Duration of a reward period
-    uint256 private constant REWARD_DURATION = 1 weeks;
+    /// @notice The last block number when rewards were distributed
+    uint256 private _lastRewardBlock;
+
+    /// @dev Mapping of users to their staking data
+    mapping(address => StakingData) private _stakingData;
+
+    /// @notice The initial reward index
+    uint256 internal constant INITIAL_REWARD_INDEX = 1;
+
+    // =================== Modifiers ===================
+
+    /// @notice Updates the global reward index and available reward balance for Stakeup
+    modifier updateIndex() {
+        _updateRewardIndex();
+        _;
+    }
+
+    /// @notice distributes rewards to the users accrued rewards
+    modifier distributeRewards() {
+        _distributeRewards(msg.sender);
+        _;
+    }
+
+    /// @notice Only the reward token can call this function
+    modifier onlyReward() {
+        if (msg.sender != address(_stUSD)) revert OnlyRewardToken();
+        _;
+    }
+
+    // ================= Constructor =================
 
     constructor(
         address stakeupToken,
@@ -53,53 +78,15 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     ) SUPVesting(stakeupToken) {
         _stUSD = IStUSD(stUSD);
         _rewardManager = IRewardManager(rewardManager);
-
-        _rewardData = RewardData({
-            periodFinished: uint32(block.timestamp + REWARD_DURATION),
-            lastUpdate: uint32(block.timestamp),
-            rewardRate: 0,
-            rewardPerTokenStaked: 0,
-            availableRewards: 0,
-            pendingRewards: 0
-        });
-    }
-
-    /**
-     * @notice Updates the rewards accrued for a user and global reward state
-     * @param account Address of the user who is getting their rewards updated
-     */
-    modifier updateReward(address account) {
-        {
-            RewardData storage rewards = _rewardData;
-
-            uint256 newRewardPerTokenStaked = _rewardPerToken();
-            rewards.rewardPerTokenStaked = uint96(newRewardPerTokenStaked);
-            rewards.lastUpdate = uint32(
-                _lastTimeRewardApplicable(rewards.periodFinished)
-            );
-
-            if (account != address(0)) {
-                _stakingData[account].rewardsAccrued = _rewardsEarned(account);
-                _stakingData[account]
-                    .rewardsPerTokenPaid = newRewardPerTokenStaked;
-            }
-        }
-        _;
-    }
-
-    /**
-     *
-     * @notice Only the reward token can call this function
-     */
-    modifier onlyReward() {
-        if (msg.sender != address(_stUSD)) revert OnlyRewardToken();
-        _;
+        _lastRewardBlock = block.number;
     }
 
     // ================== functions ==================
 
     /// @inheritdoc IStakeupStaking
-    function stake(uint256 stakeupAmount) external override {
+    function stake(
+        uint256 stakeupAmount
+    ) external override updateIndex distributeRewards {
         _stake(msg.sender, stakeupAmount);
     }
 
@@ -107,28 +94,33 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     function delegateStake(
         address receiver,
         uint256 stakeupAmount
-    ) external override {
+    ) external override updateIndex {
+        _distributeRewards(receiver);
         _stake(receiver, stakeupAmount);
     }
 
     /// @inheritdoc IStakeupStaking
     function unstake(
         uint256 stakeupAmount,
-        uint256 harvestShares
-    ) external override nonReentrant updateReward(msg.sender) {
+        bool harvestRewards
+    ) external override nonReentrant updateIndex distributeRewards {
         StakingData storage userStakingData = _stakingData[msg.sender];
 
         if (userStakingData.amountStaked == 0) revert UserHasNoStaked();
 
-        stakeupAmount = Math.min(stakeupAmount, userStakingData.amountStaked);
-        harvestShares = Math.min(harvestShares, userStakingData.rewardsAccrued);
+        if (stakeupAmount > userStakingData.amountStaked) {
+            stakeupAmount = userStakingData.amountStaked;
+        }
+
+        if (harvestRewards) {
+            uint256 rewardAmount = userStakingData.rewardsAccrued;
+            if (rewardAmount > 0) {
+                _transferRewards(msg.sender);
+            }
+        }
 
         userStakingData.amountStaked -= uint128(stakeupAmount);
         _totalStakeUpStaked -= stakeupAmount;
-
-        if (harvestShares > 0) {
-            _harvest(userStakingData, harvestShares);
-        }
 
         IERC20(address(_stakeupToken)).safeTransfer(msg.sender, stakeupAmount);
 
@@ -136,50 +128,29 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeupStaking
-    function harvest() external {
-        harvest(type(uint256).max);
+    function harvest() public nonReentrant updateIndex {
+        uint256 rewardAmount = _distributeRewards(msg.sender);
+        if (rewardAmount == 0) revert NoRewardsToClaim();
+        _transferRewards(msg.sender);
+        emit RewardsHarvested(msg.sender, rewardAmount);
     }
 
     /// @inheritdoc IStakeupStaking
-    function harvest(
-        uint256 shares
-    ) public nonReentrant updateReward(msg.sender) {
-        StakingData storage userStakingData = _stakingData[msg.sender];
-
-        if (userStakingData.rewardsAccrued == 0) revert NoRewardsToClaim();
-
-        shares = Math.min(shares, userStakingData.rewardsAccrued);
-
-        _harvest(userStakingData, shares);
-    }
-
-    /// @inheritdoc IStakeupStaking
-    function processFees(
-        uint256 shares
-    ) external nonReentrant onlyReward updateReward(address(0)) {
-        if (shares == 0) revert NoFeesToProcess();
-
-        RewardData storage rewards = _rewardData;
-
-        rewards.pendingRewards += uint128(shares);
-        // If the current reward period has ended, update the reward rate
-        // and add the leftover rewards to the next period's reward pool
-        if (block.timestamp >= rewards.periodFinished) {
-            rewards.availableRewards += rewards.pendingRewards;
-            rewards.pendingRewards = 0;
-            rewards.periodFinished = uint32(block.timestamp + REWARD_DURATION);
-            rewards.rewardRate = uint256(rewards.availableRewards).divWad(
-                REWARD_DURATION
-            );
-        }
-        _rewardData.lastUpdate = uint32(block.timestamp);
+    function processFees() external nonReentrant onlyReward updateIndex {
+        // solhint-ignore-previous-line no-empty-blocks
     }
 
     /// @inheritdoc IStakeupStaking
     function claimableRewards(
         address account
     ) external view override returns (uint256) {
-        return _rewardsEarned(account);
+        return
+            _stakingData[account].rewardsAccrued +
+            _calculateRewardDelta(
+                _stakingData[account],
+                account,
+                _rewardData.index
+            );
     }
 
     /// @inheritdoc IStakeupStaking
@@ -214,16 +185,16 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
         return _stakingData[user];
     }
 
-    function _stake(
-        address user,
-        uint256 amount
-    ) internal nonReentrant updateReward(user) {
+    /// @inheritdoc IStakeupStaking
+    function getLastRewardBlock() external view returns (uint256) {
+        return _lastRewardBlock;
+    }
+
+    /// @dev Transfers the staked tokens to the staking contract and updates the user's total staked amount
+    function _stake(address user, uint256 amount) internal nonReentrant {
         StakingData storage userStakingData = _stakingData[user];
 
         if (amount == 0) revert ZeroTokensStaked();
-
-        userStakingData.amountStaked += uint128(amount);
-        _totalStakeUpStaked += amount;
 
         // If the reward manager is the sender, then there is no need to transfer tokens
         // as the tokens will be minted directly to the staking contract
@@ -235,78 +206,129 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
             );
         }
 
+        userStakingData.amountStaked += uint128(amount);
+        _totalStakeUpStaked += amount;
+
         emit StakeupStaked(user, amount);
     }
 
-    function _harvest(
-        StakingData storage userStakingData,
-        uint256 shares
-    ) internal {
-        RewardData storage rewards = _rewardData;
-        uint256 amount = _stUSD.getUsdByShares(shares);
+    /**
+     * @notice Updates the global reward index and balance for Stakeup
+     * @dev This function is called every time a user interacts with the staking contract
+     *     to ensure that the reward index is up to date
+     * @return The updated global reward index
+     */
+    function _updateRewardIndex() internal returns (uint256) {
+        if (_lastRewardBlock != block.number) {
+            _lastRewardBlock = block.number;
 
-        userStakingData.rewardsAccrued -= uint128(shares);
-        rewards.availableRewards -= uint128(shares);
+            uint256 totalStakeupLocked = _totalStakeUpStaked +
+                _totalStakeUpVesting;
+            RewardData storage rewards = _rewardData;
 
-        IERC20(address(_stUSD)).safeTransfer(msg.sender, amount);
-        emit RewardsHarvested(msg.sender, shares);
-    }
+            uint256 accrued = IERC20(address(_stUSD)).balanceOf(address(this)) -
+                rewards.lastBalance;
 
-    function _lastTimeRewardApplicable(
-        uint32 periodFinished
-    ) internal view returns (uint32) {
-        return uint32(Math.min(block.timestamp, periodFinished));
-    }
+            if (rewards.index == 0) {
+                rewards.index = uint128(INITIAL_REWARD_INDEX);
+            }
 
-    function _rewardPerToken() internal view returns (uint256) {
-        RewardData memory rewards = _rewardData;
+            if (totalStakeupLocked != 0) {
+                rewards.index += uint128(accrued.divWad(totalStakeupLocked));
+            }
 
-        uint256 totalStakupLocked = _totalStakeUpStaked + _totalStakeUpVesting;
+            rewards.lastBalance = uint128(rewards.lastBalance + accrued);
 
-        if (totalStakupLocked == 0) {
-            return rewards.rewardPerTokenStaked;
+            return rewards.index;
+        } else {
+            return _rewardData.index;
         }
-        uint256 timeElapsed = uint256(
-            _lastTimeRewardApplicable(_rewardData.periodFinished)
-        ) - rewards.lastUpdate;
-
-        return
-            uint256(rewards.rewardPerTokenStaked) +
-            timeElapsed.mulWad(_rewardData.rewardRate).divWad(
-                totalStakupLocked
-            );
     }
 
     /**
-     * @dev There will be some dust left over due to precision loss within the
-     *     FixedPointMathLib library. This dust will be added to the next reward period
+     * @notice Distributes rewards to the user's accrued rewards data
+     * @dev This function is called every time a user interacts with the staking contract
+     *    to ensure that the user's rewards are up to date. It does not transfer the rewards
+     *    to the user, it only updates the user's accrued rewards data.
+     * @param user The address of the user to distribute rewards to
+     * @return The updated amount of rewards accrued by the user
      */
-    function _rewardsEarned(address account) internal view returns (uint256) {
-        StakingData memory userStakingData = _stakingData[account];
-        VestedAllocation memory userVestingData = _tokenAllocations[account];
+    function _distributeRewards(address user) internal returns (uint256) {
+        if (user == address(0)) revert ZeroAddress();
 
-        uint256 amountEligibleForRewards = userStakingData.amountStaked +
-            userVestingData.currentBalance;
+        StakingData storage userStakingData = _stakingData[user];
 
-        return
-            amountEligibleForRewards.mulWad(
-                _rewardPerToken() - uint256(userStakingData.rewardsPerTokenPaid)
-            ) + uint256(userStakingData.rewardsAccrued);
-    }
-
-    function _vestTokens(
-        address account
-    ) internal override updateReward(account) {
-        // solhint-ignore-next-line no-empty-blocks
-    }
-
-    function _claimTokens(
-        address account
-    ) internal override updateReward(account) {
-        uint256 rewards = _rewardsEarned(account);
-
-        if (rewards > 0) {
-            _harvest(_stakingData[account], rewards);
+        if (userStakingData.index == 0) {
+            userStakingData.index = uint128(INITIAL_REWARD_INDEX);
         }
+
+        uint256 rewardIndex = _rewardData.index;
+        if (rewardIndex == userStakingData.index) return 0;
+
+        uint256 rewardDelta = _calculateRewardDelta(
+            userStakingData,
+            user,
+            rewardIndex
+        );
+
+        userStakingData.index = uint128(rewardIndex);
+        userStakingData.rewardsAccrued += uint128(rewardDelta);
+
+        return userStakingData.rewardsAccrued;
+    }
+
+    /**
+     * @notice Calculates the reward delta for a user
+     * @dev The reward delta is the amount of rewards that a user has accrued since the last time
+     *      their rewards were updated.
+     * @param userData The user's staking data
+     * @param user The users address who's reward delta is being calculated
+     * @param globalIndex The global reward index the calculation is occurring at
+     */
+    function _calculateRewardDelta(
+        StakingData memory userData,
+        address user,
+        uint256 globalIndex
+    ) internal view returns (uint256) {
+        uint256 userIndex = userData.index;
+
+        if (userIndex == 0) {
+            userIndex = INITIAL_REWARD_INDEX;
+        }
+
+        if (userIndex == globalIndex || globalIndex == 0) {
+            return 0;
+        }
+
+        uint256 amountStaked = userData.amountStaked + getCurrentBalance(user);
+        uint256 delta = globalIndex - userIndex;
+
+        return amountStaked.mulWad(delta);
+    }
+
+    /**
+     * @notice Transfers the user's accrued rewards to the user
+     * @param user The user to transfer rewards to
+     */
+    function _transferRewards(address user) internal {
+        RewardData storage rewards = _rewardData;
+        StakingData storage userStakingData = _stakingData[user];
+
+        uint128 rewardsEarned = userStakingData.rewardsAccrued;
+        if (rewardsEarned > 0) {
+            userStakingData.rewardsAccrued = 0;
+            rewards.lastBalance -= rewardsEarned;
+            IERC20(address(_stUSD)).safeTransfer(user, rewardsEarned);
+        }
+    }
+
+    /// @inheritdoc SUPVesting
+    function _vestTokens(address account) internal override updateIndex {
+        _distributeRewards(account);
+    }
+
+    /// @inheritdoc SUPVesting
+    function _claimTokens(address account) internal override updateIndex {
+        _distributeRewards(account);
     }
 }
