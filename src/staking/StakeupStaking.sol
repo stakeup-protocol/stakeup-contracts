@@ -17,10 +17,10 @@ import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
  * @title StakeupStaking
  * @notice Allows users to stake their STAKEUP tokens to earn stUSD rewards.
  *         Tokens can be staked for any amount of time and can be unstaked at any time.
- *         The rewards tracking system is based on the methods used by Convex Finance &
- *         Aura Finance but have been modified to fit the needs of the StakeUp Protocol.
- * @dev There will be one week reward periods. This is to ensure that the reward rate
- *      is updated frequently enough to keep up with the changing amount of STAKEUP staked.
+ *         The rewards tracking system is based on the methods similar to those used by
+ *         Pendle Finance for rewarding Liquidity Providers.
+ * @dev Rewards will be streamed to the staking contract anytime fees are collected and 
+ *      are immediately claimable by the user. The rewards are denominated in stUSD shares.
  */
 contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     using SafeERC20 for IERC20;
