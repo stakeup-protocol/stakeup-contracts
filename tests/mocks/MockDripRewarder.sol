@@ -8,10 +8,10 @@ import {RewardBase} from "src/rewards/RewardBase.sol";
 contract MockDripRewarder is RewardBase {
 
     constructor(
-        address stUsd,
+        address stTBY,
         address stakeupToken,
         address stakeupStaking
-    ) RewardBase(stUsd, stakeupToken, stakeupStaking) {}
+    ) RewardBase(stTBY, stakeupToken, stakeupStaking) {}
 
     function calculateDripAmount(
         uint256 rewardSupply,

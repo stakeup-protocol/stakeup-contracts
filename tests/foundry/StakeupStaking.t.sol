@@ -15,7 +15,7 @@ contract StakeupStakingTest is Test {
 
     StakeupStaking public stakeupStaking;
     MockERC20 public mockStakeupToken;
-    MockERC20 public mockStUSD;
+    MockERC20 public mockStTBY;
     MockRewardManager public rewardManager;
 
     address public alice = makeAddr("alice");
@@ -32,13 +32,13 @@ contract StakeupStakingTest is Test {
         mockStakeupToken = new MockERC20(18);
         vm.label(address(mockStakeupToken), "mockStakeupToken");
 
-        mockStUSD = new MockERC20(18);
-        vm.label(address(mockStUSD), "mockStUSD");
+        mockStTBY = new MockERC20(18);
+        vm.label(address(mockStTBY), "mockStTBY");
 
         stakeupStaking = new StakeupStaking(
            address(mockStakeupToken),
            address(rewardManager),
-           address(mockStUSD)
+           address(mockStTBY)
         );
         vm.label(address(stakeupStaking), "stakeupStaking");
     }
@@ -105,14 +105,14 @@ contract StakeupStakingTest is Test {
 
     function test_ProcessFees() public {
         uint256 rewardAmount = 2000 ether;
-        mockStUSD.mint(address(stakeupStaking), rewardAmount);
+        mockStTBY.mint(address(stakeupStaking), rewardAmount);
 
         // Initial state of the contract
         assertEq(stakeupStaking.getLastRewardBlock(), block.number);
         assertEq(stakeupStaking.getRewardData().lastBalance, 0);
         assertEq(stakeupStaking.getRewardData().index, 0);      
         
-        // Reverts if someone other than stUSD calls this function
+        // Reverts if someone other than stTBY calls this function
         vm.startPrank(alice);
         vm.expectRevert(IStakeupStaking.OnlyRewardToken.selector);
         stakeupStaking.processFees();
@@ -145,7 +145,7 @@ contract StakeupStakingTest is Test {
         _stake(bob, bobStake);
 
         vm.roll(blockNumber++);
-        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        mockStTBY.mint(address(stakeupStaking), rewardSupply);
         _processFees();
 
         uint256 aliceClaimableRewards = stakeupStaking.claimableRewards(alice);
@@ -157,7 +157,7 @@ contract StakeupStakingTest is Test {
         stakeupStaking.harvest();
         vm.stopPrank();
 
-        assertEq(mockStUSD.balanceOf(alice), aliceClaimableRewards);
+        assertEq(mockStTBY.balanceOf(alice), aliceClaimableRewards);
         assertEq(stakeupStaking.claimableRewards(alice), 0);
 
         vm.startPrank(bob);
@@ -166,11 +166,11 @@ contract StakeupStakingTest is Test {
         stakeupStaking.harvest();
         vm.stopPrank();
 
-        assertEq(mockStUSD.balanceOf(alice), aliceClaimableRewards);
+        assertEq(mockStTBY.balanceOf(alice), aliceClaimableRewards);
         assertEq(stakeupStaking.claimableRewards(alice), 0);
 
         // No rewards left in the contract
-        assertEq(mockStUSD.balanceOf(address(stakeupStaking)), 0 ether);
+        assertEq(mockStTBY.balanceOf(address(stakeupStaking)), 0 ether);
 
         // Dont allow alice to claim more than she has been allocated
         vm.roll(blockNumber++);
@@ -191,7 +191,7 @@ contract StakeupStakingTest is Test {
         vm.stopPrank();
 
         vm.roll(blockNumber++);
-        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        mockStTBY.mint(address(stakeupStaking), rewardSupply);
         _processFees();
 
         // Since vestedUser is the only stake holder, they should be able to claim all the rewards
@@ -202,7 +202,7 @@ contract StakeupStakingTest is Test {
         stakeupStaking.harvest();
         vm.stopPrank();
 
-        assertEq(mockStUSD.balanceOf(address(vestedUser)), rewardSupply);
+        assertEq(mockStTBY.balanceOf(address(vestedUser)), rewardSupply);
         assertEq(stakeupStaking.claimableRewards(vestedUser), 0);
     }
     
@@ -270,7 +270,7 @@ contract StakeupStakingTest is Test {
 
         vm.roll(blockNumber++);
         skip(1 weeks);
-        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        mockStTBY.mint(address(stakeupStaking), rewardSupply);
         _processFees();
 
         mockStakeupToken.mint(address(stakeupStaking), vestAmount); 
@@ -288,7 +288,7 @@ contract StakeupStakingTest is Test {
         stakeupStaking.claimAvailableTokens();
 
         assertEq(mockStakeupToken.balanceOf(address(alice)), availableTokens);
-        assertEq(mockStUSD.balanceOf(address(alice)), claimableRewards);
+        assertEq(mockStTBY.balanceOf(address(alice)), claimableRewards);
     }
 
     function test_PersistentRewards(uint256 stakeAmount) public {
@@ -306,7 +306,7 @@ contract StakeupStakingTest is Test {
         _stake(alice, aliceStake);
         _stake(bob, bobStake);
 
-        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        mockStTBY.mint(address(stakeupStaking), rewardSupply);
 
         vm.roll(blockNumber++);
         _processFees();
@@ -325,7 +325,7 @@ contract StakeupStakingTest is Test {
 
         // Ensure the rewardRate is properly adjusted after next fees are processed
         vm.roll(blockNumber++);
-        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        mockStTBY.mint(address(stakeupStaking), rewardSupply);
         _processFees();
 
         uint256 aliceRewards2 = stakeupStaking.claimableRewards(alice);
@@ -352,7 +352,7 @@ contract StakeupStakingTest is Test {
         // Process 200 worth of rewards into the contract
         for (uint256 i = 0; i < 10; i++) {
             vm.roll(startingBlock += 100);
-            mockStUSD.mint(address(stakeupStaking), rewardSupply);
+            mockStTBY.mint(address(stakeupStaking), rewardSupply);
             _processFees();
         }
     
@@ -372,7 +372,7 @@ contract StakeupStakingTest is Test {
         vm.startPrank(bob);
         stakeupStaking.harvest();
 
-        assertEq(mockStUSD.balanceOf(alice) + mockStUSD.balanceOf(bob), 200 ether);
+        assertEq(mockStTBY.balanceOf(alice) + mockStTBY.balanceOf(bob), 200 ether);
 
     }
 
@@ -390,7 +390,7 @@ contract StakeupStakingTest is Test {
     }
 
     function _processFees() internal {
-        vm.startPrank(address(mockStUSD));
+        vm.startPrank(address(mockStTBY));
         stakeupStaking.processFees();
         vm.stopPrank();
     }

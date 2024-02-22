@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {IStakeupToken} from "./IStakeupToken.sol";
-import {IStUSD} from "./IStUSD.sol";
+import {IStTBY} from "./IStTBY.sol";
 import {ISUPVesting} from "./ISUPVesting.sol";
 
 interface IStakeupStaking is ISUPVesting {
@@ -28,10 +28,10 @@ interface IStakeupStaking is ISUPVesting {
     // =================== Structs ====================
     /**
      * @notice Data structure containing information pertaining to a user's stake
-     * @dev All rewards are denominated in stUSD shares due to the token's rebasing nature
+     * @dev All rewards are denominated in stTBY shares due to the token's rebasing nature
      * @param amountStaked The amount of STAKEUP tokens currently staked
      * @param index The last index that the users rewards were updated
-     * @param rewardsAccrued The amount of stUSD rewards that have accrued to the stake
+     * @param rewardsAccrued The amount of stTBY rewards that have accrued to the stake
      */
     struct StakingData {
         uint256 amountStaked;
@@ -41,7 +41,7 @@ interface IStakeupStaking is ISUPVesting {
 
     /**
      * @notice Data structure containing information pertaining to a reward period
-     * @dev All rewards are denominated in stUSD shares due to the token's rebasing nature
+     * @dev All rewards are denominated in stTBY shares due to the token's rebasing nature
      * @param index The last index that the rewards were updated
      * @param lastBalance The last balance of rewards available in the contract
      */
@@ -67,9 +67,9 @@ interface IStakeupStaking is ISUPVesting {
     event StakeupUnstaked(address indexed user, uint256 amount);
 
     /**
-     * @notice Emitted when a user claims their stUSD rewards
+     * @notice Emitted when a user claims their stTBY rewards
      * @param user Address of the user who is claiming their rewards
-     * @param shares Shares of stUSD claimed
+     * @param shares Shares of stTBY claimed
      */
     event RewardsHarvested(address indexed user, uint256 shares);
 
@@ -77,41 +77,41 @@ interface IStakeupStaking is ISUPVesting {
     function processFees() external;
 
     /**
-     * @notice Stake Stakeup Token's to earn stUSD rewards
+     * @notice Stake Stakeup Token's to earn stTBY rewards
      * @param stakeupAmount Amount of STAKEUP to stake
      */
     function stake(uint256 stakeupAmount) external;
 
     /**
-     * @notice Stake Stakeup Token's to earn stUSD rewards on behalf of another user
+     * @notice Stake Stakeup Token's to earn stTBY rewards on behalf of another user
      * @param receiver The address of the user who will receive the staked STAKEUP
      * @param stakeupAmount Amount of STAKEUP to stake
      */
     function delegateStake(address receiver, uint256 stakeupAmount) external;
 
     /**
-     * @notice Unstakes the user's STAKEUP and sends it back to them, along with their accumulated stUSD gains
+     * @notice Unstakes the user's STAKEUP and sends it back to them, along with their accumulated stTBY gains
      * @param stakeupAmount Amount of STAKEUP to unstake
-     * @param harvestRewards True if the user wants to claim their stUSD rewards
+     * @param harvestRewards True if the user wants to claim their stTBY rewards
      */
     function unstake(uint256 stakeupAmount, bool harvestRewards) external;
 
     /**
-     * @notice Claim all stUSD rewards accrued by the user
+     * @notice Claim all stTBY rewards accrued by the user
      */
     function harvest() external;
 
     /**
-     * @notice Adds stUSD rewards to the next period's reward pool
-     * @param shares Amount of shares of stUSD to add to the reward pool
+     * @notice Adds stTBY rewards to the next period's reward pool
+     * @param shares Amount of shares of stTBY to add to the reward pool
      */
     function claimableRewards(address shares) external view returns (uint256);
     
     /// @notice Returns the Stakeup Token
     function getStakupToken() external view returns (IStakeupToken);
     
-    /// @notice Returns the stUSD token
-    function getStUSD() external view returns (IStUSD);
+    /// @notice Returns the stTBY token
+    function getStTBY() external view returns (IStTBY);
 
     /// @notice Returns the address of the Reward Manager
     function getRewardManager() external view returns (address);

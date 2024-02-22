@@ -15,7 +15,6 @@ from pytypes.src.rewards.RewardManager import RewardManager
 from pytypes.src.token.StakeupToken import StakeupToken
 
 from pytypes.tests.mocks.MockDripRewarder import MockDripRewarder
-from pytypes.tests.mocks.MockSUPVesting import MockSUPVesting
 from pytypes.tests.mocks.MockERC20 import MockERC20
 from pytypes.tests.mocks.MockStakeupStaking import MockStakeupStaking
 
@@ -93,8 +92,6 @@ def test_consistent_gauge_rewards():
     ).return_value
 
     account = default_chain.accounts[0]
-
-    vesting = MockSUPVesting.deploy(from_=account, request_type="tx", chain=default_chain)
     
     stable = MockERC20.deploy(6, from_=account, request_type="tx", chain=default_chain)
 
@@ -121,7 +118,7 @@ def test_consistent_gauge_rewards():
 
     sup_token = StakeupToken.deploy(
         random_address(),
-        vesting.address,
+        stakeup.address,
         rewardManager.address,
         account.address,
         from_=account,
