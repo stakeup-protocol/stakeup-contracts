@@ -1,6 +1,6 @@
 from eth_typing import Address
 from wake.testing import *
-from pytypes.src.token.StUSD import StUSD
+from pytypes.src.token.StTBY import StTBY
 from pytypes.tests.mocks.MockERC20 import MockERC20
 from pytypes.tests.mocks.MockStakeupStaking import MockStakeupStaking
 from pytypes.tests.mocks.MockSwapFacility import MockSwapFacility
@@ -9,7 +9,7 @@ from pytypes.tests.mocks.MockBloomPool import MockBloomPool
 from pytypes.tests.mocks.MockEmergencyHandler import MockEmergencyHandler
 from pytypes.tests.mocks.MockBloomFactory import MockBloomFactory
 from pytypes.tests.mocks.MockRegistry import MockRegistry
-from pytypes.src.token.WstUSD import WstUSD
+from pytypes.src.token.WstTBY import WstTBY
 
 from pytypes.lib.openzeppelincontracts.contracts.token.ERC20 import ERC20
 from pytypes.src.staking.StakeupStaking import StakeupStaking
@@ -19,7 +19,7 @@ class ContractConfig:
         self.is_mock = is_mock
         self.address = address
 
-class StUSDTestEnv:
+class StTBYTestEnv:
     def __init__(
         self,
         c: Chain, 
@@ -42,8 +42,8 @@ class StUSDTestEnv:
         self.registry = MockRegistry.deploy(self.bloom_pool.address)
 
         self.stakeup = self.__setup_stakeup(stakeup)
-        self.st_usd = self.__setup_st_usd()
-        self.wst_usd = WstUSD.deploy(self.st_usd.address)
+        self.st_tby = self.__setup_st_tby()
+        self.wst_tby = WstTBY.deploy(self.st_tby.address)
 
         self.__init_rewards_manager(self.stakeup, self.sup_token)
 
@@ -70,9 +70,9 @@ class StUSDTestEnv:
         else:
             stakeup = StakeupStaking(config.address)
     
-    def __setup_st_usd(self):
+    def __setup_st_tby(self):
         wrapper_address = get_create_address(self.deployer, self.deployer.nonce + 1)
-        return StUSD.deploy(
+        return StTBY.deploy(
             self.stablecoin.address,
             self.stakeup.address,
             self.factory.address,
@@ -88,8 +88,8 @@ class StUSDTestEnv:
         self.rewards_manager.setStakeupStaking(stakeup.address)
         self.rewards_manager.setStakeupToken(sup_token.address)
 
-def deploy_st_usd_env(c) -> StUSDTestEnv:
-    env = StUSDTestEnv(
+def deploy_st_tby_env(c) -> StTBYTestEnv:
+    env = StTBYTestEnv(
         c,
         ContractConfig(True),
         ContractConfig(True),

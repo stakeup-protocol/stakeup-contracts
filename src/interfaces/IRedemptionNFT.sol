@@ -3,8 +3,8 @@ pragma solidity 0.8.22;
 
 interface IRedemptionNFT {
     
-    /// @notice Reverts if the caller is not the stUSD contract
-    error CallerNotStUSD();
+    /// @notice Reverts if the caller is not the stTBY contract
+    error CallerNotStTBY();
 
     /// @notice Reverts if the caller is not the owner of the NFT
     error NotOwner();
@@ -14,7 +14,7 @@ interface IRedemptionNFT {
 
     /**
      * @notice A Struct that represents a users withdrawal request
-     * @param amountOfShares the amount of stUSD shares that have been submitted for this request
+     * @param amountOfShares the amount of stTBY shares that have been submitted for this request
      * @param owner Address that can claim, cancel, or transfer the request
      * @param timestamp Timestamp of when the request was made
      * @param claimed Whether or not the request has been claimed
@@ -27,7 +27,7 @@ interface IRedemptionNFT {
 
     /**
      * @notice Mints a new NFT and adds a withdrawal request
-     * @dev This function is callable by the stUSD contract only
+     * @dev This function is callable by the stTBY contract only
      * @param to Recipient of the withdrawal request
      * @param shares Shares requested to be withdrawn
      */
@@ -46,7 +46,7 @@ interface IRedemptionNFT {
     function getWithdrawalRequest(uint256 tokenId) external view returns (WithdrawalRequest memory);
 
     /**
-     * @notice Returns the address of the stUSD contract
+     * @notice Returns the address of the stTBY contract
      */
-    function getStUSD() external view returns (address);
+    function getStTBY() external view returns (address);
 }

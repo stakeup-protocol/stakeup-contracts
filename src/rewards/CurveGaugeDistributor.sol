@@ -23,11 +23,11 @@ abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase, R
     uint256 internal constant SEED_INTERVAL = 1 weeks;
 
     constructor(
-        address stUsd,
+        address stTBY,
         address stakeupToken,
         address stakeupStaking,
         CurvePoolData[] memory curvePools
-    ) RewardBase(stUsd, stakeupToken, stakeupStaking) {
+    ) RewardBase(stTBY, stakeupToken, stakeupStaking) {
         _setCurvePools(curvePools);
     }
 

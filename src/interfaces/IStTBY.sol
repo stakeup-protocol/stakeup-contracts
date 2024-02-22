@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {IWstUSD} from "./IWstUSD.sol";
+import {IWstTBY} from "./IWstTBY.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IBloomFactory} from "./bloom/IBloomFactory.sol";
 import {IExchangeRateRegistry} from "./bloom/IExchangeRateRegistry.sol";
 import {IStakeupStaking} from "./IStakeupStaking.sol";
 import {IRewardManager} from "./IRewardManager.sol";
-import {IStUSDBase} from "./IStUSDBase.sol";
+import {IStTBYBase} from "./IStTBYBase.sol";
 
 import {RedemptionNFT} from "src/token/RedemptionNFT.sol";
 
-interface IStUSD is IStUSDBase {
+interface IStTBY is IStTBYBase {
     // =================== Errors ===================
 
     /// @notice Caller is not the Redemption NFT
-    error CallerNotUnStUSD();
+    error CallerNotUnStTBY();
 
     /// @notice Invalid address (e.g. zero address)
     error InvalidAddress();
@@ -38,7 +38,7 @@ interface IStUSD is IStUSDBase {
     /// @notice TBY not active
     error TBYNotActive();
 
-    /// @notice WstUSD already initialized
+    /// @notice WstTBY already initialized
     error AlreadyInitialized();
 
     /// @notice Zero amount
@@ -89,7 +89,7 @@ interface IStUSD is IStUSDBase {
     /**
      * @notice Emitted when a fee is captured and sent to the Stakeup Staking
      * @param feeType Fee type
-     * @param shares Number of stUSD shares sent to the Stakeup Staking
+     * @param shares Number of stTBY shares sent to the Stakeup Staking
      */
     event FeeCaptured(FeeType feeType, uint256 shares);
 
@@ -103,40 +103,40 @@ interface IStUSD is IStUSDBase {
     event Deposit(address indexed account, address token, uint256 amount, uint256 shares);
     
     /**
-     * @notice Deposit TBY and get stUSD minted
+     * @notice Deposit TBY and get stTBY minted
      * @param tby TBY address
      * @param amount TBY amount to deposit
      */
     function depositTby(address tby, uint256 amount) external;
     /**
-     * @notice Deposit underlying tokens and get stUSD minted
+     * @notice Deposit underlying tokens and get stTBY minted
      * @param amount Amount of underlying tokens to deposit
      */
     function depositUnderlying(uint256 amount) external;
 
     /**
-     * @notice Redeem stUSD in exchange for underlying tokens. Underlying
+     * @notice Redeem stTBY in exchange for underlying tokens. Underlying
      * tokens can be withdrawn with the `withdraw()` method, once the
      * redemption is processed.
      * @dev Emits a {Redeemed} event.
-     * @param stUSDAmount Amount of stUSD
+     * @param stTBYAmount Amount of stTBY
      * @return uint256 The tokenId of the redemption NFT
      */
-    function redeemStUSD(uint256 stUSDAmount) external returns (uint256);
+    function redeemStTBY(uint256 stTBYAmount) external returns (uint256);
    
     /**
-     * @notice Redeem wstUSD in exchange for underlying tokens. Underlying
+     * @notice Redeem wstTBY in exchange for underlying tokens. Underlying
      * tokens can be withdrawn with the `withdraw()` method, once the
      * redemption is processed.
      * @dev Emits a {Redeemed} event.
-     * @param wstUSDAmount Amount of wstUSD
+     * @param wstTBYAmount Amount of wstTBY
      * @return uint256 The tokenId of the redemption NFT
      */
-    function redeemWstUSD(uint256 wstUSDAmount) external returns (uint256);
+    function redeemWstTBY(uint256 wstTBYAmount) external returns (uint256);
  
     /**
      * @notice Redeems the underlying token from a Bloom Pool in exchange for TBYs
-     * @dev Underlying tokens can only be redeemed if stUSD contains a TBY which is
+     * @dev Underlying tokens can only be redeemed if stTBY contains a TBY which is
      *     in its FinalWithdrawal state.
      * @param tby TBY address
      */
@@ -159,8 +159,8 @@ interface IStUSD is IStUSDBase {
     /// @notice Get the total amount of underlying tokens in the pool
     function getRemainingBalance() external view returns (uint256);
 
-    /// @notice Returns the WstUSD contract
-    function getWstUSD() external view returns (IWstUSD);
+    /// @notice Returns the WstTBY contract
+    function getWstTBY() external view returns (IWstTBY);
 
     /// @notice Returns the underlying token
     function getUnderlyingToken() external view returns (IERC20);

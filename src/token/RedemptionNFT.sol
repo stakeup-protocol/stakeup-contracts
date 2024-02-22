@@ -3,32 +3,32 @@ pragma solidity 0.8.22;
 
 import {ONFT721, ERC721} from "@layerzerolabs/token/onft721/ONFT721.sol";
 import {IRedemptionNFT} from "../interfaces/IRedemptionNFT.sol";
-import {IStUSD} from "../interfaces/IStUSD.sol";
+import {IStTBY} from "../interfaces/IStTBY.sol";
 
 contract RedemptionNFT is IRedemptionNFT, ONFT721 {
-    address private immutable _stUSD;
+    address private immutable _stTBY;
     uint256 private _mintCount;
     mapping(uint256 => WithdrawalRequest) private _withdrawalRequests;
 
-    modifier onlyStUSD() {
-        if (_msgSender() != _stUSD) revert CallerNotStUSD();
+    modifier onlyStTBY() {
+        if (_msgSender() != _stTBY) revert CallerNotStTBY();
         _;
     }
 
     constructor(
         string memory name,
         string memory symbol,
-        address stUSD,
+        address stTBY,
         address lzEndpoint
     ) ONFT721(name, symbol, 500000, lzEndpoint) {
-        _stUSD = stUSD;
+        _stTBY = stTBY;
     }
 
     /// @inheritdoc IRedemptionNFT
     function addWithdrawalRequest(
         address to,
         uint256 shares
-    ) external override onlyStUSD returns (uint256) {
+    ) external override onlyStTBY returns (uint256) {
         uint256 tokenId = _generateNextTokenId();
 
         _withdrawalRequests[tokenId] = WithdrawalRequest({
@@ -51,7 +51,7 @@ contract RedemptionNFT is IRedemptionNFT, ONFT721 {
 
         request.claimed = true;
 
-        IStUSD(_stUSD).withdraw(request.owner, request.amountOfShares);
+        IStTBY(_stTBY).withdraw(request.owner, request.amountOfShares);
     }
 
     // Public function for anyone to clear and deliver the remaining batch sent tokenIds
@@ -95,8 +95,8 @@ contract RedemptionNFT is IRedemptionNFT, ONFT721 {
     }
 
     /// @inheritdoc IRedemptionNFT
-    function getStUSD() external view returns (address) {
-        return _stUSD;
+    function getStTBY() external view returns (address) {
+        return _stTBY;
     }
 
     /**

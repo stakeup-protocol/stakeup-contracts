@@ -14,12 +14,12 @@ contract MockRewardManager is IRewardManager {
 
     function distributeMintRewards(
         address /*rewardReceiver*/,
-        uint256 stUSDAmount
+        uint256 stTBYAmount
     ) external override {
-        MockERC20(_stakeupToken).mint(_stakeupStaking, stUSDAmount);
+        MockERC20(_stakeupToken).mint(_stakeupStaking, stTBYAmount);
     }
 
-    function getStUsd() external view override returns (address) {}
+    function getStTBY() external view override returns (address) {}
 
     function getStakeupToken() external view override returns (address) {
         return _stakeupToken;

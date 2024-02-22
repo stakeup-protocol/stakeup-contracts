@@ -7,7 +7,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {RedemptionNFT} from "./RedemptionNFT.sol";
-import {StUSDBase} from "./StUSDBase.sol";
+import {StTBYBase} from "./StTBYBase.sol";
 
 import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/bloom/IBloomPool.sol";
@@ -15,19 +15,19 @@ import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
-import {IStUSD} from "../interfaces/IStUSD.sol";
-import {IWstUSD} from "../interfaces/IWstUSD.sol";
+import {IStTBY} from "../interfaces/IStTBY.sol";
+import {IWstTBY} from "../interfaces/IWstTBY.sol";
 
-/// @title Staked USD Contract
-contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
+/// @title Staked TBY Contract
+contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     using Math for uint256;
     using SafeERC20 for IERC20;
-    using SafeERC20 for IWstUSD;
+    using SafeERC20 for IWstTBY;
 
     // =================== Storage ===================
 
-    /// @notice WstUSD token
-    IWstUSD private immutable _wstUSD;
+    /// @notice WstTBY token
+    IWstTBY private immutable _wstTBY;
 
     /// @dev Underlying token
     IERC20 private immutable _underlyingToken;
@@ -81,8 +81,8 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     mapping(address => bool) private _tbyRedeemed;
 
     // =================== Modifiers ===================
-    modifier onlyUnStUSD() {
-        if (_msgSender() != address(_redemptionNFT)) revert CallerNotUnStUSD();
+    modifier onlyUnStTBY() {
+        if (_msgSender() != address(_redemptionNFT)) revert CallerNotUnStTBY();
         _;
     }
 
@@ -96,12 +96,12 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         uint16 redeemBps_, // Suggested default 0.5%
         uint16 performanceBps_, // Suggested default 10% of yield
         address layerZeroEndpoint,
-        address wstUSD
+        address wstTBY
     )
-        StUSDBase(layerZeroEndpoint)
+        StTBYBase(layerZeroEndpoint)
     {
         if (underlyingToken == address(0)) revert InvalidAddress();
-        if (wstUSD == address(0)) revert InvalidAddress();
+        if (wstTBY == address(0)) revert InvalidAddress();
         if (bloomFactory == address(0)) revert InvalidAddress();
         if (registry == address(0)) revert InvalidAddress();
         if (stakeupStaking == address(0)) revert InvalidAddress();
@@ -122,17 +122,17 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         _lastRateUpdate = block.timestamp;
         _mintRewardsRemaining = MINT_REWARD_CUTOFF;
 
-        _wstUSD = IWstUSD(wstUSD);
+        _wstTBY = IWstTBY(wstTBY);
 
         _redemptionNFT = new RedemptionNFT(
-            "stUSD Redemption NFT",
-            "unstUSD",
+            "stTBY Redemption NFT",
+            "unstTBY",
             address(this),
             layerZeroEndpoint
         );
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function depositTby(address tby, uint256 amount) external nonReentrant {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
         
@@ -151,7 +151,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         _deposit(tby, amount, true);
     }
     
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function depositUnderlying(uint256 amount) external nonReentrant {
         _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
         IBloomPool latestPool = _getLatestPool();
@@ -171,26 +171,26 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         _deposit(address(_underlyingToken), amount, false);
     }
 
-    /// @inheritdoc IStUSD
-    function redeemStUSD(uint256 stUSDAmount) external nonReentrant returns (uint256) {
-        return _redeemStUSD(stUSDAmount);
+    /// @inheritdoc IStTBY
+    function redeemStTBY(uint256 stTBYAmount) external nonReentrant returns (uint256) {
+        return _redeemStTBY(stTBYAmount);
     }
 
-    /// @inheritdoc IStUSD
-    function redeemWstUSD(uint256 wstUSDAmount) external nonReentrant returns (uint256) {
-        IERC20(address(_wstUSD)).safeTransferFrom(msg.sender, address(this), wstUSDAmount);
-        uint256 stUSDAmount = _wstUSD.unwrap(wstUSDAmount);
-        _transfer(address(this), msg.sender, stUSDAmount);
-        return _redeemStUSD(stUSDAmount);
+    /// @inheritdoc IStTBY
+    function redeemWstTBY(uint256 wstTBYAmount) external nonReentrant returns (uint256) {
+        IERC20(address(_wstTBY)).safeTransferFrom(msg.sender, address(this), wstTBYAmount);
+        uint256 stTBYAmount = _wstTBY.unwrap(wstTBYAmount);
+        _transfer(address(this), msg.sender, stTBYAmount);
+        return _redeemStTBY(stTBYAmount);
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function getRemainingBalance() external view returns (uint256) {
         return _remainingBalance;
     }
 
-    /// @inheritdoc IStUSD
-    function withdraw(address account, uint256 shares) external override nonReentrant onlyUnStUSD {
+    /// @inheritdoc IStTBY
+    function withdraw(address account, uint256 shares) external override nonReentrant onlyUnStTBY {
         uint256 amount = getUsdByShares(shares);
 
         uint256 underlyingBalance = _underlyingToken.balanceOf(address(this));
@@ -210,7 +210,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         emit Withdrawn(msg.sender, amount);
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function redeemUnderlying(address tby) external override nonReentrant {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
         
@@ -273,68 +273,68 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         }
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function setNftTrustedRemote(uint16 remoteChainId, bytes calldata path) external onlyOwner {
         _redemptionNFT.setTrustedRemote(remoteChainId, path);
     }
     
-    /// @inheritdoc IStUSD
-    function getWstUSD() external view returns (IWstUSD) {
-        return _wstUSD;
+    /// @inheritdoc IStTBY
+    function getWstTBY() external view returns (IWstTBY) {
+        return _wstTBY;
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function getUnderlyingToken() external view returns (IERC20) {
         return _underlyingToken;
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function getBloomFactory() external view returns (IBloomFactory) {
         return _bloomFactory;
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function getExchangeRateRegistry() external view returns (IExchangeRateRegistry) {
         return _registry;
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function getStakeupStaking() external view returns (IStakeupStaking) {
         return _stakeupStaking;
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function getRewardManager() external view returns (IRewardManager) {
         return _rewardManager;
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function getRedemptionNFT() external view returns (RedemptionNFT) {
         return _redemptionNFT;
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function getMintBps() external view returns (uint256) {
         return mintBps;
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function getRedeemBps() external view returns (uint256) {
         return redeemBps;
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function getPerformanceBps() external view returns (uint256) {
         return performanceBps;
     }
 
-    /// @inheritdoc IStUSD
+    /// @inheritdoc IStTBY
     function isTbyRedeemed(address tby) external view returns (bool) {
         return _tbyRedeemed[tby];
     }
 
     /**
-     * @notice Deposit tokens into stUSD
+     * @notice Deposit tokens into stTBY
      * @param token Token being deposited
      * @param amount The amount of tokens being deposited
      * @param isTby True if the token being deposited is a TBY
@@ -353,7 +353,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
         }
 
         // If the token is a TBY, we need to get the current exchange rate of the token
-        //     to accurately calculate the amount of stUSD to mint.
+        //     to accurately calculate the amount of stTBY to mint.
         // We calculate the mint fee prior to getting the exchange rate to avoid punishing
         //     users for depositing TBYs once they have accrued interest.
         if (isTby) {
@@ -380,15 +380,16 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     }
 
     /**
-     * @notice Redeems stUSD in exchange for underlying tokens
-     * @param stUSDAmount Amount of stUSD to redeem
+     * @notice Redeems stTBY in exchange for underlying tokens
+     * @param stTBYAmount Amount of stTBY to redeem
+     * @return uint256 The tokenId of the redemption NFT
      */
-    function _redeemStUSD(uint256 stUSDAmount) internal returns (uint256) {
-        if (stUSDAmount == 0) revert ParameterOutOfBounds();
+    function _redeemStTBY(uint256 stTBYAmount) internal returns (uint256) {
+        if (stTBYAmount == 0) revert ParameterOutOfBounds();
 
-        uint256 shares = getSharesByUsd(stUSDAmount);
+        uint256 shares = getSharesByUsd(stTBYAmount);
         
-        (uint256 redemptonId, uint256 amountRedeemed) = _redeem(msg.sender, shares, stUSDAmount);
+        (uint256 redemptonId, uint256 amountRedeemed) = _redeem(msg.sender, shares, stTBYAmount);
 
         emit Redeemed(msg.sender, shares, amountRedeemed);
 
@@ -547,7 +548,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     /**
      * @notice Creates a withdrawal request and mints a redemption NFT to 
      * the redeemer
-     * @param account The address of the account redeeming their stUSD
+     * @param account The address of the account redeeming their stTBY
      * @param shares The amount of shares to redeem
      */
     function _mintRedemptionNFT(address account, uint256 shares) internal returns (uint256) {
@@ -555,7 +556,7 @@ contract StUSD is IStUSD, StUSDBase, ReentrancyGuard {
     }
     
     /**
-     * @notice Calculates the current value of all TBYs that are staked in stUSD
+     * @notice Calculates the current value of all TBYs that are staked in stTBY
      */
     function _getCurrentTbyValue() internal view returns (uint256) {
         address[] memory tokens = _registry.getActiveTokens();

@@ -9,18 +9,18 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SUPVesting} from "./SUPVesting.sol";
 
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
-import {IStUSD} from "../interfaces/IStUSD.sol";
+import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
 /**
  * @title StakeupStaking
- * @notice Allows users to stake their STAKEUP tokens to earn stUSD rewards.
+ * @notice Allows users to stake their STAKEUP tokens to earn stTBY rewards.
  *         Tokens can be staked for any amount of time and can be unstaked at any time.
  *         The rewards tracking system is based on the methods similar to those used by
  *         Pendle Finance for rewarding Liquidity Providers.
  * @dev Rewards will be streamed to the staking contract anytime fees are collected and 
- *      are immediately claimable by the user. The rewards are denominated in stUSD shares.
+ *      are immediately claimable by the user. The rewards are denominated in stTBY shares.
  */
 contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -28,8 +28,8 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
     // =================== Storage ===================
 
-    /// @notice The stUSD token
-    IStUSD private immutable _stUSD;
+    /// @notice The stTBY token
+    IStTBY private immutable _stTBY;
 
     /// @notice Address of the reward manager
     IRewardManager private immutable _rewardManager;
@@ -65,7 +65,7 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
     /// @notice Only the reward token can call this function
     modifier onlyReward() {
-        if (msg.sender != address(_stUSD)) revert OnlyRewardToken();
+        if (msg.sender != address(_stTBY)) revert OnlyRewardToken();
         _;
     }
 
@@ -74,9 +74,9 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     constructor(
         address stakeupToken,
         address rewardManager,
-        address stUSD
+        address stTBY
     ) SUPVesting(stakeupToken) {
-        _stUSD = IStUSD(stUSD);
+        _stTBY = IStTBY(stTBY);
         _rewardManager = IRewardManager(rewardManager);
         _lastRewardBlock = block.number;
     }
@@ -159,8 +159,8 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeupStaking
-    function getStUSD() external view returns (IStUSD) {
-        return _stUSD;
+    function getStTBY() external view returns (IStTBY) {
+        return _stTBY;
     }
 
     /// @inheritdoc IStakeupStaking
@@ -226,7 +226,7 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
                 _totalStakeUpVesting;
             RewardData storage rewards = _rewardData;
 
-            uint256 accrued = IERC20(address(_stUSD)).balanceOf(address(this)) -
+            uint256 accrued = IERC20(address(_stTBY)).balanceOf(address(this)) -
                 rewards.lastBalance;
 
             if (rewards.index == 0) {
@@ -318,7 +318,7 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
         if (rewardsEarned > 0) {
             userStakingData.rewardsAccrued = 0;
             rewards.lastBalance -= rewardsEarned;
-            IERC20(address(_stUSD)).safeTransfer(user, rewardsEarned);
+            IERC20(address(_stTBY)).safeTransfer(user, rewardsEarned);
         }
     }
 
