@@ -8,10 +8,10 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
-import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
+import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
 contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
-    address private immutable _vestingContract;
+    address private immutable _stakeupStaking;
     address private immutable _rewardManager;
 
     uint256 internal constant DECIMAL_SCALING = 1e18;
@@ -24,11 +24,11 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
 
     constructor(
         address layerZeroEndpoint,
-        address vestingContract,
+        address stakeupStaking,
         address rewardManager,
         address owner
     ) OFT("Stakeup Token", "SUP", layerZeroEndpoint) Ownable2Step() {
-        _vestingContract = vestingContract;
+        _stakeupStaking = stakeupStaking;
         _rewardManager = rewardManager;
 
         IRewardManager(rewardManager).initialize();
@@ -40,7 +40,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
     function mintLpSupply(Allocation[] memory allocations) external onlyOwner {
         uint256 length = allocations.length;
         for (uint256 i = 0; i < length; ++i) {
-            _mintAndVest(allocations[i], _vestingContract);
+            _mintAndVest(allocations[i], _stakeupStaking);
         }
     }
 
@@ -85,7 +85,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
                 revert ExceedsAvailableTokens();               
             }
             sharesRemaining -= allocations[i].percentOfSupply;
-            _mintAndVest(allocations[i], _vestingContract);
+            _mintAndVest(allocations[i], _stakeupStaking);
         }
         if (totalSupply() > MAX_SUPPLY) revert ExceedsMaxAllocationLimit();
 
@@ -94,7 +94,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
 
     function _mintAndVest(
         Allocation memory allocation,
-        address vestingContract
+        address stakeupStaking
     ) internal {
         TokenRecipient[] memory recipients = allocation.recipients;
         uint256 tokensReserved = (MAX_SUPPLY * allocation.percentOfSupply) /
@@ -112,10 +112,10 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
             allocationRemaining -= amount;
 
             // Set the vesting state for this recipient in the vesting contract
-            ISUPVesting(vestingContract).vestTokens(recipient, amount);
+            IStakeupStaking(stakeupStaking).vestTokens(recipient, amount);
 
             // Mint the tokens to the vesting contract
-            _mint(vestingContract, amount);
+            _mint(stakeupStaking, amount);
         }
         if (allocationRemaining > 0) revert SharesNotFullyAllocated();
     }

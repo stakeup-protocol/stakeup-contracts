@@ -2,12 +2,12 @@
 pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-import {SUPVesting} from "src/token/SUPVesting.sol";
+import {StakeupStaking} from "src/staking/StakeupStaking.sol";
 import {StakeupToken, IStakeupToken} from "src/token/StakeupToken.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-import {MockSUPVesting} from "../mocks/MockSUPVesting.sol";
+import {MockStakeupStaking} from "../mocks/MockStakeupStaking.sol";
 import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StakeupTokenTest is Test {
@@ -18,7 +18,8 @@ contract StakeupTokenTest is Test {
     address internal rando;
     address internal owner;
     address internal layerZeroEndpoint;
-    MockSUPVesting internal vestingContract;
+    
+    MockStakeupStaking internal stakeupStaking;
     MockRewardManager internal rewardManager;
 
     uint64 initialMintPercentage = 1e15; // .01%
@@ -31,7 +32,7 @@ contract StakeupTokenTest is Test {
 
         owner = makeAddr("owner");
         layerZeroEndpoint = makeAddr("layerZeroEndpoint");
-        vestingContract = new MockSUPVesting();
+        stakeupStaking = new MockStakeupStaking();
         rewardManager = new MockRewardManager();
     }
 
@@ -61,7 +62,7 @@ contract StakeupTokenTest is Test {
         uint256 expectedSupply = 1_000_000e18; // .01 * 1 billion
         _deployOneAllocation(initialMintPercentage);
 
-        assertEq(stakeupToken.balanceOf(address(vestingContract)), expectedSupply);
+        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
     }
 
     function testMultiAllocationMint() public {
@@ -71,7 +72,7 @@ contract StakeupTokenTest is Test {
         // Both allocations are 50% of the total supply
         _deployMultiAllocation(initialMintPercentage, false, false, false, bytes4(0));
 
-        assertEq(stakeupToken.balanceOf(address(vestingContract)), expectedSupply);
+        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
     }
 
     function testMintLpSupply() public {
@@ -108,7 +109,7 @@ contract StakeupTokenTest is Test {
         vm.stopPrank();
 
         // Check that the LP supply was minted
-        assertEq(stakeupToken.balanceOf(address(vestingContract)), expectedSupply);
+        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
         assertEq(stakeupToken.circulatingSupply(), expectedSupply);
 
@@ -142,7 +143,7 @@ contract StakeupTokenTest is Test {
         vm.stopPrank();
 
         // Check that the LP supply was minted
-        assertEq(stakeupToken.balanceOf(address(vestingContract)), expectedSupply / 2);
+        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply / 2);
         assertEq(stakeupToken.balanceOf(airdrop1), 500_000e18);
         assertEq(stakeupToken.balanceOf(airdrop2), 500_000e18);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
@@ -200,7 +201,7 @@ contract StakeupTokenTest is Test {
 
         stakeupToken = new StakeupToken(
             address(0),
-            address(vestingContract),
+            address(stakeupStaking),
             address(rewardManager),
             owner
         );
@@ -276,7 +277,7 @@ contract StakeupTokenTest is Test {
 
             stakeupToken = new StakeupToken(
                 address(0),
-                address(vestingContract),
+                address(stakeupStaking),
                 address(rewardManager),
                 owner
             );

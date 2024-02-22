@@ -8,7 +8,6 @@ import {RewardManager, IRewardManager} from "src/rewards/RewardManager.sol";
 import {ICurveGaugeDistributor} from "src/interfaces/ICurveGaugeDistributor.sol";
 
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockSUPVesting} from "../mocks/MockSUPVesting.sol";
 import {MockCurveFactory} from "../mocks/Curve/MockCurveFactory.sol";
 
 import {StakeupStaking} from "src/staking/StakeupStaking.sol";
@@ -17,7 +16,6 @@ contract RewardManagerTest is Test {
     RewardManager public rewardManager;
     MockERC20 public mockStUSD;
     MockERC20 public mockStakeupToken;
-    MockSUPVesting public mockSUPVesting;
     MockCurveFactory public mockCurveFactory;
     StakeupStaking public stakeupStaking;
 
@@ -31,7 +29,6 @@ contract RewardManagerTest is Test {
     function setUp() public {
         mockStUSD = new MockERC20(18);
         mockStakeupToken = new MockERC20(18);
-        mockSUPVesting = new MockSUPVesting();
         uint256 lpRewardsOne = MAX_POOL_REWARDS * 5e17 / 1e18;
         uint256 lpRewardsTwo = MAX_POOL_REWARDS * 25e16 / 1e18;
         uint256 lpRewardsThree = MAX_POOL_REWARDS * 25e16 / 1e18;
@@ -65,7 +62,6 @@ contract RewardManagerTest is Test {
 
         stakeupStaking = new StakeupStaking(
             address(mockStakeupToken),
-            address(mockSUPVesting),
             LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 1),
             address(mockStUSD)
         );

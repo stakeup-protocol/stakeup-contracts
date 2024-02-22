@@ -218,6 +218,7 @@ contract StUSDTest is Test {
         uint256 amount_scaled = amount * 1e12;
         pool.mint(alice, amount);
         registry.setTokenInfos(true);
+        registry.setExchangeRate(address(pool), 1e18);
 
         vm.startPrank(alice);
         pool.approve(address(stUSD), amount);
