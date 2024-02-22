@@ -3,7 +3,7 @@ pragma solidity 0.8.22;
 
 import {IStakeupStaking} from "src/interfaces/IStakeupStaking.sol";
 import {IStakeupToken} from "src/interfaces/IStakeupToken.sol";
-import {IStUSD} from "src/interfaces/IStUSD.sol";
+import {IStTBY} from "src/interfaces/IStTBY.sol";
 import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
 
 contract MockStakeupStaking is IStakeupStaking {
@@ -42,7 +42,7 @@ contract MockStakeupStaking is IStakeupStaking {
 
     function getStakupToken() external view override returns (IStakeupToken) {}
 
-    function getStUSD() external view override returns (IStUSD) {}
+    function getStTBY() external view override returns (IStTBY) {}
 
     function totalStakeUpStaked() external view override returns (uint256) {}
 

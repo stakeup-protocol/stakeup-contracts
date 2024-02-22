@@ -26,7 +26,7 @@ contract MockERC20 is ERC20 {
         _mint(to, amount);
     }
 
-    // This function is for testing stUSD
+    // This function is for testing stTBY
     function getUsdByShares(uint256 shares) external pure returns (uint256) {
         return shares;
     }
