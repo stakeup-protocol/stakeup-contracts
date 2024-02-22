@@ -4,10 +4,10 @@ pragma solidity 0.8.22;
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 import {OFT, IERC20, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
-import {IStUSDBase} from "../interfaces/IStUSDBase.sol";
+import {IStTBYBase} from "../interfaces/IStTBYBase.sol";
 
-/// @title Staked USD Base Contract
-contract StUSDBase is IStUSDBase, OFT {
+/// @title Staked TBY Base Contract
+contract StTBYBase is IStTBYBase, OFT {
     using FixedPointMathLib for uint256;
     // =================== Constants ===================
 
@@ -16,7 +16,7 @@ contract StUSDBase is IStUSDBase, OFT {
     // =================== Storage ===================
 
     /**
-     * @dev StUSD balances are dynamic and are calculated based on the accounts' shares
+     * @dev stTBY balances are dynamic and are calculated based on the accounts' shares
      * and the total amount of USD controlled by the protocol. Account shares aren't
      * normalized, so the contract also stores the sum of all shares to calculate
      * each account's token balance which equals to:
@@ -37,7 +37,7 @@ contract StUSDBase is IStUSDBase, OFT {
     // =================== Functions ===================
 
     constructor(address _layerZeroEndpoint) 
-        OFT("Staked USD", "stUSD", _layerZeroEndpoint)
+        OFT("Staked TBY", "stTBY", _layerZeroEndpoint)
     {
         // solhint-disable-next-line-no-empty-blocks
     }
@@ -47,7 +47,7 @@ contract StUSDBase is IStUSDBase, OFT {
     }
 
     /**
-     * @notice Get the total supply of stUSD
+     * @notice Get the total supply of stTBY
      * @dev Always equals to `_getTotalUsd()` since token amount
      *  is pegged to the total amount of Usd controlled by the protocol.
      * @return Amount of tokens in existence
@@ -56,7 +56,7 @@ contract StUSDBase is IStUSDBase, OFT {
         return _getTotalUsd();
     }
 
-    /// @inheritdoc IStUSDBase
+    /// @inheritdoc IStTBYBase
     function getTotalUsd() external view override returns (uint256) {
         return _getTotalUsd();
     }
@@ -80,7 +80,7 @@ contract StUSDBase is IStUSDBase, OFT {
      * Requirements:
      * - `_recipient` cannot be the zero address.
      * - the caller must have a balance of at least `_amount`.
-     * @param recipient recipient of stUSD tokens
+     * @param recipient recipient of stTBY tokens
      * @param amount Amount of tokens being transfered
      */
     function transfer(address recipient, uint256 amount) public override(IERC20, ERC20) returns (bool) {
@@ -104,8 +104,8 @@ contract StUSDBase is IStUSDBase, OFT {
      * @dev Emits an `Approval` event.
      * Requirements:
      * - `_spender` cannot be the zero address.
-     * @param spender Spender of stUSD tokens
-     * @param amount Amount of stUSD tokens allowed to be spent
+     * @param spender Spender of stTBY tokens
+     * @param amount Amount of stTBY tokens allowed to be spent
      */
     function approve(address spender, uint256 amount) public override(IERC20, ERC20) returns (bool) {
         _approve(msg.sender, spender, amount);
@@ -122,8 +122,8 @@ contract StUSDBase is IStUSDBase, OFT {
      * - sender` and `recipient` cannot be the zero addresses.
      * - `sender` must have a balance of at least `amount`.
      * - the caller must have allowance for `sender`'s tokens of at least `amount`.
-     * @param sender Sender of stUSD tokens
-     * @param recipient Destination of stUSD tokens
+     * @param sender Sender of stTBY tokens
+     * @param recipient Destination of stTBY tokens
      * @param amount Amount of tokens being transfered
      */
     function transferFrom(
@@ -177,17 +177,17 @@ contract StUSDBase is IStUSDBase, OFT {
         return true;
     }
 
-    /// @inheritdoc IStUSDBase
+    /// @inheritdoc IStTBYBase
     function getTotalShares() external view override returns (uint256) {
         return _getTotalShares();
     }
 
-    /// @inheritdoc IStUSDBase
+    /// @inheritdoc IStTBYBase
     function sharesOf(address account) external view override returns (uint256) {
         return _sharesOf(account);
     }
 
-    /// @inheritdoc IStUSDBase
+    /// @inheritdoc IStTBYBase
     function getSharesByUsd(uint256 usdAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         uint256 totalUsd = _getTotalUsd();
@@ -202,7 +202,7 @@ contract StUSDBase is IStUSDBase, OFT {
         return usdAmount.mulWad(totalShares).divWad(_getTotalUsd());
     }
     
-    /// @inheritdoc IStUSDBase
+    /// @inheritdoc IStTBYBase
     function getUsdByShares(uint256 sharesAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
@@ -219,7 +219,7 @@ contract StUSDBase is IStUSDBase, OFT {
      * Requirements:
      * - `recipient` cannot be the zero address.
      * - the caller must have at least `sharesAmount` shares.
-     * @param recipient recipient of stUSD tokens
+     * @param recipient recipient of stTBY tokens
      * @param sharesAmount Amount of shares being transfered
      */
     function transferShares(address recipient, uint256 sharesAmount) external returns (uint256) {
@@ -237,8 +237,8 @@ contract StUSDBase is IStUSDBase, OFT {
      * - `sender` and `recipient` cannot be the zero addresses.
      * - `sender` must have at least `sharesAmount` shares.
      * - the caller must have allowance for `sender`'s tokens of at least `getUsdByShares(sharesAmount)`.
-     * @param sender Sender of stUSD tokens
-     * @param recipient Destination of stUSD tokens
+     * @param sender Sender of stTBY tokens
+     * @param recipient Destination of stTBY tokens
      * @param sharesAmount Amount of shares being transfered
      */
     function transferSharesFrom(address sender, address recipient, uint256 sharesAmount)
@@ -326,8 +326,8 @@ contract StUSDBase is IStUSDBase, OFT {
      * - `sender` cannot be the zero address.
      * - `recipient` cannot be the zero address.
      * - `sender` must hold at least `sharesAmount` shares.
-     * @param sender The sender of stUSD tokens
-     * @param recipient The recipient of stUSD tokens
+     * @param sender The sender of stTBY tokens
+     * @param recipient The recipient of stTBY tokens
      * @param sharesAmount Amount of shares to transfer
      */
     function _transferShares(address sender, address recipient, uint256 sharesAmount) internal {

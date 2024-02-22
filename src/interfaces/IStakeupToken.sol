@@ -51,10 +51,10 @@ interface IStakeupToken {
      * to one of the supported pools.
      * @dev This function is callable by the owner only
      * @dev The pools eligible for rewards are:
-     * - stUSD-USDC: (mainnet only)
-     * - wstUSD-wstETH: (mainnet only)
-     * - wstUSD-chai: (mainnet only)
-     * - wstUSD-SUP: (mainnet only)
+     * - stTBY-USDC: (mainnet only)
+     * - wstTBY-wstETH: (mainnet only)
+     * - wstTBY-chai: (mainnet only)
+     * - wstTBY-SUP: (mainnet only)
      * @param allocations The allocations of tokens to mint
      */
     function mintLpSupply(Allocation[] memory allocations) external;

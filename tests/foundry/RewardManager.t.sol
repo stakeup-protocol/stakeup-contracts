@@ -14,7 +14,7 @@ import {StakeupStaking} from "src/staking/StakeupStaking.sol";
 
 contract RewardManagerTest is Test {
     RewardManager public rewardManager;
-    MockERC20 public mockStUSD;
+    MockERC20 public mockStTBY;
     MockERC20 public mockStakeupToken;
     MockCurveFactory public mockCurveFactory;
     StakeupStaking public stakeupStaking;
@@ -23,11 +23,11 @@ contract RewardManagerTest is Test {
     uint256 constant MAX_POKE_REWARDS = 1_000_000_000e18 * 1e16 / 1e18;
     uint256 constant MAX_POOL_REWARDS = 1_000_000_000e18 * 2e17 / 1e18;
     uint256 constant MAX_MINT_REWARDS = 1_000_000_000e18 * 1e17 / 1e18;
-    // Amount of stUSD that is eligible for minting rewards
-    uint256 internal constant STUSD_MINT_THREASHOLD = 200_000_000e18;
+    // Amount of stTBY that is eligible for minting rewards
+    uint256 internal constant STTBY_MINT_THREASHOLD = 200_000_000e18;
 
     function setUp() public {
-        mockStUSD = new MockERC20(18);
+        mockStTBY = new MockERC20(18);
         mockStakeupToken = new MockERC20(18);
         uint256 lpRewardsOne = MAX_POOL_REWARDS * 5e17 / 1e18;
         uint256 lpRewardsTwo = MAX_POOL_REWARDS * 25e16 / 1e18;
@@ -63,11 +63,11 @@ contract RewardManagerTest is Test {
         stakeupStaking = new StakeupStaking(
             address(mockStakeupToken),
             LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 1),
-            address(mockStUSD)
+            address(mockStTBY)
         );
 
         rewardManager = new RewardManager(
-            address(mockStUSD),
+            address(mockStTBY),
             address(mockStakeupToken),
             address(stakeupStaking),
             curvePools
@@ -94,8 +94,8 @@ contract RewardManagerTest is Test {
         rewardManager.initialize();
         vm.stopPrank();
 
-        // distribution fails if not called by stUSD
-        vm.expectRevert(IRewardManager.CallerNotStUsd.selector);
+        // distribution fails if not called by stTBY
+        vm.expectRevert(IRewardManager.CallerNotStTBY.selector);
         rewardManager.distributePokeRewards(address(this));
 
         skip(3 days);
@@ -105,7 +105,7 @@ contract RewardManagerTest is Test {
         uint256 expectedReward = 3 days * yearOneRewards / 52 weeks;
         
         // distribution succeeds if called by SUP
-        vm.startPrank(address(mockStUSD));
+        vm.startPrank(address(mockStTBY));
         rewardManager.distributePokeRewards(address(this));
         vm.stopPrank();
 
@@ -154,16 +154,16 @@ contract RewardManagerTest is Test {
         rewardManager.initialize();
         vm.stopPrank();
 
-        // Fail to distribute rewards if not called by stUSD
-        vm.expectRevert(IRewardManager.CallerNotStUsd.selector);
+        // Fail to distribute rewards if not called by stTBY
+        vm.expectRevert(IRewardManager.CallerNotStTBY.selector);
         rewardManager.distributeMintRewards(address(this), 1000e18);
 
-        // Distribute rewards if called by stUSD
-        vm.startPrank(address(mockStUSD));
+        // Distribute rewards if called by stTBY
+        vm.startPrank(address(mockStTBY));
         rewardManager.distributeMintRewards(address(this), 1000e18);
         vm.stopPrank();
         
-        uint256 percentOfMax = 1000e18 * 1e18 / STUSD_MINT_THREASHOLD;
+        uint256 percentOfMax = 1000e18 * 1e18 / STTBY_MINT_THREASHOLD;
 
         uint256 expectedReward = MAX_MINT_REWARDS * percentOfMax / 1e18;
 
@@ -173,7 +173,7 @@ contract RewardManagerTest is Test {
         assertEq(amountStaked, expectedReward);
 
         // Verify that if the rewardAmount is 0 due to precision loss, the function does not revert
-        vm.startPrank(address(mockStUSD));
+        vm.startPrank(address(mockStTBY));
         rewardManager.distributeMintRewards(address(this), 1);
         vm.stopPrank();
 

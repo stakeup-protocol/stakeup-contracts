@@ -19,8 +19,8 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
         _;
     }
 
-    modifier onlyStUsd() {
-        if (msg.sender != _stUsd) revert CallerNotStUsd();
+    modifier onlyStTBY() {
+        if (msg.sender != _stTBY) revert CallerNotStTBY();
         _;
     }
 
@@ -30,11 +30,11 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
     }
 
     constructor(
-        address stUsd,
+        address stTBY,
         address stakeupToken,
         address stakeupStaking,
         CurvePoolData[] memory curvePools
-    ) CurveGaugeDistributor(stUsd, stakeupToken, stakeupStaking, curvePools) {
+    ) CurveGaugeDistributor(stTBY, stakeupToken, stakeupStaking, curvePools) {
         // solhint-disable-next-line no-empty-blocks
     }
 
@@ -48,7 +48,7 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
     /// @inheritdoc IRewardManager
     function distributePokeRewards(
         address rewardReceiver
-    ) external initialized onlyStUsd {
+    ) external initialized onlyStTBY {
         if (_pokeRewardsRemaining != 0) {
             uint256 amount = _calculateDripAmount(
                 POKE_REWARDS,
@@ -69,11 +69,11 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
     /// @inheritdoc IRewardManager
     function distributeMintRewards(
         address rewardReceiver,
-        uint256 stUSDAmount
-    ) external override initialized onlyStUsd {
+        uint256 stTBYAmount
+    ) external override initialized onlyStTBY {
         // Mint a proportional amount of rewards to the user
-        uint256 rewardAmount = (LAUNCH_MINT_REWARDS * stUSDAmount) /
-            STUSD_MINT_THREASHOLD;
+        uint256 rewardAmount = (LAUNCH_MINT_REWARDS * stTBYAmount) /
+            STTBY_MINT_THREASHOLD;
 
         if (rewardAmount > 0) {
             _executeDelegateStake(rewardReceiver, rewardAmount);
@@ -90,8 +90,8 @@ contract RewardManager is IRewardManager, CurveGaugeDistributor {
     }
 
     /// @inheritdoc IRewardManager
-    function getStUsd() external view override returns (address) {
-        return _stUsd;
+    function getStTBY() external view override returns (address) {
+        return _stTBY;
     }
 
     /// @inheritdoc IRewardManager

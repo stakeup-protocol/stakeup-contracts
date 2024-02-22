@@ -7,7 +7,7 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 abstract contract RewardBase {
     using FixedPointMathLib for uint256;
 
-    address internal immutable _stUsd;
+    address internal immutable _stTBY;
     address internal immutable _stakeupToken;
     address internal immutable _stakeupStaking;
 
@@ -20,8 +20,8 @@ abstract contract RewardBase {
     uint256 internal constant LAUNCH_MINT_REWARDS =
         (SUP_MAX_SUPPLY * 1e17) / DECIMAL_SCALING; // 10% of total supply
 
-    // Amount of stUSD that is eligible for minting rewards
-    uint256 internal constant STUSD_MINT_THREASHOLD = 200_000_000 * DECIMAL_SCALING;
+    // Amount of stTBY that is eligible for minting rewards
+    uint256 internal constant STTBY_MINT_THREASHOLD = 200_000_000 * DECIMAL_SCALING;
     
     uint256 internal constant POKE_REWARDS =
         (SUP_MAX_SUPPLY * 1e16) / DECIMAL_SCALING; // 1% of total supply
@@ -29,11 +29,11 @@ abstract contract RewardBase {
     uint256 internal constant ONE_YEAR = 52 weeks;
 
     constructor(
-        address stUsd,
+        address stTBY,
         address stakeupToken,
         address stakeupStaking
     ) {
-        _stUsd = stUsd;
+        _stTBY = stTBY;
         _stakeupToken = stakeupToken;
         _stakeupStaking = stakeupStaking;
     }

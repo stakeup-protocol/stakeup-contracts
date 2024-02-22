@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-interface IStUSDBase {
+interface IStTBYBase {
     /**
      * @notice An executed shares transfer from `sender` to `recipient`.
      * @dev emitted in pair with an ERC20-defined `Transfer` event.
@@ -14,11 +14,11 @@ interface IStUSDBase {
     /**
      * @notice An executed `burnShares` request
      * @dev Reports simultaneously burnt shares amount
-     * and corresponding stUSD amount.
-     * The stUSD amount is calculated twice: before and after the burning incurred rebase.
+     * and corresponding stTBY amount.
+     * The stTBY amount is calculated twice: before and after the burning incurred rebase.
      * @param account holder of the burnt shares
-     * @param preRebaseTokenAmount amount of stUSD the burnt shares corresponded to before the burn
-     * @param postRebaseTokenAmount amount of stUSD the burnt shares corresponded to after the burn
+     * @param preRebaseTokenAmount amount of stTBY the burnt shares corresponded to before the burn
+     * @param postRebaseTokenAmount amount of stTBY the burnt shares corresponded to after the burn
      * @param sharesAmount amount of burnt shares
     */
     event SharesBurnt(
@@ -27,7 +27,7 @@ interface IStUSDBase {
 
     /**
      * @return the entire amount of Usd controlled by the protocol.
-     * @dev The sum of all USD balances in the protocol, equals to the total supply of stUSD.
+     * @dev The sum of all USD balances in the protocol, equals to the total supply of stTBY.
      */
     function getTotalUsd() external view returns (uint256);
     /**
