@@ -2,11 +2,12 @@
 pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
-
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
+
+import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
+
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockSUPVesting} from "../mocks/MockSUPVesting.sol";
 import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StakeupStakingTest is Test {
@@ -14,12 +15,14 @@ contract StakeupStakingTest is Test {
 
     StakeupStaking public stakeupStaking;
     MockERC20 public mockStakeupToken;
-    MockSUPVesting public mockSUPVesting;
     MockERC20 public mockStUSD;
     MockRewardManager public rewardManager;
 
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
+
+    uint256 public vestAmount = 1_000_000e18;
+    uint256 constant VESTING_DURATION = 3 * 52 weeks;
 
     event StakeupStaked(address indexed user, uint256 amount);
     event StakeupUnstaked(address indexed user, uint256 amount);
@@ -29,29 +32,20 @@ contract StakeupStakingTest is Test {
         mockStakeupToken = new MockERC20(18);
         vm.label(address(mockStakeupToken), "mockStakeupToken");
 
-        mockSUPVesting = new MockSUPVesting();
-        vm.label(address(mockSUPVesting), "mockSUPVesting");
-
         mockStUSD = new MockERC20(18);
         vm.label(address(mockStUSD), "mockStUSD");
 
         stakeupStaking = new StakeupStaking(
            address(mockStakeupToken),
-           address(mockSUPVesting),
            address(rewardManager),
            address(mockStUSD)
         );
         vm.label(address(stakeupStaking), "stakeupStaking");
     }
 
-    // function test_ViewFunctions() public {
-    //     assertEq(stakeupStaking.REWARD_DURATION(), 1 weeks);
-    //     assertEq(stakeupStaking.totalStakeUpStaked(), 0);
-    // }
-
     function test_Stake() public {
         mockStakeupToken.mint(alice, 1000 ether);
-
+        vm.roll(100);
         // Successfully Stake SUP
         vm.startPrank(alice);
         mockStakeupToken.approve(address(stakeupStaking), 1000 ether);
@@ -79,7 +73,7 @@ contract StakeupStakingTest is Test {
         // Reverts if stake amount is 0
         vm.startPrank(alice);
         vm.expectRevert(IStakeupStaking.UserHasNoStaked.selector);
-        stakeupStaking.unstake(1000 ether, 0);
+        stakeupStaking.unstake(1000 ether, false);
         vm.stopPrank();
 
         _stake(alice, 1000 ether);
@@ -88,7 +82,7 @@ contract StakeupStakingTest is Test {
         // Successful unstake but no harvest
         vm.expectEmit(true, true, true, true);
         emit StakeupUnstaked(alice, 1000 ether);
-        stakeupStaking.unstake(1000 ether, 0);
+        stakeupStaking.unstake(1000 ether, false);
 
         assertEq(stakeupStaking.totalStakeUpStaked(), 0);
         assertEq(mockStakeupToken.balanceOf(address(stakeupStaking)), 0);
@@ -101,7 +95,7 @@ contract StakeupStakingTest is Test {
         vm.startPrank(alice);
         vm.expectEmit(true, true, true, true);
         emit StakeupUnstaked(alice, 1000 ether);
-        stakeupStaking.unstake(2000 ether, 0);
+        stakeupStaking.unstake(2000 ether, false);
         vm.stopPrank();
 
         assertEq(stakeupStaking.totalStakeUpStaked(), 0);
@@ -110,48 +104,31 @@ contract StakeupStakingTest is Test {
     }
 
     function test_ProcessFees() public {
-        mockStUSD.mint(address(stakeupStaking), 2000 ether);
+        uint256 rewardAmount = 2000 ether;
+        mockStUSD.mint(address(stakeupStaking), rewardAmount);
+
+        // Initial state of the contract
+        assertEq(stakeupStaking.getLastRewardBlock(), block.number);
+        assertEq(stakeupStaking.getRewardData().lastBalance, 0);
+        assertEq(stakeupStaking.getRewardData().index, 0);      
         
         // Reverts if someone other than stUSD calls this function
         vm.startPrank(alice);
         vm.expectRevert(IStakeupStaking.OnlyRewardToken.selector);
-        stakeupStaking.processFees(1000 ether);
+        stakeupStaking.processFees();
         vm.stopPrank();
 
-        // Reverts if no fees are registered
-        vm.startPrank(address(mockStUSD));
-        vm.expectRevert(IStakeupStaking.NoFeesToProcess.selector);
-        stakeupStaking.processFees(0);
-        vm.stopPrank();
+        /// There must be some staked tokens in the contract to process fees
+        uint256 aliceStake = 1000 ether;
+        mockStakeupToken.mint(alice, aliceStake);
+        _stake(alice, aliceStake);
 
-        // Updates PendingRewards successfully
-        _processFees(1000 ether);
-
-        {
-            IStakeupStaking.RewardData memory rewardData = stakeupStaking.getRewardData();
-            uint256 availableRewards = rewardData.availableRewards;
-            uint256 pendingRewards = rewardData.pendingRewards;
-
-            assertEq(availableRewards, 0);
-            assertEq(pendingRewards, 1000 ether);
-        }
-
-
-
-        // If we are after the end of the reward period, then the pending rewards are added to available rewards
-        skip(2 weeks);
-        _processFees(1000 ether);
-        
-        {
-            IStakeupStaking.RewardData memory rewards = stakeupStaking.getRewardData();
-            uint256 periodFinished = rewards.periodFinished;
-            uint256 rewardsAvailable = rewards.availableRewards;
-            uint256 rewardsPending = rewards.pendingRewards;
-
-            assertEq(periodFinished, block.timestamp + 1 weeks);
-            assertEq(rewardsAvailable, 2000 ether);
-            assertEq(rewardsPending, 0);
-        }
+        // Proper reward balance after fees are processed
+        vm.roll(100);
+        _processFees();
+        assertEq(stakeupStaking.getLastRewardBlock(), block.number);
+        assertEq(stakeupStaking.getRewardData().lastBalance, rewardAmount);
+        assertEq(stakeupStaking.getRewardData().index, rewardAmount.divWad(aliceStake) + 1);
     }
 
     function test_Harvest() public {
@@ -159,42 +136,20 @@ contract StakeupStakingTest is Test {
         uint256 aliceStake = 1000 ether;
         uint256 bobStake = 1000 ether;
 
+        uint256 blockNumber = 100;
+
         mockStakeupToken.mint(alice, aliceStake);
         mockStakeupToken.mint(bob, bobStake);
-        mockStUSD.mint(address(stakeupStaking), rewardSupply);
-
-        _processFees(rewardSupply / 2);
 
         _stake(alice, aliceStake);
         _stake(bob, bobStake);
 
-        // Reverts if no rewards are available
-        vm.startPrank(alice);
-        vm.expectRevert(IStakeupStaking.NoRewardsToClaim.selector);
-        stakeupStaking.harvest();
-        vm.stopPrank();
-
-        // Successfully harvests rewards
-        skip(1 weeks);
-        _processFees(rewardSupply / 2);
-
-        {
-            IStakeupStaking.RewardData memory rewardData = stakeupStaking.getRewardData();
-            uint256 rewardRate = rewardData.rewardRate;
-            uint96 rewardPerTokenStaked = rewardData.rewardPerTokenStaked;
-            uint256 availableRewards = rewardData.availableRewards;
-
-            assertEq(availableRewards, rewardSupply);
-            assertEq(rewardRate, rewardSupply.divWad(1 weeks));
-            assertEq(rewardPerTokenStaked, 0);
-        }
-
-        skip(3 days);
-        mockStUSD.mint(address(stakeupStaking), 10 ether);
-        _processFees(10 ether);
+        vm.roll(blockNumber++);
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        _processFees();
 
         uint256 aliceClaimableRewards = stakeupStaking.claimableRewards(alice);
-
+        
         // Alice and BOB harvest equal rewards
         vm.startPrank(alice);
         vm.expectEmit(true, true, true, true);
@@ -214,64 +169,210 @@ contract StakeupStakingTest is Test {
         assertEq(mockStUSD.balanceOf(alice), aliceClaimableRewards);
         assertEq(stakeupStaking.claimableRewards(alice), 0);
 
-        // Skip to the end of the reward period and allow alice to claim the rest of her rewards
-        skip(1 weeks);
-        uint256 alice2Claim = stakeupStaking.claimableRewards(alice);
+        // No rewards left in the contract
+        assertEq(mockStUSD.balanceOf(address(stakeupStaking)), 0 ether);
 
-        vm.startPrank(alice);
-        vm.expectEmit(true, true, true, true);
-        emit RewardsHarvested(alice, alice2Claim);
-        stakeupStaking.harvest();
-        vm.stopPrank();
-
-        // Dust will be left over due to percision loss
-        assertApproxEqRel(mockStUSD.balanceOf(alice), rewardSupply / 2, .99e18);
-        assertEq(stakeupStaking.claimableRewards(alice), 0);
-
-        // Bob claims his rewards
-        vm.startPrank(bob);
-        vm.expectEmit(true, true, true, true);
-        emit RewardsHarvested(bob, alice2Claim);
-        stakeupStaking.harvest();
-        vm.stopPrank();
-                
-                
-        // Dust will be left over due to percision loss
-        assertApproxEqRel(mockStUSD.balanceOf(address(stakeupStaking)), 10 ether, .99e18);
         // Dont allow alice to claim more than she has been allocated
-        skip(1 days);
+        vm.roll(blockNumber++);
         vm.startPrank(alice);
         vm.expectRevert(IStakeupStaking.NoRewardsToClaim.selector);
         stakeupStaking.harvest();
         vm.stopPrank();
+
+        // Unstake Bob and Alice
+        _unstake(alice, aliceStake, true);
+        _unstake(bob, bobStake, true);
+
+        // Allow users who have tokens in the vesting contract to claim rewards
+        address vestedUser = makeAddr("vestedUser");
+        mockStakeupToken.mint(address(stakeupStaking), 1000 ether);
+        vm.prank(address(mockStakeupToken));
+        stakeupStaking.vestTokens(vestedUser, 1000 ether);
+        vm.stopPrank();
+
+        vm.roll(blockNumber++);
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        _processFees();
+
+        // Since vestedUser is the only stake holder, they should be able to claim all the rewards
+        uint256 vestedUser2Claim = stakeupStaking.claimableRewards(vestedUser);
+        vm.startPrank(vestedUser);
+        vm.expectEmit(true, true, true, true);
+        emit RewardsHarvested(vestedUser, vestedUser2Claim);
+        stakeupStaking.harvest();
+        vm.stopPrank();
+
+        assertEq(mockStUSD.balanceOf(address(vestedUser)), rewardSupply);
+        assertEq(stakeupStaking.claimableRewards(vestedUser), 0);
+    }
+    
+    function test_InvalidCaller() public {
+        mockStakeupToken.mint(address(stakeupStaking), vestAmount); 
+        vm.expectRevert(ISUPVesting.CallerNotSUP.selector);
+        stakeupStaking.vestTokens(address(this), vestAmount);
     }
 
-    function test_partialHarvest() public {
+    function test_FullVestingFlow() public {
+        uint256 elapsedTime = 0;
+        mockStakeupToken.mint(address(stakeupStaking), vestAmount); 
+
+        vm.startPrank(address(mockStakeupToken));
+        stakeupStaking.vestTokens(alice, vestAmount);
+        vm.stopPrank();
+
+        assertEq(mockStakeupToken.balanceOf(address(stakeupStaking)), vestAmount);
+        assertEq(mockStakeupToken.balanceOf(alice), 0);
+
+        // Check initial view functions
+        uint256 firstAliceBalance = stakeupStaking.getCurrentBalance(alice);
+        assertEq(firstAliceBalance, vestAmount);
+        assertEq(stakeupStaking.getAvailableTokens(alice), 0);
+
+        // Add additional tokens to vesting contract
+        uint256 addonAmount = 100e18;
+        mockStakeupToken.mint(address(stakeupStaking), addonAmount);
+        vm.startPrank(address(mockStakeupToken));
+        stakeupStaking.vestTokens(alice, addonAmount);
+        vm.stopPrank();
+
+        uint256 newAliceBalance = stakeupStaking.getCurrentBalance(alice);
+
+        assertEq(mockStakeupToken.balanceOf(address(stakeupStaking)), vestAmount + addonAmount);
+        assertEq(mockStakeupToken.balanceOf(alice), 0);
+        assertEq(newAliceBalance, vestAmount + addonAmount);
+
+        // Fast Forward 30 days and check if available tokens are correct
+        skip(4 weeks); 
+        elapsedTime += 4 weeks;
+        assertEq(stakeupStaking.getAvailableTokens(alice), 0);
+
+        // Skip to the end of the cliff and check if available tokens are correct
+        skip(48 weeks);
+        elapsedTime += 48 weeks;
+        uint256 expectedCliffBalance = (vestAmount + addonAmount) / 3;
+        assertEq(stakeupStaking.getAvailableTokens(alice), expectedCliffBalance);
+
+        // Skip to somewhere in the middle of the vesting period and check if available tokens are correct
+        skip(100 days);
+        elapsedTime += 100 days;
+
+        uint256 expectedVestingBalance = (vestAmount + addonAmount) * elapsedTime / VESTING_DURATION;
+        assertEq(stakeupStaking.getAvailableTokens(alice), expectedVestingBalance);
+
+        // skip to past the end of the vesting period and check if available tokens are correct
+        skip(2 * 52 weeks);
+        assertEq(stakeupStaking.getAvailableTokens(alice), vestAmount + addonAmount);
+    }
+
+    function test_harvestAfterClaimingTokens() public {
         uint256 rewardSupply = 20 ether;
-        uint256 aliceStake = 1000 ether;
+        uint256 blockNumber = 100;
+
+        vm.roll(blockNumber++);
+        skip(1 weeks);
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        _processFees();
+
+        mockStakeupToken.mint(address(stakeupStaking), vestAmount); 
+
+        vm.startPrank(address(mockStakeupToken));
+        stakeupStaking.vestTokens(alice, vestAmount);
+        vm.stopPrank();
+
+        skip(104 weeks); // Skip 2 years. 2/3 of tokens should be available
+        uint256 availableTokens = stakeupStaking.getAvailableTokens(alice);
+        uint256 claimableRewards = stakeupStaking.claimableRewards(alice);
+
+        // Remove tokens from vesting contract
+        vm.startPrank(alice);
+        stakeupStaking.claimAvailableTokens();
+
+        assertEq(mockStakeupToken.balanceOf(address(alice)), availableTokens);
+        assertEq(mockStUSD.balanceOf(address(alice)), claimableRewards);
+    }
+
+    function test_PersistentRewards(uint256 stakeAmount) public {
+        vm.assume(stakeAmount > 1 ether);
+        vm.assume(stakeAmount < 1000 ether);
+
+        uint256 rewardSupply = 20 ether;
+        uint256 aliceStake = stakeAmount;
+        uint256 bobStake = stakeAmount;
+        uint256 blockNumber = 100;
 
         mockStakeupToken.mint(alice, aliceStake);
-        mockStUSD.mint(address(stakeupStaking), rewardSupply);
-        
-        skip(1 weeks);
-        _processFees(rewardSupply);
+        mockStakeupToken.mint(bob, bobStake);
 
         _stake(alice, aliceStake);
+        _stake(bob, bobStake);
 
-        skip(3 days);
-        mockStUSD.mint(address(stakeupStaking), 10 ether);
-        _processFees(10 ether);
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+
+        vm.roll(blockNumber++);
+        _processFees();
 
         uint256 aliceRewards = stakeupStaking.claimableRewards(alice);
+        uint256 bobRewards = stakeupStaking.claimableRewards(bob);
 
-        // Alice claims half of her rewards
+        assertEq(aliceRewards, bobRewards);
+
+        assertEq(stakeupStaking.getRewardData().lastBalance, rewardSupply);
+
+        // Alice claims her rewards
         vm.startPrank(alice);
-        vm.expectEmit(true, true, true, true);
-        emit RewardsHarvested(alice, aliceRewards / 2);
-        stakeupStaking.harvest(aliceRewards / 2);
+        emit RewardsHarvested(alice, aliceRewards);
+        stakeupStaking.harvest();
 
-        // Alice claims second half of rewards
-        stakeupStaking.harvest(aliceRewards / 2);
+        // Ensure the rewardRate is properly adjusted after next fees are processed
+        vm.roll(blockNumber++);
+        mockStUSD.mint(address(stakeupStaking), rewardSupply);
+        _processFees();
+
+        uint256 aliceRewards2 = stakeupStaking.claimableRewards(alice);
+        uint256 bobRewards2 = stakeupStaking.claimableRewards(bob);
+
+        /* Delta is derived from alice having 1/2 of the first epoch
+        and 1/4 of the second, vice versa */
+        uint256 rewardDelta = (23 ether + 1 ether / 3) / (12 ether - 1 ether / 3);
+
+        assertApproxEqAbs(rewardDelta * 1e18, (bobRewards2 * 1e18 / aliceRewards2), 100);
+    }
+
+    function test_RewardMultipleBlocks() public {
+        uint256 rewardSupply = 20 ether;
+        uint256 aliceStake = 1000 ether;
+        uint256 bobStake = 1000 ether;
+        uint256 startingBlock = 100;
+        mockStakeupToken.mint(alice, aliceStake);
+        mockStakeupToken.mint(bob, bobStake);
+
+        _stake(alice, aliceStake);
+        _stake(bob, bobStake);
+
+        // Process 200 worth of rewards into the contract
+        for (uint256 i = 0; i < 10; i++) {
+            vm.roll(startingBlock += 100);
+            mockStUSD.mint(address(stakeupStaking), rewardSupply);
+            _processFees();
+        }
+    
+        // Assert that 200 worth of rewards are available
+        IStakeupStaking.RewardData memory rewards = stakeupStaking.getRewardData();
+        assertEq(rewards.lastBalance , 200 ether);
+
+        // Alice and Bob harvest equal rewards and that their combined rewards are equal to the available rewards
+        uint256 aliceRewards = stakeupStaking.claimableRewards(alice);
+        uint256 bobRewards = stakeupStaking.claimableRewards(bob);
+        
+        assertEq(aliceRewards + bobRewards, 200 ether);
+
+        vm.startPrank(alice);
+        stakeupStaking.harvest();
+
+        vm.startPrank(bob);
+        stakeupStaking.harvest();
+
+        assertEq(mockStUSD.balanceOf(alice) + mockStUSD.balanceOf(bob), 200 ether);
 
     }
 
@@ -282,9 +383,15 @@ contract StakeupStakingTest is Test {
         vm.stopPrank();
     }
 
-    function _processFees(uint256 amount) internal {
+    function _unstake(address user, uint256 amount, bool harvest) internal {
+        vm.startPrank(user);
+        stakeupStaking.unstake(amount, harvest);
+        vm.stopPrank();
+    }
+
+    function _processFees() internal {
         vm.startPrank(address(mockStUSD));
-        stakeupStaking.processFees(amount);
+        stakeupStaking.processFees();
         vm.stopPrank();
     }
 }
