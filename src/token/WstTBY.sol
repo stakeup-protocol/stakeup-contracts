@@ -5,6 +5,7 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
+import {StTBYBase} from "./StTBYBase.sol";
 
 contract WstTBY is IWstTBY, ERC20 {
     // =================== Constants ===================
@@ -21,6 +22,7 @@ contract WstTBY is IWstTBY, ERC20 {
     function wrap(uint256 stTBYAmount) external returns (uint256) {
         if (stTBYAmount == 0) revert ZeroAmount();
         uint256 wstTBYAmount = _stTBY.getSharesByUsd(stTBYAmount);
+        if (wstTBYAmount == 0) revert ZeroAmount();
         _mint(msg.sender, wstTBYAmount);
         ERC20(address(_stTBY)).transferFrom(
             msg.sender,
@@ -34,8 +36,9 @@ contract WstTBY is IWstTBY, ERC20 {
     function unwrap(uint256 wstTBYAmount) external returns (uint256) {
         if (wstTBYAmount == 0) revert ZeroAmount();
         uint256 stTBYAmount = _stTBY.getUsdByShares(wstTBYAmount);
+        if (stTBYAmount == 0) revert ZeroAmount();
         _burn(msg.sender, wstTBYAmount);
-        ERC20(address(_stTBY)).transfer(msg.sender, stTBYAmount);
+        StTBYBase(address(_stTBY)).transferShares(msg.sender, wstTBYAmount);
         return stTBYAmount;
     }
 
