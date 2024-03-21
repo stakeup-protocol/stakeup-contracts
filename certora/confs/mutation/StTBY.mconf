@@ -1,0 +1,16 @@
+{ 
+   "gambit": {                                                 
+      "filename" : "../../../src/token/StTBY.sol",
+      "num_mutants": 0,
+      "solc_remappings": [
+         "solmate/=../../../lib/solmate/src/",
+         "@openzeppelin/contracts=../../../lib/openzeppelin-contracts/contracts",
+         "solady=../../../lib/solady/src/",
+         "@layerzerolabs=../../../lib/solidity-examples/contracts/"
+      ]
+   },
+   "manual_mutants": {                                                          
+      "../../munged/StTBYMunged.sol" : "../../mutations/StTBY",
+      "../../../src/token/StTBYBase.sol" : "../../mutations/StTBY_StTBYBase"
+   }
+}
