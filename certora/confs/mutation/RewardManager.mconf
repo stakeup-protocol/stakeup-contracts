@@ -1,0 +1,18 @@
+{ 
+   "gambit": {                                                 
+      "filename" : "../../../src/rewards/RewardManager.sol",
+      "num_mutants": 0,
+      "solc_remappings": [
+         "solmate/=../../../lib/solmate/src/",
+         "@openzeppelin/contracts=../../../lib/openzeppelin-contracts/contracts",
+         "solady=../../../lib/solady/src/",
+         "@layerzerolabs=../../../lib/solidity-examples/contracts/"
+      ]
+   },
+   "manual_mutants": {                                                          
+      "../../../src/rewards/RewardManager.sol" : "../../mutations/RewardManager",
+      "../../../src/rewards/RewardBase.sol" : "../../mutations/RewardManager_RewardBase",
+      "../../../src/rewards/CurveGaugeDistributor.sol" : "../../mutations/RewardManager_CurveGaugeDistributor",
+      "../../../src/token/StakeupToken.sol" : "../../mutations/RewardManager_StakeupToken"
+   }
+}
