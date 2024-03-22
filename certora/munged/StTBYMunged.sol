@@ -180,7 +180,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     function redeemWstTBY(uint256 wstTBYAmount) external nonReentrant returns (uint256) {
         IERC20(address(_wstTBY)).safeTransferFrom(msg.sender, address(this), wstTBYAmount);
         uint256 stTBYAmount = _wstTBY.unwrap(wstTBYAmount);
-        _transfer(address(this), msg.sender, stTBYAmount);
+        _transferShares(address(this), msg.sender, wstTBYAmount);
         return _redeemStTBY(stTBYAmount);
     }
 
@@ -361,6 +361,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         }
 
         uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
+        if (sharesAmount == 0) revert ZeroAmount();
 
         _mintShares(msg.sender, sharesAmount);
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
