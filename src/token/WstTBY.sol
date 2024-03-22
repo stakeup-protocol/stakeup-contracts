@@ -22,6 +22,7 @@ contract WstTBY is IWstTBY, ERC20 {
     function wrap(uint256 stTBYAmount) external returns (uint256) {
         uint256 wstTBYAmount = _stTBY.getSharesByUsd(stTBYAmount);
         if (wstTBYAmount == 0) revert ZeroAmount();
+        
         _mint(msg.sender, wstTBYAmount);
         ERC20(address(_stTBY)).transferFrom(
             msg.sender,
@@ -35,6 +36,7 @@ contract WstTBY is IWstTBY, ERC20 {
     function unwrap(uint256 wstTBYAmount) external returns (uint256) {
         uint256 stTBYAmount = _stTBY.getUsdByShares(wstTBYAmount);
         if (stTBYAmount == 0) revert ZeroAmount();
+
         _burn(msg.sender, wstTBYAmount);
         StTBYBase(address(_stTBY)).transferShares(msg.sender, wstTBYAmount);
         return stTBYAmount;
