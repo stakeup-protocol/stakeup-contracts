@@ -20,7 +20,6 @@ contract WstTBY is IWstTBY, ERC20 {
 
     /// @inheritdoc IWstTBY
     function wrap(uint256 stTBYAmount) external returns (uint256) {
-        if (stTBYAmount == 0) revert ZeroAmount();
         uint256 wstTBYAmount = _stTBY.getSharesByUsd(stTBYAmount);
         if (wstTBYAmount == 0) revert ZeroAmount();
         _mint(msg.sender, wstTBYAmount);
@@ -34,7 +33,6 @@ contract WstTBY is IWstTBY, ERC20 {
 
     /// @inheritdoc IWstTBY
     function unwrap(uint256 wstTBYAmount) external returns (uint256) {
-        if (wstTBYAmount == 0) revert ZeroAmount();
         uint256 stTBYAmount = _stTBY.getUsdByShares(wstTBYAmount);
         if (stTBYAmount == 0) revert ZeroAmount();
         _burn(msg.sender, wstTBYAmount);
