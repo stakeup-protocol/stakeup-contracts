@@ -188,13 +188,8 @@ rule depositsIncreaseStTBYSupply(method f)
     requireScalingFactor(e);
 
     //@note Issue 01 - We force the check amount > 0, otherwise rule fails
-    //require(amount > 0);
-
-    //@note Issue 02 - We ensure the corresponding shares for amount are > 0
-    //uint256 sharesAmount = getSharesByUsd(amount);
-    //require(sharesAmount > 0);
-    //@note Issue 03 - If there is a mint fee, it could happen that minting the fee and the rest separately
-    // would mint 0 shares, so we force no mint fee
+    require(amount > 0);
+    
     require(getMintBps() == 0);
 
     
@@ -222,11 +217,11 @@ rule withdrawalsOnlyByNFTAndDecreaseStTBYSupplyAndShares() {
     uint256 shares;
 
     //@note Issue 01 - We force the check shares > 0, otherwise rule fails
-    //require(shares > 0);
+    require(shares > 0);
 
     //@note Issue 02 - We ensure the corresponding usd amount for shares is > 0
-    //uint256 usdAmount = getUsdByShares(shares);
-    //require(usdAmount > 0);
+    uint256 usdAmount = getUsdByShares(shares);
+    require(usdAmount > 0);
 
 
     uint256 supplyPre = totalSupply();
