@@ -24,8 +24,8 @@ List of properties following the categorization by [Certora](https://github.com/
 | ST-03 | SUP rewards to `StTBY` depositors don't exceed the mint rewards cutoff | High Level | ✅ |
 | ST-04 | `StTBY` holder's amountStaked increase with mint reward distribution, proportional to their deposits | High Level | ✅ |
 | ST-05 | Only calls to deposits, poke, withdraw and redemptions of underlying can make _totalUsd vary | Valid State | ✅ |
-| ST-06 | Deposits of TBY/USDC increase `StTBY` supply, adjusted for fees and scaling | State Transitions | ❌ |
-| ST-07 | `StTBY` withrawals decrease total supply and total shares, and can only be made by redemption NFT contract | State Transitions | ❌ |
+| ST-06 | Deposits of TBY/USDC increase `StTBY` supply, adjusted for fees and scaling | State Transitions | ✅ |
+| ST-07 | `StTBY` withrawals decrease total supply and total shares, and can only be made by redemption NFT contract | State Transitions | ✅ |
 | ST-08 | When calling poke, lastRateUpdate does not change if less than 12 hours between two calls | State Transitions | ✅ |
 | ST-09 | When redeeming underlying if there is yield, totalUsd increases | State Transitions | ✅ |
 | ST-10 | Fees are transferred to StakeupStaking | State Transitions | ✅ |
@@ -39,9 +39,9 @@ List of properties following the categorization by [Certora](https://github.com/
 
 | Property | Description | Category | Tested |
 | --- | --- | --- | --- |
-| WST-01 | After wrapping in `WstTBY`, balance of sender must increase | State Transitions | ❌ |
+| WST-01 | After wrapping in `WstTBY`, balance of sender must increase | State Transitions | ✅ |
 | WST-02 | After unwrapping in `WstTBY`, shares of `stTBY` of sender must increase | State Transitions | ✅ |
-| WST-03 | The total supply of `WstTBY` is always equal to the total `StTBY` shares held by the contract | Valid States | ❌ |
+| WST-03 | The total supply of `WstTBY` is always equal to the total `StTBY` shares held by the contract | Valid States | ✅ |
 | WST-04 - WST-10 | Unit tests to check consistency of functions | Unit test | ✅ |
 
 ## Rewards
