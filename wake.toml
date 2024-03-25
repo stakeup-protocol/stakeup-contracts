@@ -1,5 +1,13 @@
 [compiler.solc]
-exclude_paths = ["node_modules", "venv", ".venv", "lib", "script", "test"]
+exclude_paths = [
+    "node_modules",
+    "venv",
+    ".venv",
+    "lib",
+    "script",
+    "test",
+    "certora",
+]
 include_paths = ["node_modules"]
 
 remappings = [
@@ -22,7 +30,7 @@ runs = 200
 [detectors]
 exclude = []
 ignore_paths = ["venv", ".venv", "test"]
-exclude_paths = ["node_modules", "lib", "script"]
+exclude_paths = ["node_modules", "lib", "script", "certora"]
 
 [testing]
 cmd = "anvil"
