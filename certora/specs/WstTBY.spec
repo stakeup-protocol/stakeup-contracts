@@ -14,9 +14,6 @@ rule wstTBYBalanceOfSenderIncreasesAfterWrapping() {
 
     uint256 wstTBYAmount = _ERC20_StTBY.getSharesByUsd(e, amount);
 
-    //@note Issue 01 - wrap function should check that wstTBYAmount > 0
-    //require(wstTBYAmount > 0);
-
     uint256 balancePre = balanceOf(e.msg.sender);
     require(balancePre + wstTBYAmount <= max_uint256);
     wrap(e, amount);
@@ -80,7 +77,7 @@ rule wrapConsistencyCheck() {
             e.msg.value > 0 ||
             allowance < amount ||
             balanceSharesSenderPre < sharesAmount ||
-            amount == 0 ||
+            sharesAmount == 0 ||
             totalSupply + sharesAmount > max_uint256 ||
             balanceSharesContractPre + sharesAmount > max_uint256 ||
             e.msg.sender == 0
@@ -100,7 +97,6 @@ rule unwrapConsistencyCheck() {
     require(e.msg.sender != currentContract);
 
     uint256 stTBYAmount = _ERC20_StTBY.getUsdByShares(e, amount);
-    uint256 stTBYSharesAmount = _ERC20_StTBY.getSharesByUsd(e, stTBYAmount);
     uint256 balanceSharesContractPre = _ERC20_StTBY.sharesOf(e, currentContract);
     uint256 balanceSharesSenderPre = _ERC20_StTBY.sharesOf(e, e.msg.sender);
     uint256 balancePreWstTBY = balanceOf(e.msg.sender);
@@ -114,14 +110,15 @@ rule unwrapConsistencyCheck() {
             e.msg.value > 0 ||
             balancePreWstTBY < amount ||
             amount == 0 ||
+            stTBYAmount == 0 ||
             e.msg.sender == 0 ||
-            balanceSharesSenderPre + stTBYSharesAmount > max_uint256 ||
-            balanceSharesContractPre < stTBYSharesAmount
+            balanceSharesSenderPre + amount > max_uint256 ||
+            balanceSharesContractPre < amount
         ) <=> lastRev
     );
 
     assert(!lastRev => balancePreWstTBY - balancePostWstTBY  == to_mathint(amount));
-    assert(!lastRev => balanceSharesSenderPOST - balanceSharesSenderPre  == to_mathint(stTBYSharesAmount));
+    assert(!lastRev => balanceSharesSenderPOST - balanceSharesSenderPre  == to_mathint(amount));
 }
 
 // WST-06 Consistency check for getWstTBYByStTBY
