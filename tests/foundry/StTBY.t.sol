@@ -17,7 +17,7 @@ import {MockEmergencyHandler} from "../mocks/MockEmergencyHandler.sol";
 import {MockRegistry} from "../mocks/MockRegistry.sol";
 import {MockStakeupStaking} from "../mocks/MockStakeupStaking.sol";
 import {MockRewardManager} from "../mocks/MockRewardManager.sol";
-import "forge-std/console2.sol";
+
 contract StTBYTest is Test {
 
     StTBY internal stTBY;
