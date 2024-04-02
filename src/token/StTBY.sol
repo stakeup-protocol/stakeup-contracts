@@ -96,7 +96,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         if (stakeupStaking == address(0)) revert InvalidAddress();
         if (mintBps_ > MAX_BPS || redeemBps_ > MAX_BPS) {
             revert ParameterOutOfBounds();
-        
         }
 
         _underlyingToken = IERC20(underlyingToken);
