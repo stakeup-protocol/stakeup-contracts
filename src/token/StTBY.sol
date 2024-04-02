@@ -6,7 +6,6 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {RedemptionNFT} from "./RedemptionNFT.sol";
 import {StTBYBase} from "./StTBYBase.sol";
 
 import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
@@ -39,8 +38,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     IStakeupStaking private immutable _stakeupStaking;
 
     IRewardManager private immutable _rewardManager;
-
-    RedemptionNFT private immutable _redemptionNFT;
 
     /// @dev Underlying token decimals
     uint8 internal immutable _underlyingDecimals;
@@ -80,12 +77,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     /// @dev Mapping of TBYs that have been redeemed
     mapping(address => bool) private _tbyRedeemed;
 
-    // =================== Modifiers ===================
-    modifier onlyUnStTBY() {
-        if (_msgSender() != address(_redemptionNFT)) revert CallerNotUnStTBY();
-        _;
-    }
-
     // =================== Functions ===================
     constructor(
         address underlyingToken,
@@ -97,16 +88,16 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         uint16 performanceBps_, // Suggested default 10% of yield
         address layerZeroEndpoint,
         address wstTBY
-    )
-        StTBYBase(layerZeroEndpoint)
-    {
+    ) StTBYBase(layerZeroEndpoint) {
         if (underlyingToken == address(0)) revert InvalidAddress();
         if (wstTBY == address(0)) revert InvalidAddress();
         if (bloomFactory == address(0)) revert InvalidAddress();
         if (registry == address(0)) revert InvalidAddress();
         if (stakeupStaking == address(0)) revert InvalidAddress();
-        if (mintBps_ > MAX_BPS || redeemBps_ > MAX_BPS) revert ParameterOutOfBounds();
-        
+        if (mintBps_ > MAX_BPS || redeemBps_ > MAX_BPS) {
+            revert ParameterOutOfBounds();
+        }
+
         _underlyingToken = IERC20(underlyingToken);
         _underlyingDecimals = IERC20Metadata(underlyingToken).decimals();
         _bloomFactory = IBloomFactory(bloomFactory);
@@ -123,19 +114,12 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         _mintRewardsRemaining = MINT_REWARD_CUTOFF;
 
         _wstTBY = IWstTBY(wstTBY);
-
-        _redemptionNFT = new RedemptionNFT(
-            "stTBY Redemption NFT",
-            "unstTBY",
-            address(this),
-            layerZeroEndpoint
-        );
     }
 
     /// @inheritdoc IStTBY
     function depositTby(address tby, uint256 amount) external nonReentrant {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
-        
+
         if (IBloomPool(tby).UNDERLYING_TOKEN() != address(_underlyingToken)) {
             revert InvalidUnderlyingToken();
         }
@@ -147,10 +131,10 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         if (tby == address(latestPool)) {
             _lastDepositAmount += amount;
         }
-        
+
         _deposit(tby, amount, true);
     }
-    
+
     /// @inheritdoc IStTBY
     function depositUnderlying(uint256 amount) external nonReentrant {
         _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -167,7 +151,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         } else {
             _remainingBalance += amount;
         }
-        
+
         _deposit(address(_underlyingToken), amount, false);
     }
 
@@ -187,27 +171,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     /// @inheritdoc IStTBY
     function getRemainingBalance() external view returns (uint256) {
         return _remainingBalance;
-    }
-
-    /// @inheritdoc IStTBY
-    function withdraw(address account, uint256 shares) external override nonReentrant onlyUnStTBY {
-        uint256 amount = getUsdByShares(shares);
-
-        uint256 underlyingBalance = _underlyingToken.balanceOf(address(this));
-
-        if (amount != 0) {
-            uint256 transferAmount = amount / _scalingFactor;
-
-            if (transferAmount > underlyingBalance) revert InsufficientBalance();
-
-            _underlyingToken.safeTransfer(account, transferAmount);
-    
-            _burnShares(address(_redemptionNFT), shares);
-            _setTotalUsd(_getTotalUsd() - amount);
-
-        }
-
-        emit Withdrawn(msg.sender, amount);
     }
 
     /// @inheritdoc IStTBY
@@ -274,11 +237,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function setNftTrustedRemote(uint16 remoteChainId, bytes calldata path) external onlyOwner {
-        _redemptionNFT.setTrustedRemote(remoteChainId, path);
-    }
-    
-    /// @inheritdoc IStTBY
     function getWstTBY() external view returns (IWstTBY) {
         return _wstTBY;
     }
@@ -306,11 +264,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     /// @inheritdoc IStTBY
     function getRewardManager() external view returns (IRewardManager) {
         return _rewardManager;
-    }
-
-    /// @inheritdoc IStTBY
-    function getRedemptionNFT() external view returns (RedemptionNFT) {
-        return _redemptionNFT;
     }
 
     /// @inheritdoc IStTBY
@@ -383,35 +336,23 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     /**
      * @notice Redeems stTBY in exchange for underlying tokens
      * @param stTBYAmount Amount of stTBY to redeem
-     * @return uint256 The tokenId of the redemption NFT
+     * @return uint256 Amount of underlying tokens withdrawn from stTBY
      */
     function _redeemStTBY(uint256 stTBYAmount) internal returns (uint256) {
         if (stTBYAmount == 0) revert ParameterOutOfBounds();
+        if (balanceOf(msg.sender) < stTBYAmount) revert InsufficientBalance();
 
         uint256 shares = getSharesByUsd(stTBYAmount);
-        
-        (uint256 redemptonId, uint256 amountRedeemed) = _redeem(msg.sender, shares, stTBYAmount);
+        uint256 underlyingAmount = _redeem(msg.sender, shares);
 
-        emit Redeemed(msg.sender, shares, amountRedeemed);
-
-        return redemptonId;
+        return underlyingAmount;
     }
 
-    function _redeem(
-        address account,
-        uint256 shares,
-        uint256 underlyingAmount
-    )
-        internal returns (uint256 redemptionId, uint256 amountRedeemed)
-    {
-        if (balanceOf(account) < underlyingAmount) revert InsufficientBalance();
-
+    function _redeem(address account, uint256 shares) internal returns (uint256 underlyingAmount) {
         uint256 redeemFee = (shares * redeemBps) / BPS;
 
         if (redeemFee > 0) {
             shares -= redeemFee;
-            uint256 redeemFeeAmount = getUsdByShares(redeemFee);
-            underlyingAmount -= redeemFeeAmount;
 
             _transferShares(account, address(_stakeupStaking), redeemFee);
             _stakeupStaking.processFees();
@@ -419,11 +360,27 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             emit FeeCaptured(FeeType.Redeem, redeemFee);
         }
 
-        _transferShares(account, address(_redemptionNFT), shares);
+        underlyingAmount = _withdraw(account, shares);
+        
+        emit Redeemed(msg.sender, shares, underlyingAmount);
+    }
 
-        redemptionId = _mintRedemptionNFT(account, shares);
+    function _withdraw(address account, uint256 shares) internal returns (uint256 underlyingAmount) {
+        uint256 amount = getUsdByShares(shares);
+        uint256 underlyingBalance = _underlyingToken.balanceOf(address(this));
 
-        return (redemptionId, underlyingAmount);
+        if (amount != 0) {
+            underlyingAmount = amount / _scalingFactor;
+
+            if (underlyingAmount > underlyingBalance) {
+                revert InsufficientBalance();
+            }
+
+            _underlyingToken.safeTransfer(account, underlyingAmount);
+
+            _burnShares(account, shares);
+            _setTotalUsd(_getTotalUsd() - amount);
+        }
     }
 
     /**
@@ -435,7 +392,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     function _processProceeds(uint256 proceeds, uint256 yield) internal {
         uint256 underlyingGains = yield * _scalingFactor;
 
-        uint256 performanceFee = underlyingGains * performanceBps / BPS;
+        uint256 performanceFee = (underlyingGains * performanceBps) / BPS;
 
         if (performanceFee > 0) {
             uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
@@ -546,16 +503,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         return IBloomPool(_bloomFactory.getLastCreatedPool());
     }
 
-    /**
-     * @notice Creates a withdrawal request and mints a redemption NFT to 
-     * the redeemer
-     * @param account The address of the account redeeming their stTBY
-     * @param shares The amount of shares to redeem
-     */
-    function _mintRedemptionNFT(address account, uint256 shares) internal returns (uint256) {
-        return _redemptionNFT.addWithdrawalRequest(account, shares);
-    }
-    
     /**
      * @notice Calculates the current value of all TBYs that are staked in stTBY
      */
