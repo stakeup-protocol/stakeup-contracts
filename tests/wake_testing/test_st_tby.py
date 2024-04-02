@@ -110,8 +110,12 @@ def test_redeem_fee():
 
     deposit(default_chain, user, parsed_deposit_amount, False)
 
+    usdc.mint(st_tby.address, parsed_deposit_amount)
+
     bal_before = st_tby.balanceOf(stakeup.address)
-    st_tby.redeemStTBY(st_tby.balanceOf(user.address), from_=user)
+
+    amount = st_tby.balanceOf(user.address)
+    st_tby.redeemStTBY(amount, from_=user)
     fees_collected = st_tby.balanceOf(stakeup.address) - bal_before
 
     assert st_tby.getRedeemBps() == int(redeem_fee * bps_scale)
