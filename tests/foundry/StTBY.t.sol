@@ -6,7 +6,6 @@ import {LibRLP} from "solady/utils/LibRLP.sol";
 
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
-import {RedemptionNFT, IRedemptionNFT} from "src/token/RedemptionNFT.sol";
 
 import {IStTBY} from "src/interfaces/IStTBY.sol";
 
@@ -18,12 +17,11 @@ import {MockEmergencyHandler} from "../mocks/MockEmergencyHandler.sol";
 import {MockRegistry} from "../mocks/MockRegistry.sol";
 import {MockStakeupStaking} from "../mocks/MockStakeupStaking.sol";
 import {MockRewardManager} from "../mocks/MockRewardManager.sol";
-
+import "forge-std/console2.sol";
 contract StTBYTest is Test {
 
     StTBY internal stTBY;
     WstTBY internal wstTBY;
-    RedemptionNFT internal redemptionNFT;
 
     MockERC20 internal stableToken;
     MockERC20 internal billyToken;
@@ -121,9 +119,6 @@ contract StTBYTest is Test {
 
         wstTBY = new WstTBY(address(stTBY));
         vm.label(address(wstTBY), "WstTBY");
-        
-        redemptionNFT = stTBY.getRedemptionNFT();
-        vm.label(address(redemptionNFT), "RedemptionNFT");
 
         assertEq(address(wstTBY), expectedWrapperAddress);
         assertEq(address(wstTBY.getStTBY()), address(stTBY));
@@ -245,8 +240,7 @@ contract StTBYTest is Test {
         stableToken.mint(address(stTBY), 100_000_000e6);
         vm.startPrank(alice);
         stTBY.approve(address(stTBY), UINT256_MAX);
-        uint256 redemptionId = stTBY.redeemStTBY(burnAmount);
-        redemptionNFT.claimWithdrawal(redemptionId);
+        stTBY.redeemStTBY(burnAmount);
         vm.stopPrank();
 
         // Verify that the total TBY in stTBY is now below 200M
@@ -457,7 +451,6 @@ contract StTBYTest is Test {
         assertEq(wstTBY.tokensPerStTBY(), 1 ether);
         /// ##############################################
 
-
         // ####### Set the stTBY up for a 10% yield #######
         stableToken.mint(address(pool), 3_300000);
         swap.setRate(1e18);
@@ -467,46 +460,6 @@ contract StTBYTest is Test {
         swap.setRate(1.1e18);
         pool.initiatePostHoldSwap();
         swap.completeNextSwap();
-        // ###############################################
-
-        // ####### Redeem state Tests ####################
-        
-        uint256 aliceShares = stTBY.sharesOf(alice);
-        uint256 aliceBalance1 = stTBY.balanceOf(alice);
-
-        vm.startPrank(alice);
-        stTBY.approve(address(stTBY), UINT256_MAX);
-        vm.expectEmit(true, true, true, true);
-        emit Redeemed(alice, aliceShares, aliceBalance1 * .995e18 / 1e18);
-        uint256 aliceNFTId = stTBY.redeemStTBY(aliceBalance1);
-        assertEq(aliceNFTId, _generateExpectedNftId(0));
-        vm.stopPrank();
-        
-        uint256 bobWrappedAmount = wstTBY.balanceOf(bob);
-        uint256 bobAmountReceived = wstTBY.getStTBYByWstTBY(bobWrappedAmount) * .995e18 / 1e18;
-        vm.startPrank(bob);
-        wstTBY.approve(address(stTBY), UINT256_MAX);
-        vm.expectEmit(true, true, true, true);
-        emit Redeemed(bob, bobWrappedAmount, bobAmountReceived);
-        uint256 bobNFTId = stTBY.redeemWstTBY(bobWrappedAmount);
-        assertEq(bobNFTId, _generateExpectedNftId(1));
-        vm.stopPrank();
-
-        // Verify state after redeems
-        assertEq(stTBY.balanceOf(alice), 0);
-        assertEq(wstTBY.balanceOf(bob), 0);
-        assertEq(stTBY.balanceOf(address(redemptionNFT)), bobMintedShares + aliceMintedShares - aliceRedeemFees - bobRedeemFees);
-
-        // Verfiy NFT state
-        assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).amountOfShares, aliceMintedShares - aliceRedeemFees);
-        assertEq(redemptionNFT.getWithdrawalRequest(bobNFTId).amountOfShares, bobMintedShares - bobRedeemFees);
-
-        assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).owner, alice);
-        assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).owner, alice);
-
-        assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).claimed, false);
-        assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).claimed, false);
-        
         // ###############################################
 
         // ####### Verify performance fee #################
@@ -522,62 +475,36 @@ contract StTBYTest is Test {
         assertEq(wstTBY.tokensPerStTBY(), sharesPerUsd);  
         // ###############################################
 
-        // ############ Withdraw to underlying ############
-        address rando = makeAddr("rando");
+        // ####### Redeem state Tests ####################
+        uint256 aliceShares = stTBY.sharesOf(alice);
+        uint256 aliceBalance1 = stTBY.balanceOf(alice);
+        uint256 bobWrappedAmount = wstTBY.balanceOf(bob);
 
-        uint256 aliceBalance = redemptionNFT.getWithdrawalRequest(aliceNFTId).amountOfShares * usdPerShares / 1e18;
-        uint256 bobBalance = redemptionNFT.getWithdrawalRequest(bobNFTId).amountOfShares * usdPerShares / 1e18;
+        uint256 scaler = 10 ** (18 + (18 - stableToken.decimals()));
+        uint256 aliceExpectedStableBalance = aliceBalance1 * .995e18 / scaler;
+        uint256 bobExpectedStableBalance = wstTBY.getStTBYByWstTBY(bobWrappedAmount) * .995e18 / scaler;
 
         vm.startPrank(alice);
-        redemptionNFT.claimWithdrawal(aliceNFTId);
-        assertEq(stTBY.sharesOf(alice), 0);
-        assertEq(stableToken.balanceOf(alice), aliceBalance / 1e12);
-
-        // Verify NFT state after alice withdraws
-        assertEq(redemptionNFT.getWithdrawalRequest(aliceNFTId).claimed, true);
-
-        // Fail to transfer NFT to rando
-        vm.expectRevert(IRedemptionNFT.RedemptionClaimed.selector);
-        redemptionNFT.transferFrom(alice, rando, aliceNFTId);
-
-        // Fail to withdraw again
-        vm.expectRevert(IRedemptionNFT.RedemptionClaimed.selector);
-        redemptionNFT.claimWithdrawal(aliceNFTId);
+        stTBY.approve(address(stTBY), UINT256_MAX);
+        vm.expectEmit(true, true, true, true);
+        emit Redeemed(alice, aliceShares - aliceRedeemFees, aliceExpectedStableBalance);
+        stTBY.redeemStTBY(aliceBalance1);
         vm.stopPrank();
 
-        // Fail when rando tries to withdraw Bobs withdrawal
-        vm.startPrank(rando);
-        vm.expectRevert(IRedemptionNFT.NotOwner.selector);
-        redemptionNFT.claimWithdrawal(bobNFTId);
-        vm.stopPrank();
-
-        // Transfer NFT to rando
         vm.startPrank(bob);
-        redemptionNFT.transferFrom(bob, rando, bobNFTId);
+        wstTBY.approve(address(stTBY), UINT256_MAX);
+        vm.expectEmit(true, true, true, true);
+        emit Redeemed(bob, bobWrappedAmount - bobRedeemFees, bobExpectedStableBalance);
+        stTBY.redeemWstTBY(bobWrappedAmount);
         vm.stopPrank();
 
-        // Verify NFT state after bob transfers
-        assertEq(redemptionNFT.getWithdrawalRequest(bobNFTId).owner, rando);
+        assertEq(stTBY.balanceOf(alice), 0);
+        assertEq(stableToken.balanceOf(alice), aliceExpectedStableBalance);
 
-        // Fail when bob tries to withdraw
-        vm.startPrank(bob);
-        vm.expectRevert(IRedemptionNFT.NotOwner.selector);
-        redemptionNFT.claimWithdrawal(bobNFTId);
-        vm.stopPrank();
-
-        // Withdraw to underlying
-        vm.startPrank(rando);
-        redemptionNFT.claimWithdrawal(bobNFTId);
         assertEq(stTBY.sharesOf(bob), 0);
-        assertEq(stableToken.balanceOf(rando), bobBalance / 1e12);
-        vm.stopPrank();
+        assertEq(stableToken.balanceOf(bob), bobExpectedStableBalance);
 
-        assertEq(stTBY.sharesOf(address(staking)), stakeupStakingShares + performanceFeeInShares);
-        assertEq(stTBY.balanceOf(address(redemptionNFT)), 0);
+        assertEq(stTBY.sharesOf(address(staking)), stakeupStakingShares + performanceFeeInShares + aliceRedeemFees + bobRedeemFees);
         // ###############################################
-    }
-
-    function _generateExpectedNftId(uint256 mintCount) internal view returns (uint256) {
-        return uint256(keccak256(abi.encode(block.chainid, 0x00, mintCount)));
     }
 }

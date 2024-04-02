@@ -9,13 +9,8 @@ import {IStakeupStaking} from "./IStakeupStaking.sol";
 import {IRewardManager} from "./IRewardManager.sol";
 import {IStTBYBase} from "./IStTBYBase.sol";
 
-import {RedemptionNFT} from "src/token/RedemptionNFT.sol";
-
 interface IStTBY is IStTBYBase {
     // =================== Errors ===================
-
-    /// @notice Caller is not the Redemption NFT
-    error CallerNotUnStTBY();
 
     /// @notice Invalid address (e.g. zero address)
     error InvalidAddress();
@@ -61,16 +56,9 @@ interface IStTBY is IStTBYBase {
      * @notice Emitted when LP tokens are redeemed
      * @param account Redeeming account
      * @param shares Amount of LP tokens burned
-     * @param amount Amount of underlying tokens
+     * @param amount Amount of underlying tokens paid out to the user
      */
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
-
-    /**
-     * @notice Emitted when redeemed underlying tokens are withdrawn
-     * @param account Withdrawing account
-     * @param amount Amount of underlying tokens withdrawn
-     */
-    event Withdrawn(address indexed account, uint256 amount);
 
     /**
      * @notice Emitted when USDC is deposited into a Bloom Pool
@@ -120,7 +108,7 @@ interface IStTBY is IStTBYBase {
      * redemption is processed.
      * @dev Emits a {Redeemed} event.
      * @param stTBYAmount Amount of stTBY
-     * @return uint256 The tokenId of the redemption NFT
+     * @return uint256 The Amount of underlying tokens redeemed
      */
     function redeemStTBY(uint256 stTBYAmount) external returns (uint256);
    
@@ -130,7 +118,7 @@ interface IStTBY is IStTBYBase {
      * redemption is processed.
      * @dev Emits a {Redeemed} event.
      * @param wstTBYAmount Amount of wstTBY
-     * @return uint256 The tokenId of the redemption NFT
+     * @return uint256 The Amount of underlying tokens redeemed
      */
     function redeemWstTBY(uint256 wstTBYAmount) external returns (uint256);
  
@@ -141,20 +129,6 @@ interface IStTBY is IStTBYBase {
      * @param tby TBY address
      */
     function redeemUnderlying(address tby) external;
-
-    /**
-     * @notice Withdraw redeemed underlying tokens
-     * @dev Emits a {Withdrawn} event.
-     * @dev Entrypoint for the withdrawl process is the RedemptionNFT contract
-     */
-    function withdraw(address account, uint256 shares) external;
-
-    /**
-     * 
-     * @param remoteChainId The chainId of the remote chain
-     * @param path abi.encodePacked(remoteAddress, localAddress)
-     */
-    function setNftTrustedRemote(uint16 remoteChainId, bytes calldata path) external;
 
     /// @notice Get the total amount of underlying tokens in the pool
     function getRemainingBalance() external view returns (uint256);
@@ -176,9 +150,6 @@ interface IStTBY is IStTBYBase {
 
     /// @notice Returns the RewardManager contract.
     function getRewardManager() external view returns (IRewardManager);
-
-    /// @notice Returns the RedemptionNFT contract.
-    function getRedemptionNFT() external view returns (RedemptionNFT);
 
     /// @notice Returns the mintBps.
     function getMintBps() external view returns (uint256);
