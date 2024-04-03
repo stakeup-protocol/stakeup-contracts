@@ -9,16 +9,16 @@ pragma solidity ^0.8.0;
  *      testnets.
  */
 library MintRewardLib {
-    /// @notice Mint reward cutoff for native minting on Ethereum Mainnet
+    /// @notice Mint reward cutoff for native minting on Ethereum Mainnet | 2.5% of total SUP supply
     uint256 private constant MINT_REWARD_CUTOFF_MAINNET = 30_000_000e18;
 
-    /// @notice Mint reward cutoff for native minting on Arbitrum
+    /// @notice Mint reward cutoff for native minting on Arbitrum | 1.5% of total SUP supply
     uint256 private constant MINT_REWARD_CUTOFF_ARBITRUM = 15_000_000e18;
 
-    /// @notice Mint reward cutoff for native minting on Polygon POS
+    /// @notice Mint reward cutoff for native minting on Polygon POS | 0.66% of total SUP supply
     uint256 private constant MINT_REWARD_CUTOFF_POLYGON = 10_000_000e18;
 
-    /// @notice Mint reward cutoff for native minting on Horizen EON
+    /// @notice Mint reward cutoff for native minting on Horizen EON | 0.34% of total SUP supply
     uint256 private constant MINT_REWARD_CUTOFF_EON = 5_000_000e18;
 
     /// @notice Mint reward cutoff for native minting on Sepolia Testnet (This is for testing purposes only)
