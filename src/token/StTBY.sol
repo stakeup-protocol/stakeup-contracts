@@ -6,6 +6,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+import {MintRewardLib} from "../rewards/lib/MintRewardLib.sol";
 import {StTBYBase} from "./StTBYBase.sol";
 
 import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
@@ -56,8 +57,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     uint16 private constant MAX_BPS = 200; // Max 2%
 
     uint256 private constant AUTO_STAKE_PHASE = 1 days;
-
-    uint256 private constant MINT_REWARD_CUTOFF = 200_000_000e18;
 
     /// @dev Last deposit amount
     uint256 internal _lastDepositAmount;
@@ -111,7 +110,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
         _lastRateUpdate = block.timestamp;
-        _mintRewardsRemaining = MINT_REWARD_CUTOFF;
+        _mintRewardsRemaining = MintRewardLib._getMintRewardAllocation();
 
         _wstTBY = IWstTBY(wstTBY);
     }
