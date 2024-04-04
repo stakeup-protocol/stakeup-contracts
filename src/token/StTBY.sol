@@ -6,7 +6,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {MintRewardLib} from "../rewards/lib/MintRewardLib.sol";
+import {StakeUpMintRewardLib} from "../rewards/lib/StakeUpMintRewardLib.sol";
 import {StTBYBase} from "./StTBYBase.sol";
 
 import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
