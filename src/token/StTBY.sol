@@ -38,8 +38,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
     IStakeupStaking private immutable _stakeupStaking;
 
-    IRewardManager private immutable _rewardManager;
-
     /// @dev Underlying token decimals
     uint8 internal immutable _underlyingDecimals;
 
@@ -102,7 +100,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         _bloomFactory = IBloomFactory(bloomFactory);
         _registry = IExchangeRateRegistry(registry);
         _stakeupStaking = IStakeupStaking(stakeupStaking);
-        _rewardManager = IRewardManager(_stakeupStaking.getRewardManager());
 
         mintBps = mintBps_;
         redeemBps = redeemBps_;
@@ -110,7 +107,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
         _lastRateUpdate = block.timestamp;
-        _mintRewardsRemaining = MintRewardLib._getMintRewardAllocation();
+        _mintRewardsRemaining = StakeUpMintRewardLib._getMintRewardAllocation();
 
         _wstTBY = IWstTBY(wstTBY);
     }
