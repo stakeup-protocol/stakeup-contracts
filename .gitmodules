@@ -13,3 +13,6 @@
 [submodule "lib/solidity-examples"]
 	path = lib/solidity-examples
 	url = https://github.com/layerzero-labs/solidity-examples
+[submodule "lib/LayerZero-v2"]
+	path = lib/LayerZero-v2
+	url = https://github.com/LayerZero-Labs/LayerZero-v2
