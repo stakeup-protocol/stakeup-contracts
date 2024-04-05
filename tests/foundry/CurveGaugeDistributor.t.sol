@@ -60,7 +60,7 @@ contract CurveGaugeDistributorTest is Test {
             address(mockStTBY)
         );
 
-        curveGaugeDistributor = new CurveGaugeDistributor();
+        curveGaugeDistributor = new CurveGaugeDistributor(address(this));
     }
 
     function test_SeedGauges() public {

@@ -83,13 +83,6 @@ interface IStakeupStaking is ISUPVesting {
     function stake(uint256 stakeupAmount) external;
 
     /**
-     * @notice Stake Stakeup Token's to earn stTBY rewards on behalf of another user
-     * @param receiver The address of the user who will receive the staked STAKEUP
-     * @param stakeupAmount Amount of STAKEUP to stake
-     */
-    function delegateStake(address receiver, uint256 stakeupAmount) external;
-
-    /**
      * @notice Unstakes the user's STAKEUP and sends it back to them, along with their accumulated stTBY gains
      * @param stakeupAmount Amount of STAKEUP to unstake
      * @param harvestRewards True if the user wants to claim their stTBY rewards

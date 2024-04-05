@@ -53,7 +53,7 @@ abstract contract SUPVesting is ISUPVesting {
 
     /// @inheritdoc ISUPVesting
     function vestTokens(address account, uint256 amount) external onlySUP {
-        _vestTokens(account);
+        _updateRewardState(account);
 
         VestedAllocation storage allocation = _tokenAllocations[account];
 
@@ -77,7 +77,7 @@ abstract contract SUPVesting is ISUPVesting {
 
     /// @inheritdoc ISUPVesting
     function claimAvailableTokens() external returns (uint256) {
-        _claimTokens(msg.sender);
+        _updateRewardState(msg.sender);
 
         VestedAllocation storage allocation = _tokenAllocations[msg.sender];
 
@@ -132,14 +132,9 @@ abstract contract SUPVesting is ISUPVesting {
     }
 
     /**
-     * @notice A hook that is called at the beginning of the `vestTokens` function
+     * @notice Updates the global reward index and distributes rewards to the user
+     * @dev A hook that is called at the beginning of the `vestTokens` & `claimAvailableTokens`function
      * @param user The user to vest tokens for
      */
-    function _vestTokens(address user) internal virtual {}
-
-    /**
-     * @notice A hook that is called at the beginning of the `claimAvailableTokens` function
-     * @param user The user to claim tokens for
-     */
-    function _claimTokens(address user) internal virtual {}
+    function _updateRewardState(address user) internal virtual {}
 }

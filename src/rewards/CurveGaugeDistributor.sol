@@ -4,6 +4,7 @@ pragma solidity 0.8.22;
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import {StakeUpRewardMathLib} from "./lib/StakeUpRewardMathLib.sol";
 
@@ -12,7 +13,7 @@ import {ICurvePoolFactory} from "../interfaces/curve/ICurvePoolFactory.sol";
 import {ICurvePoolGauge} from "../interfaces//curve/ICurvePoolGauge.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 
-contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard {
+contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownable2Step {
     using SafeERC20 for IERC20;
 
     /// @notice Curve pool data
@@ -37,8 +38,13 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard {
         if (!_initialized) revert NotInitialized();
         _;
     }
+    
+    constructor(address owner) Ownable2Step() {
+        _initialized = false;
+        _transferOwnership(owner);
+    }
 
-    function initialize(CurvePoolData[] calldata curvePools, address stakeupToken) external {
+    function initialize(CurvePoolData[] calldata curvePools, address stakeupToken) external onlyOwner {
         if (stakeupToken == address(0)) revert InvalidAddress();
         if (_initialized) revert ContractInitialized();
         

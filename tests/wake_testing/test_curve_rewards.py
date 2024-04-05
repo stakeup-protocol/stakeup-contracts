@@ -100,6 +100,7 @@ def test_consistent_gauge_rewards():
 
     # Deploy CurveGaugeDistributor
     curveGaugeDistributor = CurveGaugeDistributor.deploy(
+        account,
         from_=account,
         request_type="tx",
         chain=default_chain
