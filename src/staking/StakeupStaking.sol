@@ -10,7 +10,7 @@ import {SUPVesting} from "./SUPVesting.sol";
 
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
-import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+import {IStakeupStaking, IStakeupStakingBase} from "../interfaces/IStakeupStaking.sol";
 
 /**
  * @title StakeupStaking
@@ -120,7 +120,7 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
         emit RewardsHarvested(msg.sender, rewardAmount);
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeupStakingBase
     function processFees() external nonReentrant onlyStTBY updateIndex {
         // solhint-ignore-previous-line no-empty-blocks
     }
@@ -138,12 +138,12 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
             );
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeupStakingBase
     function getStakupToken() external view returns (IStakeupToken) {
         return _stakeupToken;
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeupStakingBase
     function getStTBY() external view returns (IStTBY) {
         return _stTBY;
     }
