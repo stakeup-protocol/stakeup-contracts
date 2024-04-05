@@ -6,7 +6,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IBloomFactory} from "./bloom/IBloomFactory.sol";
 import {IExchangeRateRegistry} from "./bloom/IExchangeRateRegistry.sol";
 import {IStakeupStaking} from "./IStakeupStaking.sol";
-import {IRewardManager} from "./IRewardManager.sol";
 import {IStTBYBase} from "./IStTBYBase.sol";
 
 interface IStTBY is IStTBYBase {
@@ -147,9 +146,6 @@ interface IStTBY is IStTBYBase {
 
     /// @notice Returns the StakeupStaking contract.
     function getStakeupStaking() external view returns (IStakeupStaking);
-
-    /// @notice Returns the RewardManager contract.
-    function getRewardManager() external view returns (IRewardManager);
 
     /// @notice Returns the mintBps.
     function getMintBps() external view returns (uint256);

@@ -31,7 +31,7 @@ contract MockERC20 is ERC20 {
         return shares;
     }
 
-    // This function is for testing the reward manager
+    // This function is for testing the minting Rewards
     function mintRewards(address to, uint256 amount) external {
         _mint(to, amount);
     }

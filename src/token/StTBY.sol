@@ -6,6 +6,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+import {StakeUpRewardMathLib} from "../rewards/lib/StakeUpRewardMathLib.sol";
 import {StakeUpMintRewardLib} from "../rewards/lib/StakeUpMintRewardLib.sol";
 import {StTBYBase} from "./StTBYBase.sol";
 
@@ -15,6 +16,7 @@ import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
 
@@ -37,6 +39,8 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     IExchangeRateRegistry private immutable _registry;
 
     IStakeupStaking private immutable _stakeupStaking;
+
+    IStakeupToken private immutable _stakeupToken;
 
     /// @dev Underlying token decimals
     uint8 internal immutable _underlyingDecimals;
@@ -65,8 +69,14 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     /// @dev Mint rewards remaining
     uint256 internal _mintRewardsRemaining;
 
+    /// @notice Amount of rewards remaining to be distributed to users for poking the contract
+    uint256 private _pokeRewardsRemaining;
+
     /// @dev Last rate update timestamp
     uint256 internal _lastRateUpdate;
+
+    /// @dev Deployment timestamp
+    uint256 internal _startTimestamp;
 
     /// @dev Scaling factor for underlying token
     uint256 private immutable _scalingFactor;
@@ -83,8 +93,9 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         uint16 mintBps_, // Suggested default 0.5%
         uint16 redeemBps_, // Suggested default 0.5%
         uint16 performanceBps_, // Suggested default 10% of yield
-        address layerZeroEndpoint,
-        address wstTBY
+        address wstTBY,
+        bool pokeEligible,
+        address layerZeroEndpoint
     ) StTBYBase(layerZeroEndpoint) {
         if (underlyingToken == address(0)) revert InvalidAddress();
         if (wstTBY == address(0)) revert InvalidAddress();
@@ -101,12 +112,20 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         _registry = IExchangeRateRegistry(registry);
         _stakeupStaking = IStakeupStaking(stakeupStaking);
 
+        _stakeupToken = IStakeupStaking(stakeupStaking).getStakupToken();
+
         mintBps = mintBps_;
         redeemBps = redeemBps_;
         performanceBps = performanceBps_;
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
         _lastRateUpdate = block.timestamp;
+        _startTimestamp = block.timestamp;
+
+        if (pokeEligible) {
+            _pokeRewardsRemaining = StakeUpRewardMathLib.POKE_REWARDS;
+        }
+
         _mintRewardsRemaining = StakeUpMintRewardLib._getMintRewardAllocation();
 
         _wstTBY = IWstTBY(wstTBY);
@@ -199,7 +218,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         if (yieldFromPool > 0 && !_tbyRedeemed[tby]) {
             _tbyRedeemed[tby] = true;
-            _rewardManager.distributePokeRewards(msg.sender);
+            _distributePokeRewards();
         }
     }
 
@@ -228,7 +247,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         if (block.timestamp - _lastRateUpdate >= 12 hours) {
             _lastRateUpdate = block.timestamp;
             _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
-            _rewardManager.distributePokeRewards(msg.sender);
+            _distributePokeRewards();
         }
     }
 
@@ -255,11 +274,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     /// @inheritdoc IStTBY
     function getStakeupStaking() external view returns (IStakeupStaking) {
         return _stakeupStaking;
-    }
-
-    /// @inheritdoc IStTBY
-    function getRewardManager() external view returns (IRewardManager) {
-        return _rewardManager;
     }
 
     /// @inheritdoc IStTBY
@@ -321,7 +335,8 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         if (mintRewardsRemaining > 0) {
             uint256 eligibleAmount = Math.min(amountScaled, mintRewardsRemaining);
             _mintRewardsRemaining -= eligibleAmount;
-            _rewardManager.distributeMintRewards(msg.sender, eligibleAmount);
+
+            _stakeupToken.mintRewards(msg.sender, eligibleAmount);
         }
 
         _setTotalUsd(_getTotalUsd() + amountScaled);
@@ -515,5 +530,23 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         }
 
         return usdValue;
+    }
+
+    /// @notice Calulates and mints SUP rewards to users who have poked the contract
+    function _distributePokeRewards() internal {
+        if (_pokeRewardsRemaining > 0) {
+            uint256 amount = StakeUpRewardMathLib._calculateDripAmount(
+                StakeUpRewardMathLib.POKE_REWARDS,
+                _startTimestamp,
+                _pokeRewardsRemaining,
+                false
+            );
+
+            if (amount > 0) {
+                amount = Math.min(amount, _pokeRewardsRemaining);
+                _pokeRewardsRemaining -= amount;
+                IStakeupToken(_stakeupToken).mintRewards(msg.sender, amount);
+            }
+        }
     }
 }
