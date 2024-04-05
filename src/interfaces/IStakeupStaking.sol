@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
+import {IStakeupStakingBase} from "../interfaces/IStakeupStakingBase.sol";
 import {IStakeupToken} from "./IStakeupToken.sol";
 import {IStTBY} from "./IStTBY.sol";
 import {ISUPVesting} from "./ISUPVesting.sol";
 
-interface IStakeupStaking is ISUPVesting {
+interface IStakeupStaking is IStakeupStakingBase, ISUPVesting {
 
     // @notice Token amount is 0
     error ZeroTokensStaked();
@@ -73,9 +74,6 @@ interface IStakeupStaking is ISUPVesting {
      */
     event RewardsHarvested(address indexed user, uint256 shares);
 
-
-    function processFees() external;
-
     /**
      * @notice Stake Stakeup Token's to earn stTBY rewards
      * @param stakeupAmount Amount of STAKEUP to stake
@@ -99,12 +97,6 @@ interface IStakeupStaking is ISUPVesting {
      * @param shares Amount of shares of stTBY to add to the reward pool
      */
     function claimableRewards(address shares) external view returns (uint256);
-    
-    /// @notice Returns the Stakeup Token
-    function getStakupToken() external view returns (IStakeupToken);
-    
-    /// @notice Returns the stTBY token
-    function getStTBY() external view returns (IStTBY);
     
     /// @notice Returns the total amount of STAKEUP staked within the contract
     function totalStakeUpStaked() external view returns (uint256);
