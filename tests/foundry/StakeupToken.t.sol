@@ -2,13 +2,13 @@
 pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
+
 import {StakeupStaking} from "src/staking/StakeupStaking.sol";
 import {StakeupToken, IStakeupToken} from "src/token/StakeupToken.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {MockStakeupStaking} from "../mocks/MockStakeupStaking.sol";
-import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StakeupTokenTest is Test {
     StakeupToken public stakeupToken;
@@ -17,10 +17,10 @@ contract StakeupTokenTest is Test {
     address internal bob;
     address internal rando;
     address internal owner;
+    address internal stTBY;
     address internal layerZeroEndpoint;
     
     MockStakeupStaking internal stakeupStaking;
-    MockRewardManager internal rewardManager;
 
     uint64 initialMintPercentage = 1e15; // .01%
 
@@ -29,11 +29,12 @@ contract StakeupTokenTest is Test {
         alice = makeAddr("alice");
         bob = makeAddr("bob");
         rando = makeAddr("rando");
+        stTBY = makeAddr("stTBY");
 
         owner = makeAddr("owner");
         layerZeroEndpoint = makeAddr("layerZeroEndpoint");
         stakeupStaking = new MockStakeupStaking();
-        rewardManager = new MockRewardManager();
+        stakeupStaking.setStTBY(stTBY);
     }
 
     function testViewFunctions() public {
@@ -200,10 +201,10 @@ contract StakeupTokenTest is Test {
         allocations[0] = allocation;
 
         stakeupToken = new StakeupToken(
-            address(0),
             address(stakeupStaking),
-            address(rewardManager),
-            owner
+            address(0),
+            owner,
+            address(0)
         );
 
         vm.startPrank(owner);
@@ -276,10 +277,10 @@ contract StakeupTokenTest is Test {
             allocations[1] = allocation2;
 
             stakeupToken = new StakeupToken(
-                address(0),
                 address(stakeupStaking),
-                address(rewardManager),
-                owner
+                address(stTBY),
+                owner,
+                address(0)
             );
         }
 
@@ -299,16 +300,16 @@ contract StakeupTokenTest is Test {
         _deployOneAllocation(initialMintPercentage);
 
         // Fails when caller is not reward manager
-        vm.expectRevert(IStakeupToken.CallerNotRewardManager.selector);
+        vm.expectRevert(IStakeupToken.CallerAuthorizedMinter.selector);
         stakeupToken.mintRewards(address(this), rewards);
 
         // Mint rewards
-        vm.startPrank(address(rewardManager));
-        stakeupToken.mintRewards(address(rewardManager), rewards);
+        vm.startPrank(address(stTBY));
+        stakeupToken.mintRewards(address(stTBY), rewards);
         vm.stopPrank();
 
         // Check that the LP supply was minted
-        assertEq(stakeupToken.balanceOf(address(rewardManager)), rewards);
+        assertEq(stakeupToken.balanceOf(address(stTBY)), rewards);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
         assertEq(stakeupToken.circulatingSupply(), expectedSupply);
     }

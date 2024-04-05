@@ -3,9 +3,11 @@ pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
+import {StakeupStaking} from "src/staking/StakeupStaking.sol";
 
 import {IStTBY} from "src/interfaces/IStTBY.sol";
 
@@ -15,8 +17,6 @@ import {MockBloomPool, IBloomPool} from "../mocks/MockBloomPool.sol";
 import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
 import {MockEmergencyHandler} from "../mocks/MockEmergencyHandler.sol";
 import {MockRegistry} from "../mocks/MockRegistry.sol";
-import {MockStakeupStaking} from "../mocks/MockStakeupStaking.sol";
-import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StTBYTest is Test {
 
@@ -30,8 +30,7 @@ contract StTBYTest is Test {
     MockBloomPool internal pool;
     MockBloomFactory internal factory;
     MockRegistry internal registry;
-    MockStakeupStaking internal staking;
-    MockRewardManager internal rewardsManager;
+    StakeupStaking internal staking;
     MockEmergencyHandler internal emergencyHandler;
 
     address internal owner = makeAddr("owner");
@@ -65,9 +64,6 @@ contract StTBYTest is Test {
         
         swap = new MockSwapFacility(stableToken, billyToken);
         vm.label(address(swap), "MockSwapFacility");
-
-        rewardsManager = new MockRewardManager();
-        vm.label(address(rewardsManager), "MockRewardManager");
         
         pool = new MockBloomPool(
             address(stableToken),
@@ -90,11 +86,12 @@ contract StTBYTest is Test {
 
         registry = new MockRegistry(address(pool));
 
-        staking = new MockStakeupStaking();
-        staking.setRewardManager(address(rewardsManager));
+        address expectedStakingAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
 
-        rewardsManager.setStakeupStaking(address(staking));
-        rewardsManager.setStakeupToken(address(supToken));
+        staking = new StakeupStaking(
+            address(supToken),
+            expectedStakingAddress
+        );
         
         address expectedWrapperAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
 
@@ -106,8 +103,9 @@ contract StTBYTest is Test {
             mintBps,
             redeemBps,
             performanceFeeBps,
-            layerZeroEndpoint,
-            expectedWrapperAddress
+            expectedWrapperAddress,
+            true,
+            layerZeroEndpoint
         );
         vm.label(address(stTBY), "StTBY");
 
@@ -220,8 +218,8 @@ contract StTBYTest is Test {
         stTBY.depositTby(address(pool), amount);
         vm.stopPrank();
 
-        // Verify that the staking contract received the rewards
-        assertEq(supToken.balanceOf(address(staking)), amount_scaled);
+        // Verify that the alice received the rewards
+        assertEq(supToken.balanceOf(alice), amount_scaled);
 
         // Fail to mint rewards for the next mint of stTBY
         pool.mint(bob, 100e6);
@@ -230,8 +228,8 @@ contract StTBYTest is Test {
         stTBY.depositTby(address(pool), 100e6);
         vm.stopPrank();
 
-        // Verify that the staking contract did not receive any additional rewards
-        assertEq(supToken.balanceOf(address(staking)), amount_scaled);
+        // Verify that bob did not receive any rewards
+        assertEq(supToken.balanceOf(bob), 0);
         // Verify that bob still received his stTBY
         assertTrue(stTBY.balanceOf(bob) > 0);
 
@@ -254,8 +252,8 @@ contract StTBYTest is Test {
         stTBY.depositTby(address(pool), 100e6);
         vm.stopPrank();
 
-        // Verify that the staking contract did not receive any additional rewards
-        assertEq(supToken.balanceOf(address(staking)), amount_scaled);
+        // Verify alice did not receive any additional rewards
+        assertEq(supToken.balanceOf(alice), amount_scaled);
         // Verify that alice still received her stTBY
         assertTrue(stTBY.balanceOf(alice) > aliceBalancePreMint);
     }
@@ -506,5 +504,26 @@ contract StTBYTest is Test {
 
         assertEq(stTBY.sharesOf(address(staking)), stakeupStakingShares + performanceFeeInShares + aliceRedeemFees + bobRedeemFees);
         // ###############################################
+    }
+
+    function test_DistributePokeRewards() public {
+        uint256 MAX_POKE_REWARDS = 10_000_000e18;
+
+        // Setup pool and stTBY
+        registry.setTokenInfos(true);
+        pool.setCommitPhaseEnd(block.timestamp + 1 hours + 3 days);
+        pool.setState(IBloomPool.State.Commit);
+
+        skip(3 days);
+        uint256 year = 1;
+        uint256 yearOneRewards = MAX_POKE_REWARDS * (FixedPointMathLib.WAD - (FixedPointMathLib.WAD / 2**year)) / FixedPointMathLib.WAD;
+
+        uint256 expectedReward = 3 days * yearOneRewards / 52 weeks;
+        
+        vm.startPrank(alice);
+        stTBY.poke();
+        vm.stopPrank();
+
+        assertEq(supToken.balanceOf(alice), expectedReward);        
     }
 }

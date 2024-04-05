@@ -16,8 +16,8 @@ interface IStakeupStaking is ISUPVesting {
     // @notice User has no rewards to claim
     error NoRewardsToClaim();
 
-    // @notice Only the reward token can call this function
-    error OnlyRewardToken();
+    // @notice Only stTBY can call this function
+    error CallerNotStTBY();
 
     // @notice No Fees were sent to the contract
     error NoFeesToProcess();
@@ -112,9 +112,6 @@ interface IStakeupStaking is ISUPVesting {
     
     /// @notice Returns the stTBY token
     function getStTBY() external view returns (IStTBY);
-
-    /// @notice Returns the address of the Reward Manager
-    function getRewardManager() external view returns (address);
     
     /// @notice Returns the total amount of STAKEUP staked within the contract
     function totalStakeUpStaked() external view returns (uint256);

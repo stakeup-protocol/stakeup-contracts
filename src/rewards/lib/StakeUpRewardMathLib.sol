@@ -18,6 +18,9 @@ library StakeUpRewardMathLib {
     /// @notice Fixed point representation of 1 scaled to 18 decimal places
     uint256 private constant FIXED_POINT_ONE = 1e18;
 
+    /// @notice Amount of rewards to be distributed to users for poking the contract (mainnet only)
+    uint256 internal constant POKE_REWARDS = 10_000_000e18;
+
     /**
      * @notice Calculates the amount of tokens to drip via a linear halving schedule over 5 years
      * @param rewardSupply The total amount of rewards to be distributed during the 5 year period

@@ -12,26 +12,34 @@ import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
 contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
     address private immutable _stakeupStaking;
-    address private immutable _rewardManager;
+
+    /// @notice This address is authorized to mint tokens
+    mapping(address => bool) private _authorizedMinters;
 
     uint256 internal constant DECIMAL_SCALING = 1e18;
     uint256 internal constant MAX_SUPPLY = 1_000_000_000 * DECIMAL_SCALING;
 
-    modifier onlyManager() {
-        if (msg.sender != _rewardManager) revert CallerNotRewardManager();
+    modifier onlyAuthorized() {
+        if (!_authorizedMinters[msg.sender]) {
+            revert CallerAuthorizedMinter();
+        }
         _;
     }
 
     constructor(
-        address layerZeroEndpoint,
         address stakeupStaking,
-        address rewardManager,
-        address owner
+        address gaugeDistributor, // Optional parameter for the gauge distributor
+        address owner,
+        address layerZeroEndpoint
     ) OFT("Stakeup Token", "SUP", layerZeroEndpoint) Ownable2Step() {
         _stakeupStaking = stakeupStaking;
-        _rewardManager = rewardManager;
 
-        IRewardManager(rewardManager).initialize();
+        _authorizedMinters[_stakeupStaking] = true;
+        _authorizedMinters[address(IStakeupStaking(stakeupStaking).getStTBY())] = true;
+
+        if (gaugeDistributor != address(0)) {
+            _authorizedMinters[gaugeDistributor] = true;
+        }
 
         _transferOwnership(owner);
     }
@@ -68,7 +76,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
     }
 
     /// @inheritdoc IStakeupToken
-    function mintRewards(address recipient, uint256 amount) external override onlyManager {
+    function mintRewards(address recipient, uint256 amount) external override onlyAuthorized {
         _mint(recipient, amount);
     }
 

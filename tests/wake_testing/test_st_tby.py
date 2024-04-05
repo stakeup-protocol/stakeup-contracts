@@ -284,7 +284,6 @@ def test_deposit_existing_tby():
 @default_chain.connect()
 def test_deposit_fee():
     deploy_env(default_chain)
-    stakeup.setFeeProcessed(False)
 
     user = default_chain.accounts[1]
 
@@ -295,4 +294,3 @@ def test_deposit_fee():
     deposit(default_chain, user, EvmMath.parse_decimals(deposit_amount, 6), False)
 
     assert st_tby.balanceOf(stakeup.address) == EvmMath.parse_eth(deposit_fee)
-    assert stakeup.isFeeProcessed() == True

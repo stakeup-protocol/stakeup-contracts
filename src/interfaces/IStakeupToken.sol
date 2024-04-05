@@ -16,8 +16,8 @@ interface IStakeupToken {
     /// @notice Invalid recipient, must be non-zero address
     error InvalidRecipient();
 
-    /// @notice Invalid caller, must be reward manager
-    error CallerNotRewardManager();
+    /// @notice Invalid caller, must be StakeUpStaking or the CurveGaugeDistributor
+    error CallerAuthorizedMinter();
 
     /// @notice The total number of shares have not been fully allocated
     error SharesNotFullyAllocated();

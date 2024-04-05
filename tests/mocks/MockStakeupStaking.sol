@@ -7,7 +7,7 @@ import {IStTBY} from "src/interfaces/IStTBY.sol";
 import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
 
 contract MockStakeupStaking is IStakeupStaking {
-    address private _rewardManager;
+    address private _stTBY;
     bool private _feeProcessed;
 
     function processFees() external override {
@@ -32,18 +32,16 @@ contract MockStakeupStaking is IStakeupStaking {
         uint256 stakeupAmount
     ) external override {}
 
-    function getRewardManager() external view override returns (address) {
-        return _rewardManager;
-    }
-
-    function setRewardManager(address rewardManager) external {
-        _rewardManager = rewardManager;
-    }
-
     function getStakupToken() external view override returns (IStakeupToken) {}
 
-    function getStTBY() external view override returns (IStTBY) {}
+    function getStTBY() external view override returns (IStTBY) {
+        return IStTBY(_stTBY);
+    }
 
+    function setStTBY(address stTBY) external {
+        _stTBY = stTBY;
+    }
+    
     function totalStakeUpStaked() external view override returns (uint256) {}
 
     function getRewardData()

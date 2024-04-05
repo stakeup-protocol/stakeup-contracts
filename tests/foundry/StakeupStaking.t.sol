@@ -8,7 +8,6 @@ import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
 import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
 
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StakeupStakingTest is Test {
     using FixedPointMathLib for uint256;
@@ -16,7 +15,6 @@ contract StakeupStakingTest is Test {
     StakeupStaking public stakeupStaking;
     MockERC20 public mockStakeupToken;
     MockERC20 public mockStTBY;
-    MockRewardManager public rewardManager;
 
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
@@ -37,7 +35,6 @@ contract StakeupStakingTest is Test {
 
         stakeupStaking = new StakeupStaking(
            address(mockStakeupToken),
-           address(rewardManager),
            address(mockStTBY)
         );
         vm.label(address(stakeupStaking), "stakeupStaking");
@@ -114,7 +111,7 @@ contract StakeupStakingTest is Test {
         
         // Reverts if someone other than stTBY calls this function
         vm.startPrank(alice);
-        vm.expectRevert(IStakeupStaking.OnlyRewardToken.selector);
+        vm.expectRevert(IStakeupStaking.CallerNotStTBY.selector);
         stakeupStaking.processFees();
         vm.stopPrank();
 
