@@ -14,7 +14,6 @@ import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/bloom/IBloomPool.sol";
 import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
-import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
@@ -76,7 +75,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     uint256 internal _lastRateUpdate;
 
     /// @dev Deployment timestamp
-    uint256 internal _startTimestamp;
+    uint256 internal immutable _startTimestamp;
 
     /// @dev Scaling factor for underlying token
     uint256 private immutable _scalingFactor;

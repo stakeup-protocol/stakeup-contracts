@@ -6,10 +6,8 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
-import {StakeUpRewardMathLib} from "../rewards/lib/StakeUpRewardMathLib.sol";
 import {SUPVesting} from "./SUPVesting.sol";
 
-import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
@@ -41,20 +39,11 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     /// @notice The last block number when rewards were distributed
     uint256 private _lastRewardBlock;
 
-    /// @notice Amount of rewards remaining to be distributed to users for poking the contract
-    uint256 private _pokeRewardsRemaining;
-
-    /// @notice The timestamp when the staking contract was deployed. Used to calculate rewards
-    uint256 private immutable _startTimestamp;
-
     /// @dev Mapping of users to their staking data
     mapping(address => StakingData) private _stakingData;
 
     /// @notice The initial reward index
     uint256 internal constant INITIAL_REWARD_INDEX = 1;
-
-    /// @notice Amount of rewards to be distributed to users for poking the contract (mainnet only)
-    uint256 internal constant POKE_REWARDS = 10_000_000e18;
 
     // =================== Modifiers ===================
 
@@ -84,7 +73,6 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     ) SUPVesting(stakeupToken) {
         _stTBY = IStTBY(stTBY);
         _lastRewardBlock = block.number;
-        _pokeRewardsRemaining = POKE_REWARDS;
     }
 
     // ================== functions ==================
@@ -94,15 +82,6 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
         uint256 stakeupAmount
     ) external override updateIndex distributeRewards {
         _stake(msg.sender, stakeupAmount);
-    }
-
-    /// @inheritdoc IStakeupStaking
-    function delegateStake(
-        address receiver,
-        uint256 stakeupAmount
-    ) public override updateIndex {
-        _distributeRewards(receiver);
-        _stake(receiver, stakeupAmount);
     }
 
     /// @inheritdoc IStakeupStaking
@@ -197,15 +176,11 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
         if (amount == 0) revert ZeroTokensStaked();
 
-        // If stTBY is the sender, then there is no need to transfer tokens
-        // as the tokens will be minted directly to the staking contract
-        if (msg.sender != address(_stTBY)) {
-            IERC20(address(_stakeupToken)).safeTransferFrom(
-                msg.sender,
-                address(this),
-                amount
-            );
-        }
+        IERC20(address(_stakeupToken)).safeTransferFrom(
+            msg.sender,
+            address(this),
+            amount
+        );
 
         userStakingData.amountStaked += uint128(amount);
         _totalStakeUpStaked += amount;
@@ -308,16 +283,6 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     }
 
     /**
-     * @notice Delegates stake and mints rewards on behalf of a user
-     * @param rewardReceiver The address of the user receiving the rewards
-     * @param amount The amount of rewards to delegate stake and mint
-     */
-    function _delegateStakeAndMint(address rewardReceiver, uint256 amount) internal {
-        delegateStake(rewardReceiver, amount);
-        IStakeupToken(_stakeupToken).mintRewards(address(this), amount);
-    }
-
-    /**
      * @notice Transfers the user's accrued rewards to the user
      * @param user The user to transfer rewards to
      */
@@ -334,12 +299,7 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc SUPVesting
-    function _vestTokens(address account) internal override updateIndex {
-        _distributeRewards(account);
-    }
-
-    /// @inheritdoc SUPVesting
-    function _claimTokens(address account) internal override updateIndex {
+    function _updateRewardState(address account) internal override updateIndex {
         _distributeRewards(account);
     }
 }

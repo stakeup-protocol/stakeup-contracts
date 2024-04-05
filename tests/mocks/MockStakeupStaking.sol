@@ -27,11 +27,6 @@ contract MockStakeupStaking is IStakeupStaking {
         address account
     ) external view override returns (uint256) {}
 
-    function delegateStake(
-        address delegatee,
-        uint256 stakeupAmount
-    ) external override {}
-
     function getStakupToken() external view override returns (IStakeupToken) {}
 
     function getStTBY() external view override returns (IStTBY) {

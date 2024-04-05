@@ -2,22 +2,25 @@
 
 pragma solidity 0.8.22;
 
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {OFT, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
 contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
+    
+    /// @notice Address of the StakeUp Staking contract
     address private immutable _stakeupStaking;
 
-    /// @notice This address is authorized to mint tokens
+    /// @notice Mapping of authorized minters status'
     mapping(address => bool) private _authorizedMinters;
 
+    /// @notice Token decimal scaling for precision
     uint256 internal constant DECIMAL_SCALING = 1e18;
-    uint256 internal constant MAX_SUPPLY = 1_000_000_000 * DECIMAL_SCALING;
+
+    /// @notice Maximum supply of SUP tokens
+    uint256 internal constant MAX_SUPPLY = 1_000_000_000e18;
 
     modifier onlyAuthorized() {
         if (!_authorizedMinters[msg.sender]) {
