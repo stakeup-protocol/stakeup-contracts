@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.22;
 
-import {OFT, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
+import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
@@ -33,8 +33,9 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         address stakeupStaking,
         address gaugeDistributor, // Optional parameter for the gauge distributor
         address owner,
-        address layerZeroEndpoint
-    ) OFT("Stakeup Token", "SUP", layerZeroEndpoint) Ownable2Step() {
+        address layerZeroEndpoint,
+        address _layerZeroDelegate
+    ) OFT("Stakeup Token", "SUP", layerZeroEndpoint, _layerZeroDelegate) Ownable2Step() {
         _stakeupStaking = stakeupStaking;
 
         _authorizedMinters[_stakeupStaking] = true;

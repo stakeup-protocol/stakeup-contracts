@@ -1,7 +1,7 @@
 from eth_account import Account
 from wake.testing import *
 from wake.testing.fuzzing import *
-from helpers.wake_st_tby_setup import ContractConfig, deploy_st_tby_env, StTBYTestEnv
+from helpers.wake_st_tby_setup import deploy_st_tby_env
 from helpers.utils import *
 from pytypes.src.interfaces.bloom.IBloomPool import IBloomPool
 from pytypes.src.token.StTBY import StTBY
@@ -65,7 +65,6 @@ def test_deployment():
     assert wst_tby.address != Address(0)
     assert st_tby.owner() == deployer.address
     assert st_tby.getWstTBY().address == wst_tby.address
-    assert st_tby.circulatingSupply() == 0
 
 @default_chain.connect()
 def test_mint_fee():
@@ -89,7 +88,6 @@ def test_mint_fee():
     assert st_tby.getMintBps() == mint_fee_scaled
     assert st_tby.balanceOf(user.address) == int(EvmMath.parse_eth(tby_deposit_amount) - scaled_mint_fee)
     assert st_tby.balanceOf(stakeup.address) == scaled_mint_fee
-    assert st_tby.circulatingSupply() == EvmMath.parse_eth(tby_deposit_amount)
 
     ## TODO: Mint fee with 1:1.02 TBY:USD exchange rate
 

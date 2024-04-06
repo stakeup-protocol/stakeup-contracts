@@ -14,5 +14,7 @@ remappings = [
     "solmate/=lib/solmate/src/",
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "solady/=lib/solady/src/",
-    "@layerzerolabs/=lib/solidity-examples/contracts",
+    "@LayerZero/=lib/LayerZero-v2/oapp/contracts/",
+    "@layerzerolabs/=lib/LayerZero-v2/oapp/node_modules/@layerzerolabs/",
+    "@LayerZeroTesting/=lib/devtools/packages/test-devtools-evm-foundry/contracts/",
 ]

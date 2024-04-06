@@ -14,13 +14,15 @@ remappings = [
     "solmate/=lib/solmate/src/",
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "solady/=lib/solady/src/",
-    "@layerzerolabs/=lib/solidity-examples/contracts/",
     "ds-test/=lib/forge-std/lib/ds-test/src/",
     "erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/",
     "forge-std/=lib/forge-std/src/",
     "openzeppelin-contracts/=lib/openzeppelin-contracts/",
     "openzeppelin/=lib/openzeppelin-contracts/contracts/",
     "solidity-examples/=lib/solidity-examples/contracts/",
+    "@LayerZero/=lib/LayerZero-v2/oapp/contracts/",
+    "@layerzerolabs/=lib/LayerZero-v2/oapp/node_modules/@layerzerolabs/",
+    "@LayerZeroTesting/=lib/devtools/packages/test-devtools-evm-foundry/contracts/",
 ]
 
 [compiler.solc.optimizer]

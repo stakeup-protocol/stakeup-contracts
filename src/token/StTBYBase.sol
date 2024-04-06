@@ -3,7 +3,7 @@ pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
-import {OFT, IERC20, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
+import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
 import {IStTBYBase} from "../interfaces/IStTBYBase.sol";
 
 /// @title Staked TBY Base Contract
@@ -36,14 +36,10 @@ contract StTBYBase is IStTBYBase, OFT {
 
     // =================== Functions ===================
 
-    constructor(address _layerZeroEndpoint) 
-        OFT("Staked TBY", "stTBY", _layerZeroEndpoint)
+    constructor(address _layerZeroEndpoint, address _layerZeroDelegate) 
+        OFT("Staked TBY", "stTBY", _layerZeroEndpoint, _layerZeroDelegate)
     {
         // solhint-disable-next-line-no-empty-blocks
-    }
-
-    function circulatingSupply() public view override returns (uint) {
-        return totalSupply();
     }
 
     /**
@@ -52,7 +48,7 @@ contract StTBYBase is IStTBYBase, OFT {
      *  is pegged to the total amount of Usd controlled by the protocol.
      * @return Amount of tokens in existence
      */
-    function totalSupply() public view override(IERC20, ERC20) returns (uint256) {
+    function totalSupply() public view override returns (uint256) {
         return _getTotalUsd();
     }
 
@@ -68,7 +64,7 @@ contract StTBYBase is IStTBYBase, OFT {
      * @param account Account to get balance of
      * @return Amount of tokens owned by the `_account`
      */
-    function balanceOf(address account) public view override(IERC20, ERC20) returns (uint256) {
+    function balanceOf(address account) public view override returns (uint256) {
         return getUsdByShares(_sharesOf(account));
     }
 
@@ -83,7 +79,7 @@ contract StTBYBase is IStTBYBase, OFT {
      * @param recipient recipient of stTBY tokens
      * @param amount Amount of tokens being transfered
      */
-    function transfer(address recipient, uint256 amount) public override(IERC20, ERC20) returns (bool) {
+    function transfer(address recipient, uint256 amount) public override returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
@@ -95,7 +91,7 @@ contract StTBYBase is IStTBYBase, OFT {
      * @param owner Owner of the tokens
      * @param spender Spender of the tokens
      */
-    function allowance(address owner, address spender) public view override(IERC20, ERC20) returns (uint256) {
+    function allowance(address owner, address spender) public view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
@@ -107,7 +103,7 @@ contract StTBYBase is IStTBYBase, OFT {
      * @param spender Spender of stTBY tokens
      * @param amount Amount of stTBY tokens allowed to be spent
      */
-    function approve(address spender, uint256 amount) public override(IERC20, ERC20) returns (bool) {
+    function approve(address spender, uint256 amount) public override returns (bool) {
         _approve(msg.sender, spender, amount);
         return true;
     }
@@ -130,7 +126,7 @@ contract StTBYBase is IStTBYBase, OFT {
         address sender,
         address recipient, 
         uint256 amount
-    ) public override(IERC20, ERC20) returns (bool) {
+    ) public override returns (bool) {
         _spendAllowance(sender, msg.sender, amount);
         _transfer(sender, recipient, amount);
         return true;
@@ -406,25 +402,23 @@ contract StTBYBase is IStTBYBase, OFT {
         emit TransferShares(from, to, sharesAmount);
     }
 
-    function _debitFrom(
-        address _from,
-        uint16,
-        bytes memory,
-        uint _amount
-    ) internal override returns (uint) {
-        address spender = _msgSender();
-        if (_from != spender) _spendAllowance(_from, spender, _amount);
-        uint256 shares = getSharesByUsd(_amount);
-        _burnShares(_from, shares);
-        return _amount;
+    function _debit(
+        uint256 _amountLD,
+        uint256 _minAmountLD,
+        uint32 _dstEid
+    ) internal override returns (uint256 amountSentLD, uint256 amountReceivedLD) {
+        (amountSentLD, amountReceivedLD) = _debitView(_amountLD, _minAmountLD, _dstEid);
+    
+        uint256 shares = getSharesByUsd(amountSentLD);
+        _burnShares(msg.sender, shares);
     }
 
-    function _creditTo(
-        uint16,
-        address _toAddress,
-        uint _amount
-    ) internal override returns (uint) {
-        _mintShares(_toAddress, getSharesByUsd(_amount));
-        return _amount;
+    function _credit(
+        address _to,
+        uint256 _amountToCreditLD,
+        uint32 /*_srcEid*/
+    ) internal override returns (uint256 amountReceivedLD) {
+        _mintShares(_to, getSharesByUsd(_amountToCreditLD));
+        return _amountToCreditLD;
     }
 }

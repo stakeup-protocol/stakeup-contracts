@@ -9,6 +9,7 @@ import {StakeupToken, IStakeupToken} from "src/token/StakeupToken.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {MockStakeupStaking} from "../mocks/MockStakeupStaking.sol";
+import {LayerZeroEndpointV2Mock} from "../mocks/LayerZero/LayerZeroEndpointV2Mock.sol";
 
 contract StakeupTokenTest is Test {
     StakeupToken public stakeupToken;
@@ -20,6 +21,11 @@ contract StakeupTokenTest is Test {
     address internal stTBY;
     address internal layerZeroEndpoint;
     
+    LayerZeroEndpointV2Mock internal layerZeroEndpointA;
+    LayerZeroEndpointV2Mock internal layerZeroEndpointB;
+    uint32 internal constant EID_A = 1;
+    uint32 internal constant EID_B = 2;
+
     MockStakeupStaking internal stakeupStaking;
 
     uint64 initialMintPercentage = 1e15; // .01%
@@ -35,6 +41,9 @@ contract StakeupTokenTest is Test {
         layerZeroEndpoint = makeAddr("layerZeroEndpoint");
         stakeupStaking = new MockStakeupStaking();
         stakeupStaking.setStTBY(stTBY);
+
+        layerZeroEndpointA = new LayerZeroEndpointV2Mock(EID_A, owner);
+        layerZeroEndpointB = new LayerZeroEndpointV2Mock(EID_B, owner);
     }
 
     function testViewFunctions() public {
@@ -51,7 +60,6 @@ contract StakeupTokenTest is Test {
         assertEq(stakeupToken.decimals(), 18);
 
         assertEq(stakeupToken.totalSupply(), expectedSupply);
-        assertEq(stakeupToken.circulatingSupply(), stakeupToken.totalSupply());
     }
 
     function testOwnership() public {        
@@ -112,8 +120,6 @@ contract StakeupTokenTest is Test {
         // Check that the LP supply was minted
         assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
-        assertEq(stakeupToken.circulatingSupply(), expectedSupply);
-
     }
 
     function testAirdrop() public {
@@ -148,7 +154,6 @@ contract StakeupTokenTest is Test {
         assertEq(stakeupToken.balanceOf(airdrop1), 500_000e18);
         assertEq(stakeupToken.balanceOf(airdrop2), 500_000e18);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
-        assertEq(stakeupToken.circulatingSupply(), expectedSupply);
     }
 
     function testRevertZeroAddress() public {
@@ -204,7 +209,8 @@ contract StakeupTokenTest is Test {
             address(stakeupStaking),
             address(0),
             owner,
-            address(0)
+            address(layerZeroEndpointA),
+            owner
         );
 
         vm.startPrank(owner);
@@ -280,7 +286,8 @@ contract StakeupTokenTest is Test {
                 address(stakeupStaking),
                 address(stTBY),
                 owner,
-                address(0)
+                address(layerZeroEndpointA),
+                owner
             );
         }
 
@@ -311,6 +318,5 @@ contract StakeupTokenTest is Test {
         // Check that the LP supply was minted
         assertEq(stakeupToken.balanceOf(address(stTBY)), rewards);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
-        assertEq(stakeupToken.circulatingSupply(), expectedSupply);
     }
 }

@@ -8,6 +8,7 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
 import {StakeupStaking} from "src/staking/StakeupStaking.sol";
+import {LayerZeroEndpointV2Mock} from "../mocks/LayerZero/LayerZeroEndpointV2Mock.sol";
 
 import {IStTBY} from "src/interfaces/IStTBY.sol";
 
@@ -33,6 +34,9 @@ contract StTBYTest is Test {
     StakeupStaking internal staking;
     MockEmergencyHandler internal emergencyHandler;
 
+    LayerZeroEndpointV2Mock internal layerZeroEndpointA;
+    LayerZeroEndpointV2Mock internal layerZeroEndpointB;
+
     address internal owner = makeAddr("owner");
     address internal layerZeroEndpoint = makeAddr("layerZeroEndpoint");
     address internal alice = makeAddr("alice");
@@ -44,6 +48,9 @@ contract StTBYTest is Test {
     uint16 internal performanceFeeBps = 1000;
 
     uint16 internal constant BPS = 10000;
+
+    uint32 internal constant EID_A = 1;
+    uint32 internal constant EID_B = 2;
 
     bytes internal constant NOT_OWNER_ERROR = bytes("Ownable: caller is not the owner");
 
@@ -86,11 +93,14 @@ contract StTBYTest is Test {
 
         registry = new MockRegistry(address(pool));
 
-        address expectedStakingAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
+        layerZeroEndpointA = new LayerZeroEndpointV2Mock(EID_A, owner);
+        layerZeroEndpointB = new LayerZeroEndpointV2Mock(EID_B, owner);
+
+        address expectedstTBYAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
 
         staking = new StakeupStaking(
             address(supToken),
-            expectedStakingAddress
+            expectedstTBYAddress
         );
         
         address expectedWrapperAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
@@ -105,7 +115,8 @@ contract StTBYTest is Test {
             performanceFeeBps,
             expectedWrapperAddress,
             true,
-            layerZeroEndpoint
+            address(layerZeroEndpointA),
+            owner
         );
         vm.label(address(stTBY), "StTBY");
 

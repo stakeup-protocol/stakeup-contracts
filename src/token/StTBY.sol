@@ -94,8 +94,9 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         uint16 performanceBps_, // Suggested default 10% of yield
         address wstTBY,
         bool pokeEligible,
-        address layerZeroEndpoint
-    ) StTBYBase(layerZeroEndpoint) {
+        address layerZeroEndpoint,
+        address layerZeroDelegate
+    ) StTBYBase(layerZeroEndpoint, layerZeroDelegate) {
         if (underlyingToken == address(0)) revert InvalidAddress();
         if (wstTBY == address(0)) revert InvalidAddress();
         if (bloomFactory == address(0)) revert InvalidAddress();
