@@ -5,13 +5,16 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 
 import {SUPVesting} from "./SUPVesting.sol";
+
+import {IOAppComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking, IStakeupStakingBase} from "../interfaces/IStakeupStaking.sol";
-
+import "forge-std/Console2.sol";
 /**
  * @title StakeupStaking
  * @notice Allows users to stake their STAKEUP tokens to earn stTBY rewards.
@@ -21,7 +24,12 @@ import {IStakeupStaking, IStakeupStakingBase} from "../interfaces/IStakeupStakin
  * @dev Rewards will be streamed to the staking contract anytime fees are collected and 
  *      are immediately claimable by the user. The rewards are denominated in stTBY shares.
  */
-contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
+contract StakeupStaking is
+    IStakeupStaking,
+    IOAppComposer,
+    SUPVesting,
+    ReentrancyGuard
+{
     using SafeERC20 for IERC20;
     using FixedPointMathLib for uint256;
 
@@ -67,10 +75,7 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
     // ================= Constructor =================
 
-    constructor(
-        address stakeupToken,
-        address stTBY
-    ) SUPVesting(stakeupToken) {
+    constructor(address stakeupToken, address stTBY) SUPVesting(stakeupToken) {
         _stTBY = IStTBY(stTBY);
         _lastRewardBlock = block.number;
     }
@@ -301,5 +306,22 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     /// @inheritdoc SUPVesting
     function _updateRewardState(address account) internal override updateIndex {
         _distributeRewards(account);
+    }
+
+    // TODO: Add protections
+    function lzCompose(
+        address _oApp,
+        bytes32 /*_guid*/,
+        bytes calldata _message,
+        address /*Executor*/,
+        bytes calldata /*Executor Data*/
+    ) external payable override {
+        bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(_message);
+        console2.log("app address: %s", _oApp);
+        console2.log("composeMsgContent: %s", string(_composeMsgContent));
+
+        (bool success, ) = address(this).call(_composeMsgContent);
+
+        if (!success) revert("StakeupStaking: lzCompose failed");
     }
 }

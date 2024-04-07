@@ -18,6 +18,7 @@ import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
+import "forge-std/Console2.sol";
 
 /// @title Staked TBY Contract
 contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
@@ -325,10 +326,11 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
         if (sharesAmount == 0) revert ZeroAmount();
-
+        console2.log("stTBY Fee", sharesFeeAmount);
         _mintShares(msg.sender, sharesAmount);
+        console2.log("user balance", balanceOf(address(msg.sender)));
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
-        _stakeupStaking.processFees();
+        console2.log("stakeup balance", balanceOf(address(_stakeupStaking)));
 
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
 
@@ -340,6 +342,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         }
 
         _setTotalUsd(_getTotalUsd() + amountScaled);
+        _stakeupStaking.processFees();
 
         emit Deposit(msg.sender, token, amount, sharesAmount);
     }
