@@ -14,6 +14,7 @@ import {MessagingChannel} from "@layerzerolabs/lz-evm-protocol-v2/contracts/Mess
 import {MessagingComposer} from "@layerzerolabs/lz-evm-protocol-v2/contracts/MessagingComposer.sol";
 import {MessageLibManager} from "@layerzerolabs/lz-evm-protocol-v2/contracts/MessageLibManager.sol";
 import {MessagingContext} from "@layerzerolabs/lz-evm-protocol-v2/contracts/MessagingContext.sol";
+import "forge-std/Console2.sol";
 
 // LayerZero EndpointV2 is fully backward compatible with LayerZero Endpoint(V1), but it also supports additional
 // features that Endpoint(V1) does not support now and may not in the future. We have also changed some terminology
@@ -120,7 +121,7 @@ contract LayerZeroEndpointV2Mock is
     ) internal returns (MessagingReceipt memory, address) {
         // get the correct outbound nonce
         uint64 latestNonce = _outbound(_sender, _params.dstEid, _params.receiver);
-
+        console2.log("latestNonce: ", latestNonce);
         // construct the packet with a GUID
         Packet memory packet = Packet({
             nonce: latestNonce,
@@ -134,7 +135,7 @@ contract LayerZeroEndpointV2Mock is
 
         // get the send library by sender and dst eid
         address _sendLibrary = getSendLibrary(_sender, _params.dstEid);
-
+        console2.log("Send library");
         // messageLib always returns encodedPacket with guid
         (MessagingFee memory fee, bytes memory encodedPacket) = ISendLib(_sendLibrary).send(
             packet,
