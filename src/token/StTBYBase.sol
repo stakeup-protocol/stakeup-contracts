@@ -408,9 +408,10 @@ contract StTBYBase is IStTBYBase, OFT {
         uint32 _dstEid
     ) internal override returns (uint256 amountSentLD, uint256 amountReceivedLD) {
         (amountSentLD, amountReceivedLD) = _debitView(_amountLD, _minAmountLD, _dstEid);
-    
+
         uint256 shares = getSharesByUsd(amountSentLD);
         _burnShares(msg.sender, shares);
+        _setTotalUsd(_getTotalUsd() - amountSentLD);
     }
 
     function _credit(
@@ -419,6 +420,7 @@ contract StTBYBase is IStTBYBase, OFT {
         uint32 /*_srcEid*/
     ) internal override returns (uint256 amountReceivedLD) {
         _mintShares(_to, getSharesByUsd(_amountToCreditLD));
+        _setTotalUsd(_getTotalUsd() + _amountToCreditLD);
         return _amountToCreditLD;
     }
 }

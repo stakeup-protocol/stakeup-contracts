@@ -12,8 +12,11 @@ import {IStTBY} from "./IStTBY.sol";
  */
 interface IStakeupStakingBase {
 
+    /// @notice An unauthorized caller attempted to call a function
+    error UnauthorizedCaller();
+
     /// @notice Updates global staking data after protocol fees are taken
-    function processFees() external;
+    function processFees() external payable;
     
     /// @notice Returns the Stakeup Token
     function getStakupToken() external view returns (IStakeupToken);
