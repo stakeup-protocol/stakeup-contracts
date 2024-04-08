@@ -10,7 +10,7 @@ contract MockStakeupStaking is IStakeupStaking {
     address private _stTBY;
     bool private _feeProcessed;
 
-    function processFees() external override {
+    function processFees() external payable override {
         _feeProcessed = true;
     }
 

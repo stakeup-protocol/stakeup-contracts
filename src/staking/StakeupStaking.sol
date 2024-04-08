@@ -14,7 +14,7 @@ import {IOAppComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking, IStakeupStakingBase} from "../interfaces/IStakeupStaking.sol";
-import "forge-std/Console2.sol";
+
 /**
  * @title StakeupStaking
  * @notice Allows users to stake their STAKEUP tokens to earn stTBY rewards.
@@ -126,7 +126,7 @@ contract StakeupStaking is
     }
 
     /// @inheritdoc IStakeupStakingBase
-    function processFees() external nonReentrant onlyStTBY updateIndex {
+    function processFees() public payable nonReentrant updateIndex {
         // solhint-ignore-previous-line no-empty-blocks
     }
 
@@ -317,11 +317,11 @@ contract StakeupStaking is
         bytes calldata /*Executor Data*/
     ) external payable override {
         bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(_message);
-        console2.log("app address: %s", _oApp);
-        console2.log("composeMsgContent: %s", string(_composeMsgContent));
-
+        
         (bool success, ) = address(this).call(_composeMsgContent);
 
-        if (!success) revert("StakeupStaking: lzCompose failed");
+        if (!success) {
+            revert LZComposeFailed();
+        }
     }
 }

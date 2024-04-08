@@ -6,6 +6,7 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
 
 import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
+import {IStakeupStakingBase} from "src/interfaces/IStakeupStakingBase.sol";
 
 import {MockERC20} from "../mocks/MockERC20.sol";
 
@@ -111,7 +112,7 @@ contract StakeupStakingTest is Test {
         
         // Reverts if someone other than stTBY calls this function
         vm.startPrank(alice);
-        vm.expectRevert(IStakeupStaking.CallerNotStTBY.selector);
+        vm.expectRevert(IStakeupStakingBase.UnauthorizedCaller.selector);
         stakeupStaking.processFees();
         vm.stopPrank();
 

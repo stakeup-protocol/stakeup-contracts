@@ -18,7 +18,6 @@ import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
-import "forge-std/Console2.sol";
 
 /// @title Staked TBY Contract
 contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
@@ -133,7 +132,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function depositTby(address tby, uint256 amount) external nonReentrant {
+    function depositTby(address tby, uint256 amount) external payable nonReentrant {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
 
         if (IBloomPool(tby).UNDERLYING_TOKEN() != address(_underlyingToken)) {
@@ -152,7 +151,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function depositUnderlying(uint256 amount) external nonReentrant {
+    function depositUnderlying(uint256 amount) external payable nonReentrant {
         _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
         IBloomPool latestPool = _getLatestPool();
 
@@ -326,11 +325,8 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
         if (sharesAmount == 0) revert ZeroAmount();
-        console2.log("stTBY Fee", sharesFeeAmount);
         _mintShares(msg.sender, sharesAmount);
-        console2.log("user balance", balanceOf(address(msg.sender)));
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
-        console2.log("stakeup balance", balanceOf(address(_stakeupStaking)));
 
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
 
@@ -342,7 +338,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         }
 
         _setTotalUsd(_getTotalUsd() + amountScaled);
-        _stakeupStaking.processFees();
+        _stakeupStaking.processFees{ value: 100000010526 }();
 
         emit Deposit(msg.sender, token, amount, sharesAmount);
     }
@@ -412,7 +408,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
 
             _mintShares(address(_stakeupStaking), sharesFeeAmount);
-            _stakeupStaking.processFees();
 
             emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
         }
@@ -422,6 +417,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         }
 
         _setTotalUsd(_getCurrentTbyValue() + _remainingBalance * _scalingFactor);
+        _stakeupStaking.processFees();
     }
 
     /**

@@ -94,12 +94,12 @@ interface IStTBY is IStTBYBase {
      * @param tby TBY address
      * @param amount TBY amount to deposit
      */
-    function depositTby(address tby, uint256 amount) external;
+    function depositTby(address tby, uint256 amount) external payable;
     /**
      * @notice Deposit underlying tokens and get stTBY minted
      * @param amount Amount of underlying tokens to deposit
      */
-    function depositUnderlying(uint256 amount) external;
+    function depositUnderlying(uint256 amount) external payable;
 
     /**
      * @notice Redeem stTBY in exchange for underlying tokens. Underlying
