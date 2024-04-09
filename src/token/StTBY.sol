@@ -5,7 +5,6 @@ import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {MessagingReceipt, MessagingFee, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {StakeUpRewardMathLib} from "../rewards/lib/StakeUpRewardMathLib.sol";
 import {StakeUpMintRewardLib} from "../rewards/lib/StakeUpMintRewardLib.sol";
@@ -17,7 +16,6 @@ import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
-import {ILzBridgeConfig} from "../interfaces/ILzBridgeConfig.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
 
@@ -55,12 +53,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     /// @notice Performance fee bps
     uint16 private immutable performanceBps;
 
-    uint16 private constant BPS = 10000;
-
-    uint16 private constant MAX_BPS = 200; // Max 2%
-
-    uint256 private constant AUTO_STAKE_PHASE = 1 days;
-
     /// @dev Last deposit amount
     uint256 internal _lastDepositAmount;
 
@@ -84,6 +76,12 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
     /// @dev Mapping of TBYs that have been redeemed
     mapping(address => bool) private _tbyRedeemed;
+
+    uint16 private constant BPS = 10000;
+
+    uint16 private constant MAX_BPS = 200; // Max 2%
+
+    uint256 private constant AUTO_STAKE_PHASE = 1 days;
 
     // =================== Functions ===================
     constructor(
@@ -138,7 +136,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         address tby, 
         uint256 amount,
         LZBridgeSettings memory settings
-    ) external payable nonReentrant returns (LzBridgeReceipts memory bridgingReceipts) {
+    ) external payable nonReentrant returns (LzBridgeReceipt memory bridgingReceipt) {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
 
         if (IBloomPool(tby).UNDERLYING_TOKEN() != address(_underlyingToken)) {
@@ -161,7 +159,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         external
         payable
         nonReentrant
-        returns (LzBridgeReceipts memory bridgingReceipts)
+        returns (LzBridgeReceipt memory bridgingReceipt)
     {
         _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
         IBloomPool latestPool = _getLatestPool();
@@ -187,7 +185,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         payable
         returns (
             uint256 underlyingRedeemed,
-            LzBridgeReceipts memory bridgingReceipts
+            LzBridgeReceipt memory bridgingReceipt
         )
     {
         return _redeemStTBY(stTBYAmount, settings);
@@ -200,13 +198,13 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         nonReentrant
         returns (
             uint256 underlyingRedeemed,
-            LzBridgeReceipts memory bridgingReceipts
+            LzBridgeReceipt memory bridgingReceipt
         )
     {
         IERC20(address(_wstTBY)).safeTransferFrom(msg.sender, address(this), wstTBYAmount);
         uint256 stTBYAmount = _wstTBY.unwrap(wstTBYAmount);
         _transferShares(address(this), msg.sender, wstTBYAmount);
-        (underlyingRedeemed, bridgingReceipts) =  _redeemStTBY(stTBYAmount, settings);
+        (underlyingRedeemed, bridgingReceipt) =  _redeemStTBY(stTBYAmount, settings);
     }
 
     /// @inheritdoc IStTBY
@@ -220,7 +218,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         payable
         override
         nonReentrant
-        returns (LzBridgeReceipts memory bridgingReceipts)
+        returns (LzBridgeReceipt memory bridgingReceipt)
     {
         if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
         
@@ -246,7 +244,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         uint256 yieldFromPool = withdrawn - amount;
         
-        bridgingReceipts = _processProceeds(withdrawn, yieldFromPool, settings);
+        bridgingReceipt = _processProceeds(withdrawn, yieldFromPool, settings);
 
         if (yieldFromPool > 0 && !_tbyRedeemed[tby]) {
             _tbyRedeemed[tby] = true;
@@ -340,7 +338,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         uint256 amount,
         bool isTby,
         LZBridgeSettings memory settings
-    ) internal returns (LzBridgeReceipts memory bridgingReceipts) {   
+    ) internal returns (LzBridgeReceipt memory bridgingReceipt) {   
         // TBYs will always have the same underlying decimals as the underlying token
         uint256 amountScaled = amount * _scalingFactor;
 
@@ -376,7 +374,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         }
 
         _setTotalUsd(_getTotalUsd() + amountScaled);
-        bridgingReceipts = _stakeupStaking.processFees{ value: msg.value }(msg.sender, settings);
+        bridgingReceipt = _stakeupStaking.processFees{ value: msg.value }(msg.sender, settings);
 
         emit Deposit(msg.sender, token, amount, sharesAmount);
     }
@@ -386,27 +384,27 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
      * @param stTBYAmount Amount of stTBY to redeem
      * @param settings LZBridge settings
      * @return underlyingAmount Amount of underlying tokens withdrawn from stTBY
-     * @return bridgingReceipts Receipts for bridging using LayerZero
+     * @return bridgingReceipt Receipts for bridging using LayerZero
      */
     function _redeemStTBY(uint256 stTBYAmount, LZBridgeSettings memory settings) 
         internal
         returns (
             uint256 underlyingAmount,
-            LzBridgeReceipts memory bridgingReceipts
+            LzBridgeReceipt memory bridgingReceipt
         )
     {
         if (stTBYAmount == 0) revert ParameterOutOfBounds();
         if (balanceOf(msg.sender) < stTBYAmount) revert InsufficientBalance();
 
         uint256 shares = getSharesByUsd(stTBYAmount);
-        (underlyingAmount, bridgingReceipts) = _redeem(msg.sender, shares, settings);
+        (underlyingAmount, bridgingReceipt) = _redeem(msg.sender, shares, settings);
     }
 
     function _redeem(
         address account,
         uint256 shares,
         LZBridgeSettings memory settings
-    ) internal returns (uint256 underlyingAmount, LzBridgeReceipts memory bridgingReceipts) {
+    ) internal returns (uint256 underlyingAmount, LzBridgeReceipt memory bridgingReceipt) {
         uint256 redeemFee = (shares * redeemBps) / BPS;
 
         if (redeemFee > 0) {
@@ -416,7 +414,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             emit FeeCaptured(FeeType.Redeem, redeemFee);
         }
 
-        (underlyingAmount, bridgingReceipts) = _withdraw(account, shares, settings);
+        (underlyingAmount, bridgingReceipt) = _withdraw(account, shares, settings);
         
         emit Redeemed(msg.sender, shares, underlyingAmount);
     }
@@ -425,7 +423,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         address account,
         uint256 shares,
         LZBridgeSettings memory settings
-    ) internal returns (uint256 underlyingAmount, LzBridgeReceipts memory bridgingReceipts) {
+    ) internal returns (uint256 underlyingAmount, LzBridgeReceipt memory bridgingReceipt) {
         uint256 amount = getUsdByShares(shares);
         uint256 underlyingBalance = _underlyingToken.balanceOf(address(this));
 
@@ -439,7 +437,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
             _burnShares(account, shares);
             _setTotalUsd(_getTotalUsd() - amount);
-            bridgingReceipts = _stakeupStaking.processFees{ value: msg.value }(msg.sender, settings);
+            bridgingReceipt = _stakeupStaking.processFees{ value: msg.value }(msg.sender, settings);
         }
     }
 
@@ -452,7 +450,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
      */
     function _processProceeds(uint256 proceeds, uint256 yield, LZBridgeSettings memory settings) 
         internal
-        returns (LzBridgeReceipts memory)
+        returns (LzBridgeReceipt memory)
     {
         uint256 underlyingGains = yield * _scalingFactor;
 

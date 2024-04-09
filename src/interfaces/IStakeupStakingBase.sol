@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {MessagingReceipt, MessagingFee, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
-
 import {ILzBridgeConfig} from "./ILzBridgeConfig.sol";
 import {IStakeupToken} from "./IStakeupToken.sol";
 import {IStTBY} from "./IStTBY.sol";
@@ -25,12 +23,12 @@ interface IStakeupStakingBase is ILzBridgeConfig {
      *        Is an optional parameter on mainnet and can be set to address(0). Do not set
      *        this parameter to address(0) on L2 chains or you will lose the excess fees.
      * @param settings Configuration settings for bridging using LayerZero
-     * @return bridgingReceipts LzBridgeReceipts Receipts for bridging using LayerZero
+     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
     function processFees(address refundRecipient, LZBridgeSettings memory settings)
         external
         payable
-        returns (LzBridgeReceipts memory bridgingReceipts);
+        returns (LzBridgeReceipt memory bridgingReceipt);
     
     /// @notice Returns the Stakeup Token
     function getStakupToken() external view returns (IStakeupToken);

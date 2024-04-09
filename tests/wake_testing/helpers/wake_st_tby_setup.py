@@ -60,7 +60,8 @@ class StTBYTestEnv:
         st_tby_address = get_create_address(self.deployer, self.deployer.nonce + 1)
         stakeupStaking = StakeupStaking.deploy(
             self.sup_token.address,
-            st_tby_address
+            st_tby_address,
+            self.endpoint
         )
         return stakeupStaking
     

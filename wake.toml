@@ -9,6 +9,9 @@ exclude_paths = [
     "certora",
 ]
 include_paths = ["node_modules"]
+via_IR = true
+
+evm_version = 'paris'
 
 remappings = [
     "solmate/=lib/solmate/src/",
@@ -27,7 +30,7 @@ remappings = [
 
 [compiler.solc.optimizer]
 enabled = true
-runs = 200
+runs = 5_000
 
 [detectors]
 exclude = []
@@ -41,7 +44,7 @@ cmd = "anvil"
 cmd_args = "--prune-history 100 --transaction-block-keeper 10 --steps-tracing --silent"
 
 [testing.ganache]
-cmd_args = "-k istanbul -q"
+cmd_args = "-k paris -q"
 
 [testing.hardhat]
 cmd_args = ""

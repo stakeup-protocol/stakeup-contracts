@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IOFT, SendParam, MessagingFee, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 import {OApp, Origin, OAppReceiver} from "@LayerZero/oapp/OApp.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
 
-import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStakingBase} from "../interfaces/IStakeupStakingBase.sol";
+import {IStTBY} from "../interfaces/IStTBY.sol";
 
+/**
+ * @title StakeupStakingL2
+ * @notice Bridges stTBY fees to the mainnet StakeUp Staking contract
+ */
 contract StakeupStakingL2 is OApp, IStakeupStakingBase {
     using OFTComposeMsgCodec for address;
     using OptionsBuilder for bytes;
@@ -25,9 +29,9 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
     address private immutable _baseChainInstance;
 
     /// @notice The endpoint ID of the mainnet chain
-    uint16 private immutable _baseChainEid;
+    uint32 private immutable _baseChainEid;
 
-    bytes constant PROCESS_FEE_MSG = abi.encodeCall(
+    bytes constant public PROCESS_FEE_MSG = abi.encodeCall(
         IStakeupStakingBase.processFees, 
         ((address(0)), LZBridgeSettings({ options: "", fee: MessagingFee({ nativeFee: 0, lzTokenFee: 0 })}))
     );
@@ -42,7 +46,7 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
         address stakeupToken,
         address stTBY,
         address baseChainInstance,
-        uint16 baseChainEid,
+        uint32 baseChainEid,
         address layerZeroEndpoint,
         address layerZeroDelegate
     ) OApp(layerZeroEndpoint, layerZeroDelegate) {
@@ -58,7 +62,7 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
         payable
         override
         authorized
-        returns (LzBridgeReceipts memory bridgingReceipts)
+        returns (LzBridgeReceipt memory bridgingReceipt)
     {
         //Get the balance of stTBY in the contract
         uint256 stTbyBalance = IERC20(address(_stTBY)).balanceOf(address(this));
@@ -71,7 +75,7 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
             refundRecipient
         );
 
-        bridgingReceipts = LzBridgeReceipts(msgReceipt, oftReceipt);
+        bridgingReceipt = LzBridgeReceipt(msgReceipt, oftReceipt);
     }
 
     /// @inheritdoc IStakeupStakingBase
