@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.22;
 
+import {IOFT, SendParam, MessagingFee, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
+
 import {IStakeupStaking} from "src/interfaces/IStakeupStaking.sol";
 import {IStakeupToken} from "src/interfaces/IStakeupToken.sol";
 import {IStTBY} from "src/interfaces/IStTBY.sol";
@@ -9,10 +11,6 @@ import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
 contract MockStakeupStaking is IStakeupStaking {
     address private _stTBY;
     bool private _feeProcessed;
-
-    function processFees() external payable override {
-        _feeProcessed = true;
-    }
 
     function stake(uint256 stakeupAmount) external override {}
 
@@ -36,7 +34,7 @@ contract MockStakeupStaking is IStakeupStaking {
     function setStTBY(address stTBY) external {
         _stTBY = stTBY;
     }
-    
+
     function totalStakeUpStaked() external view override returns (uint256) {}
 
     function getRewardData()
@@ -73,4 +71,20 @@ contract MockStakeupStaking is IStakeupStaking {
     ) external view override returns (uint256) {}
 
     function getLastRewardBlock() external view override returns (uint256) {}
+
+    function processFees(
+        address /*refundRecipient*/,
+        LZBridgeSettings memory /*settings*/
+    )
+        external
+        payable
+        override
+        returns (LzBridgeReceipt memory bridgingReceipt)
+    {
+        _feeProcessed = true;
+        MessagingReceipt memory msgReceipt = MessagingReceipt("", 0, MessagingFee(0, 0));
+        OFTReceipt memory oftReceipt = OFTReceipt(0, 0);
+
+        bridgingReceipt = LzBridgeReceipt(msgReceipt, oftReceipt);
+    }
 }

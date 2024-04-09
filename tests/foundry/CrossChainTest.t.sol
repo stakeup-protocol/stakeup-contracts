@@ -3,24 +3,23 @@ pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {LibRLP} from "solady/utils/LibRLP.sol";
+import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
+import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
+import { TestHelper } from "@LayerZeroTesting/TestHelper.sol";
+import { MessagingFee, SendParam } from "@LayerZero/oft/interfaces/IOFT.sol";
+
+import {MockBloomPool} from "../mocks/MockBloomPool.sol";
+import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
 import {StakeupStakingL2} from "src/staking/StakeupStakingL2.sol";
 import {StTBY} from "src/token/StTBY.sol";
 import {StakeupToken} from "src/token/StakeupToken.sol";
-import {LibRLP} from "solady/utils/LibRLP.sol";
-import {MockBloomPool, IBloomPool} from "../mocks/MockBloomPool.sol";
-import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
-import {MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
-import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
-import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
-import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
-import { TestHelper } from "@LayerZeroTesting/TestHelper.sol";
-import { OFTInspectorMock } from "@LayerZeroTesting/mocks/OFTInspectorMock.sol";
-import { MessagingFee, SendParam } from "@LayerZero/oft/interfaces/IOFT.sol";
-import { IStakeupStakingBase } from "src/interfaces/IStakeupStakingBase.sol";
-import {MockERC20} from "../mocks/MockERC20.sol";
+import {ILzBridgeConfig} from "src/interfaces/ILzBridgeConfig.sol";
 
-contract StakeupStakingL2Test is TestHelper {
+contract CrossChainTest is TestHelper {
     using FixedPointMathLib for uint256;
     using OFTComposeMsgCodec for address;
     using OptionsBuilder for bytes;
@@ -65,7 +64,8 @@ contract StakeupStakingL2Test is TestHelper {
 
         stakeupStaking = new StakeupStaking(
             address(expectedSupAAddress), 
-            address(expectedstTBYAddress)
+            address(expectedstTBYAddress),
+            endpoints[aEid]
         );
 
         supA = new StakeupToken(
@@ -97,6 +97,7 @@ contract StakeupStakingL2Test is TestHelper {
             address(expectedSupBAddress),
             address(expectedstTBYBAddress),
             address(stakeupStaking),
+            aEid,
             address(endpoints[bEid]),
             address(this)
         );
@@ -133,21 +134,21 @@ contract StakeupStakingL2Test is TestHelper {
         sups[0] = address(supA);
         sups[1] = address(supA);
         this.wireOApps(sups);
-
-        // address[] memory staking = new address[](3);
-        // staking[0] = address(stTBYA);
-        // staking[1] = address(stTBYB);
-        // staking[2] = address(stakeupStakingL2);
-
-        this.wireOApps(sups);
     }
 
     function testBridge() public {
         uint256 amount = 10000e6;
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);
-        stTBYA.depositUnderlying{value: 100000010526}(amount);
-
+        ILzBridgeConfig.LZBridgeSettings memory settings = ILzBridgeConfig.LZBridgeSettings({
+            options: "",
+            fee: MessagingFee({
+                nativeFee: 0,
+                lzTokenFee: 0
+            })
+        });
+        stTBYA.depositUnderlying{value: 100000010526}(amount, settings);
+        
         uint256 initialBalanceA = stTBYA.balanceOf(address(this));
         uint256 tokensToSend = 1 ether;
 
@@ -155,7 +156,7 @@ contract StakeupStakingL2Test is TestHelper {
             .newOptions()
             .addExecutorLzReceiveOption(200000, 0);
         SendParam memory sendParam = SendParam(
-            bEid,
+            bEid, // Destination ID 
             addressToBytes32(address(this)),
             tokensToSend,
             tokensToSend,
@@ -190,43 +191,47 @@ contract StakeupStakingL2Test is TestHelper {
         uint256 initialRewardBlock = stakeupStaking.getLastRewardBlock();
         vm.roll(10);
 
-        //stTBYA.depositUnderlying(amount);
-        stTBYB.depositUnderlying{value: 100000010526}(amount);
-        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
-
         bytes memory options = OptionsBuilder
             .newOptions()
             .addExecutorLzReceiveOption(20000000, 0)
             .addExecutorLzComposeOption(0, 50000000, 0);
 
-        bytes memory composeMsg = abi.encodeCall(IStakeupStakingBase.processFees, ());
-
         SendParam memory sendParam = SendParam({
-            dstEid: 1, // Mainnet chain ID
+            dstEid: aEid,
             to: address(stakeupStaking).addressToBytes32(),
-            amountLD: 1000000000000000000,
-            minAmountLD: 1000000000000000000,
+            amountLD: 1000000000000000000, // Expected Fee amount
+            minAmountLD: 1000000000000000000, // Expected Fee amount
             extraOptions: options,
-            composeMsg: composeMsg,
+            composeMsg: stakeupStakingL2.PROCESS_FEE_MSG(),
             oftCmd: ""
         });
 
         MessagingFee memory fee = stTBYB.quoteSend(sendParam, false);
-        
-        (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt) = stTBYB.send{ value: fee.nativeFee }(sendParam, fee, address(this));
+
+        ILzBridgeConfig.LZBridgeSettings memory settings = ILzBridgeConfig.LZBridgeSettings({
+            options: options,
+            fee: MessagingFee({
+                nativeFee: fee.nativeFee,
+                lzTokenFee: fee.lzTokenFee
+            })
+        });
+
+        (ILzBridgeConfig.LzBridgeReceipt memory receipt) = stTBYB.depositUnderlying{value: fee.nativeFee}(amount, settings);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+        
         uint32 dstEid_ = aEid;
         address from_ = address(stTBYA);
         bytes memory options_ = options;
-        bytes32 guid_ = msgReceipt.guid;
+        bytes32 guid_ = receipt.msgReceipt.guid;
         address to_ = address(stakeupStaking);
         bytes memory composerMsg_ = OFTComposeMsgCodec.encode(
-            msgReceipt.nonce,
+            receipt.msgReceipt.nonce,
             bEid,
-            oftReceipt.amountReceivedLD,
-            abi.encodePacked(addressToBytes32(address(this)), composeMsg)
+            receipt.oftReceipt.amountReceivedLD,
+            abi.encodePacked(addressToBytes32(address(stakeupStakingL2)), stakeupStakingL2.PROCESS_FEE_MSG())
         );
-        
+
+        vm.startPrank(endpoints[aEid]);
         this.lzCompose(dstEid_, from_, options_, guid_, to_, composerMsg_);
 
         assertGt(stTBYB.balanceOf(address(this)), 0);

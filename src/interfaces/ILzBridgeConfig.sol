@@ -3,6 +3,10 @@ pragma solidity 0.8.22;
 
 import {MessagingReceipt, MessagingFee, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
+/**
+ * @title ILzBridgeConfig
+ * @notice An interfaces for the configuration settings and receipts for bridging using LayerZero
+ */
 interface ILzBridgeConfig {
     /**
      * @notice Configuration settings to be used for bridging using LayerZero
@@ -19,7 +23,7 @@ interface ILzBridgeConfig {
      * @param msgReceipt Receipt returned for cross-chain messaging
      * @param oftReceipt Receipt returned for cross-chain OFT bridging
      */
-    struct LzBridgeReceipts {
+    struct LzBridgeReceipt {
         MessagingReceipt msgReceipt;
         OFTReceipt oftReceipt;
     }

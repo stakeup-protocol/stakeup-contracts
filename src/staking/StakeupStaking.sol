@@ -5,11 +5,9 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
-import {MessagingReceipt, MessagingFee, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 
 import {SUPVesting} from "./SUPVesting.sol";
-
-import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
@@ -48,7 +46,7 @@ contract StakeupStaking is
     uint256 private _lastRewardBlock;
 
     /// @notice The layer zero endpoint associated with the chain
-    address private _layerZeroEndpoint;
+    address private immutable _layerZeroEndpoint;
 
     /// @dev Mapping of users to their staking data
     mapping(address => StakingData) private _stakingData;
@@ -70,9 +68,9 @@ contract StakeupStaking is
         _;
     }
 
-    /// @notice Only the reward token or LayerZero endpoint can call this function
+    /// @notice Only the reward token or the contract itself can call this function
     modifier authorized() {
-        if (msg.sender != address(_stTBY) || msg.sender != _layerZeroEndpoint) {
+        if (msg.sender != address(_stTBY) && msg.sender != address(this)) {
             revert UnauthorizedCaller();
         }
         _;
@@ -146,7 +144,7 @@ contract StakeupStaking is
         authorized
         nonReentrant
         updateIndex
-        returns (LzBridgeReceipts memory)
+        returns (LzBridgeReceipt memory)
     {
         // solhint-ignore-previous-line no-empty-blocks
     }
@@ -338,6 +336,7 @@ contract StakeupStaking is
         bytes calldata /*Executor Data*/
     ) external payable override {
         if (_oApp != address(_stTBY)) revert InvalidOApp();
+        if (msg.sender != _layerZeroEndpoint) revert UnauthorizedCaller();
 
         bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(
             _message
