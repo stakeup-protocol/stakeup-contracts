@@ -8,11 +8,11 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
 import {StakeupStaking} from "src/staking/StakeupStaking.sol";
-import {LayerZeroEndpointV2Mock} from "../mocks/LayerZero/LayerZeroEndpointV2Mock.sol";
 
 import {IStTBY} from "src/interfaces/IStTBY.sol";
 import {ILzBridgeConfig} from "src/interfaces/ILzBridgeConfig.sol";
 
+import {MockEndpoint} from "../mocks/MockEndpoint.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockSwapFacility} from "../mocks/MockSwapFacility.sol";
 import {MockBloomPool, IBloomPool} from "../mocks/MockBloomPool.sol";
@@ -35,8 +35,8 @@ contract StTBYTest is Test {
     StakeupStaking internal staking;
     MockEmergencyHandler internal emergencyHandler;
 
-    LayerZeroEndpointV2Mock internal layerZeroEndpointA;
-    LayerZeroEndpointV2Mock internal layerZeroEndpointB;
+    MockEndpoint internal layerZeroEndpointA;
+    MockEndpoint internal layerZeroEndpointB;
 
     ILzBridgeConfig.LZBridgeSettings internal settings;
 
@@ -95,9 +95,9 @@ contract StTBYTest is Test {
         factory.setLastCreatedPool(address(pool));
 
         registry = new MockRegistry(address(pool));
-
-        layerZeroEndpointA = new LayerZeroEndpointV2Mock(EID_A, owner);
-        layerZeroEndpointB = new LayerZeroEndpointV2Mock(EID_B, owner);
+        
+        layerZeroEndpointA = new MockEndpoint();
+        layerZeroEndpointB = new MockEndpoint();
 
         address expectedstTBYAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
 
