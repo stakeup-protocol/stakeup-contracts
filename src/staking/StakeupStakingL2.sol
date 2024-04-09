@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IOFT, SendParam, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {IOFT, SendParam, MessagingFee, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 import {OApp, Origin, OAppReceiver} from "@LayerZero/oapp/OApp.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
@@ -24,6 +24,14 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
     /// @notice The address of StakeUp Staking's mainnet instance
     address private immutable _baseChainInstance;
 
+    /// @notice The endpoint ID of the mainnet chain
+    uint16 private immutable _baseChainEid;
+
+    bytes constant PROCESS_FEE_MSG = abi.encodeCall(
+        IStakeupStakingBase.processFees, 
+        ((address(0)), LZBridgeSettings({ options: "", fee: MessagingFee({ nativeFee: 0, lzTokenFee: 0 })}))
+    );
+
     /// @notice Only the reward token can call this function
     modifier authorized() {
         if (msg.sender != address(_stTBY)) revert UnauthorizedCaller();
@@ -34,38 +42,36 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
         address stakeupToken,
         address stTBY,
         address baseChainInstance,
+        uint16 baseChainEid,
         address layerZeroEndpoint,
         address layerZeroDelegate
     ) OApp(layerZeroEndpoint, layerZeroDelegate) {
         _stakeupToken = IStakeupToken(stakeupToken);
         _stTBY = IStTBY(stTBY);
         _baseChainInstance = baseChainInstance;
+        _baseChainEid = baseChainEid;
     }
 
     /// @inheritdoc IStakeupStakingBase
-    function processFees() external payable override authorized {
+    function processFees(address refundRecipient, LZBridgeSettings memory settings)
+        external
+        payable
+        override
+        authorized
+        returns (LzBridgeReceipts memory bridgingReceipts)
+    {
         //Get the balance of stTBY in the contract
         uint256 stTbyBalance = IERC20(address(_stTBY)).balanceOf(address(this));
 
-        bytes memory options = OptionsBuilder
-            .newOptions()
-            .addExecutorLzReceiveOption(20000000, 0)
-            .addExecutorLzComposeOption(0, 50000000, 0);
-
-        bytes memory composeMsg = abi.encodeCall(IStakeupStakingBase.processFees, ());
-        SendParam memory sendParam = SendParam({
-            dstEid: 1, // Mainnet chain ID
-            to: _baseChainInstance.addressToBytes32(),
-            amountLD: stTbyBalance,
-            minAmountLD: stTbyBalance,
-            extraOptions: options,
-            composeMsg: composeMsg,
-            oftCmd: ""
-        });
-
-        MessagingFee memory fee = IOFT(address(_stTBY)).quoteSend(sendParam, false);
+        SendParam memory sendParam = _setSendParam(stTbyBalance, settings.options);
         
-        IOFT(address(_stTBY)).send{ value: fee.nativeFee }(sendParam, fee, tx.origin);
+        (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt) = IOFT(address(_stTBY)).send{ value: msg.value }(
+            sendParam,
+            settings.fee,
+            refundRecipient
+        );
+
+        bridgingReceipts = LzBridgeReceipts(msgReceipt, oftReceipt);
     }
 
     /// @inheritdoc IStakeupStakingBase
@@ -76,6 +82,23 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
     /// @inheritdoc IStakeupStakingBase
     function getStTBY() external view override returns (IStTBY) {
         return _stTBY;
+    }
+
+    /**
+     * @notice Sets the send parameters for the bridging operation
+     * @param amount The minimum amount of tokens to send
+     * @param options The executor options for the send operation
+     */
+    function _setSendParam(uint256 amount, bytes memory options) internal view returns (SendParam memory) {
+        return SendParam({
+            dstEid: _baseChainEid,
+            to: _baseChainInstance.addressToBytes32(),
+            amountLD: amount,
+            minAmountLD: amount,
+            extraOptions: options,
+            composeMsg: PROCESS_FEE_MSG,
+            oftCmd: ""
+        });
     }
 
     /// @inheritdoc OAppReceiver
