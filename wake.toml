@@ -5,7 +5,7 @@ exclude_paths = [
     ".venv",
     "lib",
     "script",
-    "tests",
+    "tests/foundry",
     "certora"
 ]
 include_paths = ["node_modules"]
