@@ -32,6 +32,9 @@ jobs:
       - name: Build
         run: |
           forge --version
+          cd lib/LayerZero-v2/oapp yarn
+          cd ../protocol yarn
+          cd ../../..
           forge build --sizes
           bash compile.sh
         id: build
