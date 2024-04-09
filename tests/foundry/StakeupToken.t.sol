@@ -8,8 +8,8 @@ import {StakeupToken, IStakeupToken} from "src/token/StakeupToken.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+import {MockEndpoint} from "../mocks/MockEndpoint.sol";
 import {MockStakeupStaking} from "../mocks/MockStakeupStaking.sol";
-import {LayerZeroEndpointV2Mock} from "../mocks/LayerZero/LayerZeroEndpointV2Mock.sol";
 
 contract StakeupTokenTest is Test {
     StakeupToken public stakeupToken;
@@ -21,8 +21,8 @@ contract StakeupTokenTest is Test {
     address internal stTBY;
     address internal layerZeroEndpoint;
     
-    LayerZeroEndpointV2Mock internal layerZeroEndpointA;
-    LayerZeroEndpointV2Mock internal layerZeroEndpointB;
+    MockEndpoint internal layerZeroEndpointA;
+    MockEndpoint internal layerZeroEndpointB;
     uint32 internal constant EID_A = 1;
     uint32 internal constant EID_B = 2;
 
@@ -42,8 +42,8 @@ contract StakeupTokenTest is Test {
         stakeupStaking = new MockStakeupStaking();
         stakeupStaking.setStTBY(stTBY);
 
-        layerZeroEndpointA = new LayerZeroEndpointV2Mock(EID_A, owner);
-        layerZeroEndpointB = new LayerZeroEndpointV2Mock(EID_B, owner);
+        layerZeroEndpointA = new MockEndpoint();
+        layerZeroEndpointB = new MockEndpoint();
     }
 
     function testViewFunctions() public {
