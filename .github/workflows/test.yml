@@ -27,14 +27,15 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install -r requirements.txt
+          forge install
+          cd lib/LayerZero-v2/
+          yarn build
+          cd ../..
         id: install
 
       - name: Build
         run: |
           forge --version
-          cd lib/LayerZero-v2/oapp yarn
-          cd ../protocol yarn
-          cd ../../..
           forge build --sizes
           bash compile.sh
         id: build
