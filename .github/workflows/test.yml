@@ -27,6 +27,11 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install -r requirements.txt
+          forge install
+          cd lib/LayerZero-v2/
+          yarn install
+          yarn build
+          cd ../..
         id: install
 
       - name: Build
