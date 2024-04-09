@@ -7,7 +7,7 @@ from pytypes.tests.mocks.MockBloomPool import MockBloomPool
 from pytypes.tests.mocks.MockEmergencyHandler import MockEmergencyHandler
 from pytypes.tests.mocks.MockBloomFactory import MockBloomFactory
 from pytypes.tests.mocks.MockRegistry import MockRegistry
-from pytypes.tests.mocks.LayerZero.LayerZeroEndpointV2Mock import LayerZeroEndpointV2Mock
+from pytypes.tests.mocks.MockEndpoint import MockEndpoint
 from pytypes.src.token.WstTBY import WstTBY
 
 from pytypes.lib.openzeppelincontracts.contracts.token.ERC20 import ERC20
@@ -37,7 +37,7 @@ class StTBYTestEnv:
         self.emergency_handler = MockEmergencyHandler.deploy()
         self.factory = self.__setup_bloom_factory(self.bloom_pool)
         self.registry = MockRegistry.deploy(self.bloom_pool.address)
-        self.endpoint = LayerZeroEndpointV2Mock.deploy(1, self.deployer)
+        self.endpoint = MockEndpoint.deploy()
 
         self.stakeup = self.__setup_stakeup()
         self.st_tby = self.__setup_st_tby()
