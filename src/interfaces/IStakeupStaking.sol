@@ -29,6 +29,9 @@ interface IStakeupStaking is IStakeupStakingBase, ISUPVesting {
     // @notice If the LZ Compose call fails
     error LZComposeFailed();
 
+    // @notice If the originating OApp of the LZCompose call is invalid 
+    error InvalidOApp();
+
     // =================== Structs ====================
     /**
      * @notice Data structure containing information pertaining to a user's stake

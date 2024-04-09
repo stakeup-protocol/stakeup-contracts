@@ -2,14 +2,14 @@
 pragma solidity 0.8.22;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
+import {MessagingReceipt, MessagingFee, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {SUPVesting} from "./SUPVesting.sol";
 
-import {IOAppComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
+import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
@@ -47,6 +47,9 @@ contract StakeupStaking is
     /// @notice The last block number when rewards were distributed
     uint256 private _lastRewardBlock;
 
+    /// @notice The layer zero endpoint associated with the chain
+    address private _layerZeroEndpoint;
+
     /// @dev Mapping of users to their staking data
     mapping(address => StakingData) private _stakingData;
 
@@ -67,17 +70,24 @@ contract StakeupStaking is
         _;
     }
 
-    /// @notice Only the reward token can call this function
-    modifier onlyStTBY() {
-        if (msg.sender != address(_stTBY)) revert CallerNotStTBY();
+    /// @notice Only the reward token or LayerZero endpoint can call this function
+    modifier authorized() {
+        if (msg.sender != address(_stTBY) || msg.sender != _layerZeroEndpoint) {
+            revert UnauthorizedCaller();
+        }
         _;
     }
 
     // ================= Constructor =================
 
-    constructor(address stakeupToken, address stTBY) SUPVesting(stakeupToken) {
+    constructor(
+        address stakeupToken,
+        address stTBY,
+        address layerZeroEndpoint
+    ) SUPVesting(stakeupToken) {
         _stTBY = IStTBY(stTBY);
         _lastRewardBlock = block.number;
+        _layerZeroEndpoint = layerZeroEndpoint;
     }
 
     // ================== functions ==================
@@ -126,7 +136,18 @@ contract StakeupStaking is
     }
 
     /// @inheritdoc IStakeupStakingBase
-    function processFees() public payable nonReentrant updateIndex {
+    function processFees(
+        address /*refundRecipient*/,
+        LZBridgeSettings memory /*settings*/
+    )
+        public
+        payable
+        override
+        authorized
+        nonReentrant
+        updateIndex
+        returns (LzBridgeReceipts memory)
+    {
         // solhint-ignore-previous-line no-empty-blocks
     }
 
@@ -308,7 +329,7 @@ contract StakeupStaking is
         _distributeRewards(account);
     }
 
-    // TODO: Add protections
+    /// @inheritdoc ILayerZeroComposer
     function lzCompose(
         address _oApp,
         bytes32 /*_guid*/,
@@ -316,12 +337,14 @@ contract StakeupStaking is
         address /*Executor*/,
         bytes calldata /*Executor Data*/
     ) external payable override {
-        bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(_message);
-        
+        if (_oApp != address(_stTBY)) revert InvalidOApp();
+
+        bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(
+            _message
+        );
+
         (bool success, ) = address(this).call(_composeMsgContent);
 
-        if (!success) {
-            revert LZComposeFailed();
-        }
+        if (!success) revert LZComposeFailed();
     }
 }
