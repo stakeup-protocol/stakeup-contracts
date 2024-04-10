@@ -2,16 +2,10 @@
 
 pragma solidity 0.8.22;
 
-import {RewardBase} from "src/rewards/RewardBase.sol";
+import {StakeUpRewardMathLib} from "src/rewards/lib/StakeUpRewardMathLib.sol";
 
 // This contract is a wrapper created to isolate the internal function _calculateDripAmount within the RewardBase contract
-contract MockDripRewarder is RewardBase {
-
-    constructor(
-        address stTBY,
-        address stakeupToken,
-        address stakeupStaking
-    ) RewardBase(stTBY, stakeupToken, stakeupStaking) {}
+contract MockDripRewarder {
 
     function calculateDripAmount(
         uint256 rewardSupply,
@@ -19,7 +13,7 @@ contract MockDripRewarder is RewardBase {
         uint256 rewardsRemaining,
         bool isRewardGauge
     ) external view returns (uint256) {
-        return _calculateDripAmount(rewardSupply, startTimestamp, rewardsRemaining, isRewardGauge);
+        return StakeUpRewardMathLib._calculateDripAmount(rewardSupply, startTimestamp, rewardsRemaining, isRewardGauge);
     }
     
 }

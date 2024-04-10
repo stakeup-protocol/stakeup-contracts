@@ -5,14 +5,19 @@ libs = ["lib"]
 test = "tests"
 via_ir = true
 optimizer = true
-optimizer-runs = 15_000
+optimizer-runs = 5_000
+evm_version = "paris"
 
 solc = "0.8.22"
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
 
 remappings = [
     "solmate/=lib/solmate/src/",
-    "@openzeppelin/=lib/openzeppelin-contracts/",
+    '@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/',
+    '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
     "solady/=lib/solady/src/",
-    "@layerzerolabs/=lib/solidity-examples/contracts",
+    "@LayerZero/=lib/LayerZero-v2/oapp/contracts/",
+    "@layerzerolabs/=lib/LayerZero-v2/oapp/node_modules/@layerzerolabs/",
+    "@LayerZeroTesting/=lib/LayerZero-v2/oapp/test/",
+    "solidity-bytes-utils/=lib/LayerZero-v2/oapp/node_modules/solidity-bytes-utils/",
 ]

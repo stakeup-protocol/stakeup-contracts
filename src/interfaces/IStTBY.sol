@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {IWstTBY} from "./IWstTBY.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import {IBloomFactory} from "./bloom/IBloomFactory.sol";
 import {IExchangeRateRegistry} from "./bloom/IExchangeRateRegistry.sol";
 import {IStakeupStaking} from "./IStakeupStaking.sol";
-import {IRewardManager} from "./IRewardManager.sol";
 import {IStTBYBase} from "./IStTBYBase.sol";
+import {ILzBridgeConfig} from "./ILzBridgeConfig.sol";
+import {IWstTBY} from "./IWstTBY.sol";
 
-interface IStTBY is IStTBYBase {
+interface IStTBY is IStTBYBase, ILzBridgeConfig {
     // =================== Errors ===================
 
     /// @notice Invalid address (e.g. zero address)
@@ -94,13 +95,23 @@ interface IStTBY is IStTBYBase {
      * @notice Deposit TBY and get stTBY minted
      * @param tby TBY address
      * @param amount TBY amount to deposit
+     * @param settings Configuration settings for bridging using LayerZero
+     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function depositTby(address tby, uint256 amount) external;
+    function depositTby(address tby, uint256 amount, LZBridgeSettings memory settings) 
+        external 
+        payable
+        returns (LzBridgeReceipt memory bridgingReceipt);
     /**
      * @notice Deposit underlying tokens and get stTBY minted
      * @param amount Amount of underlying tokens to deposit
+     * @param settings Configuration settings for bridging using LayerZero
+     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function depositUnderlying(uint256 amount) external;
+    function depositUnderlying(uint256 amount, LZBridgeSettings memory settings)
+        external 
+        payable
+        returns (LzBridgeReceipt memory bridgingReceipt);
 
     /**
      * @notice Redeem stTBY in exchange for underlying tokens. Underlying
@@ -108,9 +119,17 @@ interface IStTBY is IStTBYBase {
      * redemption is processed.
      * @dev Emits a {Redeemed} event.
      * @param stTBYAmount Amount of stTBY
-     * @return uint256 The Amount of underlying tokens redeemed
+     * @param settings Configuration settings for bridging using LayerZero
+     * @return underlyingRedeemed The Amount of underlying tokens redeemed
+     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function redeemStTBY(uint256 stTBYAmount) external returns (uint256);
+    function redeemStTBY(uint256 stTBYAmount, LZBridgeSettings memory settings)
+        external 
+        payable
+        returns (
+            uint256 underlyingRedeemed,
+            LzBridgeReceipt memory bridgingReceipt
+        );
    
     /**
      * @notice Redeem wstTBY in exchange for underlying tokens. Underlying
@@ -118,17 +137,30 @@ interface IStTBY is IStTBYBase {
      * redemption is processed.
      * @dev Emits a {Redeemed} event.
      * @param wstTBYAmount Amount of wstTBY
-     * @return uint256 The Amount of underlying tokens redeemed
+     * @param settings Configuration settings for bridging using LayerZero
+     * @return underlyingRedeemed The Amount of underlying tokens redeemed
+     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function redeemWstTBY(uint256 wstTBYAmount) external returns (uint256);
+    function redeemWstTBY(uint256 wstTBYAmount, LZBridgeSettings memory settings)
+        external 
+        payable
+        returns (
+            uint256 underlyingRedeemed,
+            LzBridgeReceipt memory bridgingReceipt
+        );
  
     /**
      * @notice Redeems the underlying token from a Bloom Pool in exchange for TBYs
      * @dev Underlying tokens can only be redeemed if stTBY contains a TBY which is
      *     in its FinalWithdrawal state.
      * @param tby TBY address
+     * @param settings Configuration settings for bridging using LayerZero
+     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function redeemUnderlying(address tby) external;
+    function redeemUnderlying(address tby, LZBridgeSettings memory settings)
+        external
+        payable
+        returns (LzBridgeReceipt memory bridgingReceipt);
 
     /// @notice Get the total amount of underlying tokens in the pool
     function getRemainingBalance() external view returns (uint256);
@@ -147,9 +179,6 @@ interface IStTBY is IStTBYBase {
 
     /// @notice Returns the StakeupStaking contract.
     function getStakeupStaking() external view returns (IStakeupStaking);
-
-    /// @notice Returns the RewardManager contract.
-    function getRewardManager() external view returns (IRewardManager);
 
     /// @notice Returns the mintBps.
     function getMintBps() external view returns (uint256);

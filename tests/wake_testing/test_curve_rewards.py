@@ -1,33 +1,26 @@
 import os
-import math
 from pytest import approx
 from eth_typing import Address
 from dotenv import load_dotenv
 
 from wake.testing import *
 from wake.testing.fuzzing import *
+from pytypes.src.rewards.CurveGaugeDistributor import CurveGaugeDistributor
 from tests.wake_testing.helpers.utils import Constants, EvmMath
 
 from pytypes.src.interfaces.curve.ICurvePoolFactory import ICurvePoolFactory
 from pytypes.src.interfaces.ICurveGaugeDistributor import ICurveGaugeDistributor
 from pytypes.src.interfaces.curve.ICurvePoolGauge import ICurvePoolGauge
-from pytypes.src.rewards.RewardManager import RewardManager
-from pytypes.src.token.StakeupToken import StakeupToken
 
 from pytypes.tests.mocks.MockDripRewarder import MockDripRewarder
-from pytypes.tests.mocks.MockERC20 import MockERC20
-from pytypes.tests.mocks.MockStakeupStaking import MockStakeupStaking
+from tests.wake_testing.helpers.wake_st_tby_setup import deploy_st_tby_env
 
 load_dotenv()
 
 ALCHEMY_API_KEY = os.getenv("ALCHEMY_API_KEY")
 
 def deploy_dripRewarder():
-    dripRewarder = MockDripRewarder.deploy(
-        MockERC20.deploy(6).address,
-        MockERC20.deploy(18).address,
-        random_address()
-    )
+    dripRewarder = MockDripRewarder.deploy()
     return dripRewarder
 
 def revert_handler(e: TransactionRevertedError):
@@ -72,7 +65,7 @@ def test_yearly_allocations():
 )
 @on_revert(revert_handler)
 def test_consistent_gauge_rewards():
-    total_rewards = 200000000
+    total_rewards = 350000000
     assert default_chain.connected is True
     
     curve_factory = ICurvePoolFactory(Constants.CURVE_STABLE_POOL_FACTORY)
@@ -93,10 +86,10 @@ def test_consistent_gauge_rewards():
 
     account = default_chain.accounts[0]
     
-    stable = MockERC20.deploy(6, from_=account, request_type="tx", chain=default_chain)
+    e = deploy_st_tby_env(default_chain)
 
-    stakeup = MockStakeupStaking.deploy(request_type="tx", chain=default_chain)
-    
+    sup_token = e.sup_token
+
     curvePoolData: ICurveGaugeDistributor.CurvePoolData = ICurveGaugeDistributor.CurvePoolData(
         curve_pool,
         Address(0),
@@ -105,35 +98,24 @@ def test_consistent_gauge_rewards():
         EvmMath.parse_eth(total_rewards)
     )
 
-    # Deploy Reward Manager
-    rewardManager = RewardManager.deploy(
-        stable.address,
-        get_create_address(account, account.nonce + 1),
-        stakeup.address,
-        [curvePoolData],
+    # Deploy CurveGaugeDistributor
+    curveGaugeDistributor = CurveGaugeDistributor.deploy(
+        account,
         from_=account,
         request_type="tx",
         chain=default_chain
     )
 
-    sup_token = StakeupToken.deploy(
-        random_address(),
-        stakeup.address,
-        rewardManager.address,
-        account.address,
-        from_=account,
-        request_type="tx",
-        chain=default_chain
-    )
+    curveGaugeDistributor.initialize([curvePoolData], sup_token, from_=account, request_type="tx")
 
-    gauge = rewardManager.getCurvePoolData()[0].curveGauge
+    gauge = curveGaugeDistributor.getCurvePoolData()[0].curveGauge
 
     # The tx.orgin is the account that executed the original call that triggered gauge deployment
     # Due to protections on adding tokens to the gauge, the reward manager cannot add rewards to the gauge
     # unless the original gauge manager transfers the manager role to the reward manager
-    ICurvePoolGauge(gauge).set_gauge_manager(rewardManager.address, from_=account, request_type="tx")
+    ICurvePoolGauge(gauge).set_gauge_manager(curveGaugeDistributor.address, from_=account, request_type="tx")
 
-    assert rewardManager.getCurvePoolData()[0].curveGauge == gauge
+    assert curveGaugeDistributor.getCurvePoolData()[0].curveGauge == gauge
 
     expected_reward_per_epoch = EvmMath.parse_eth(total_rewards / 2 / 52) # 50% of total rewards over 52 weeks
     default_chain.change_automine(False)
@@ -143,7 +125,7 @@ def test_consistent_gauge_rewards():
 
     year_num = 1
     for (i, epoch) in enumerate(range(0, weeks_in_6_years)):
-        rewardManager.seedGauges(from_=account, request_type="tx")
+        curveGaugeDistributor.seedGauges(from_=account, request_type="tx")
         default_chain.mine(lambda x: x + Constants.ONE_WEEK - 1)
         
         if (((i + 1) / 52) > year_num):

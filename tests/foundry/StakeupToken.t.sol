@@ -2,13 +2,14 @@
 pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
+
 import {StakeupStaking} from "src/staking/StakeupStaking.sol";
 import {StakeupToken, IStakeupToken} from "src/token/StakeupToken.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
+import {MockEndpoint} from "../mocks/MockEndpoint.sol";
 import {MockStakeupStaking} from "../mocks/MockStakeupStaking.sol";
-import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StakeupTokenTest is Test {
     StakeupToken public stakeupToken;
@@ -17,10 +18,15 @@ contract StakeupTokenTest is Test {
     address internal bob;
     address internal rando;
     address internal owner;
+    address internal stTBY;
     address internal layerZeroEndpoint;
     
+    MockEndpoint internal layerZeroEndpointA;
+    MockEndpoint internal layerZeroEndpointB;
+    uint32 internal constant EID_A = 1;
+    uint32 internal constant EID_B = 2;
+
     MockStakeupStaking internal stakeupStaking;
-    MockRewardManager internal rewardManager;
 
     uint64 initialMintPercentage = 1e15; // .01%
 
@@ -29,11 +35,15 @@ contract StakeupTokenTest is Test {
         alice = makeAddr("alice");
         bob = makeAddr("bob");
         rando = makeAddr("rando");
+        stTBY = makeAddr("stTBY");
 
         owner = makeAddr("owner");
         layerZeroEndpoint = makeAddr("layerZeroEndpoint");
         stakeupStaking = new MockStakeupStaking();
-        rewardManager = new MockRewardManager();
+        stakeupStaking.setStTBY(stTBY);
+
+        layerZeroEndpointA = new MockEndpoint();
+        layerZeroEndpointB = new MockEndpoint();
     }
 
     function testViewFunctions() public {
@@ -50,7 +60,6 @@ contract StakeupTokenTest is Test {
         assertEq(stakeupToken.decimals(), 18);
 
         assertEq(stakeupToken.totalSupply(), expectedSupply);
-        assertEq(stakeupToken.circulatingSupply(), stakeupToken.totalSupply());
     }
 
     function testOwnership() public {        
@@ -111,8 +120,6 @@ contract StakeupTokenTest is Test {
         // Check that the LP supply was minted
         assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
-        assertEq(stakeupToken.circulatingSupply(), expectedSupply);
-
     }
 
     function testAirdrop() public {
@@ -147,7 +154,6 @@ contract StakeupTokenTest is Test {
         assertEq(stakeupToken.balanceOf(airdrop1), 500_000e18);
         assertEq(stakeupToken.balanceOf(airdrop2), 500_000e18);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
-        assertEq(stakeupToken.circulatingSupply(), expectedSupply);
     }
 
     function testRevertZeroAddress() public {
@@ -200,9 +206,10 @@ contract StakeupTokenTest is Test {
         allocations[0] = allocation;
 
         stakeupToken = new StakeupToken(
-            address(0),
             address(stakeupStaking),
-            address(rewardManager),
+            address(0),
+            owner,
+            address(layerZeroEndpointA),
             owner
         );
 
@@ -276,9 +283,10 @@ contract StakeupTokenTest is Test {
             allocations[1] = allocation2;
 
             stakeupToken = new StakeupToken(
-                address(0),
                 address(stakeupStaking),
-                address(rewardManager),
+                address(stTBY),
+                owner,
+                address(layerZeroEndpointA),
                 owner
             );
         }
@@ -299,17 +307,16 @@ contract StakeupTokenTest is Test {
         _deployOneAllocation(initialMintPercentage);
 
         // Fails when caller is not reward manager
-        vm.expectRevert(IStakeupToken.CallerNotRewardManager.selector);
+        vm.expectRevert(IStakeupToken.CallerAuthorizedMinter.selector);
         stakeupToken.mintRewards(address(this), rewards);
 
         // Mint rewards
-        vm.startPrank(address(rewardManager));
-        stakeupToken.mintRewards(address(rewardManager), rewards);
+        vm.startPrank(address(stTBY));
+        stakeupToken.mintRewards(address(stTBY), rewards);
         vm.stopPrank();
 
         // Check that the LP supply was minted
-        assertEq(stakeupToken.balanceOf(address(rewardManager)), rewards);
+        assertEq(stakeupToken.balanceOf(address(stTBY)), rewards);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
-        assertEq(stakeupToken.circulatingSupply(), expectedSupply);
     }
 }
