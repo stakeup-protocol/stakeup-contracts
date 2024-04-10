@@ -1,9 +1,10 @@
 from eth_account import Account
 from wake.testing import *
 from wake.testing.fuzzing import *
-from helpers.wake_st_tby_setup import ContractConfig, deploy_st_tby_env, StTBYTestEnv
+from helpers.wake_st_tby_setup import deploy_st_tby_env
 from helpers.utils import *
 from pytypes.src.interfaces.bloom.IBloomPool import IBloomPool
+from pytypes.src.interfaces.ILzBridgeConfig import ILzBridgeConfig
 from pytypes.src.token.StTBY import StTBY
 from pytypes.src.token.WstTBY import WstTBY
 from pytypes.tests.mocks.MockBloomFactory import MockBloomFactory
@@ -23,9 +24,10 @@ registry: MockRegistry
 swap_facility: MockSwapFacility
 deployer: Account
 factory: MockBloomFactory
+settings = ILzBridgeConfig.LZBridgeSettings
 
 def deploy_env(c):
-    global st_tby, wst_tby, usdc, bill, bloom_pool, stakeup, registry, swap_facility, deployer, factory
+    global st_tby, wst_tby, usdc, bill, bloom_pool, stakeup, registry, swap_facility, deployer, factory, settings
 
     e = deploy_st_tby_env(c)
     st_tby = e.st_tby
@@ -39,6 +41,11 @@ def deploy_env(c):
     deployer = e.deployer
     factory = e.factory
 
+    settings = ILzBridgeConfig.LZBridgeSettings(
+        bytearray([0,1,2,3]),
+        (0,0)
+    )
+
     tokens = [bloom_pool.address]
 
     registry.setActiveTokens(tokens)
@@ -51,11 +58,11 @@ def deposit(c: Chain, u: Account, a: int, tby: bool):
     if tby:
         bloom_pool.mint(u.address, a)
         bloom_pool.approve(st_tby.address, a, from_=u)
-        st_tby.depositTby(bloom_pool.address, a, from_=u)
+        st_tby.depositTby(bloom_pool.address, a, settings, from_=u, value=0)
     else:
         usdc.mint(u.address, a)
         usdc.approve(st_tby.address, a, from_=u)
-        st_tby.depositUnderlying(a, from_=u)
+        st_tby.depositUnderlying(a, settings, from_=u, value=0)
 
 @default_chain.connect()
 def test_deployment():
@@ -65,7 +72,6 @@ def test_deployment():
     assert wst_tby.address != Address(0)
     assert st_tby.owner() == deployer.address
     assert st_tby.getWstTBY().address == wst_tby.address
-    assert st_tby.circulatingSupply() == 0
 
 @default_chain.connect()
 def test_mint_fee():
@@ -89,7 +95,6 @@ def test_mint_fee():
     assert st_tby.getMintBps() == mint_fee_scaled
     assert st_tby.balanceOf(user.address) == int(EvmMath.parse_eth(tby_deposit_amount) - scaled_mint_fee)
     assert st_tby.balanceOf(stakeup.address) == scaled_mint_fee
-    assert st_tby.circulatingSupply() == EvmMath.parse_eth(tby_deposit_amount)
 
     ## TODO: Mint fee with 1:1.02 TBY:USD exchange rate
 
@@ -115,7 +120,7 @@ def test_redeem_fee():
     bal_before = st_tby.balanceOf(stakeup.address)
 
     amount = st_tby.balanceOf(user.address)
-    st_tby.redeemStTBY(amount, from_=user)
+    st_tby.redeemStTBY(amount, settings, from_=user, value=0)
     fees_collected = st_tby.balanceOf(stakeup.address) - bal_before
 
     assert st_tby.getRedeemBps() == int(redeem_fee * bps_scale)
@@ -144,7 +149,7 @@ def test_performance_fee():
     bloom_pool.setState(IBloomPool.State.FinalWithdraw)
 
     bal_before = st_tby.balanceOf(stakeup.address)
-    st_tby.redeemUnderlying(bloom_pool.address, from_=user)
+    st_tby.redeemUnderlying(bloom_pool.address, settings, from_=user, value=0)
     fees_collected = st_tby.balanceOf(stakeup.address) - bal_before
 
     expected_performance_fee = (EvmMath.parse_eth(yield_gained)) * performance_fee
@@ -177,7 +182,7 @@ def test_exchange_rate():
     
     registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1))
 
-    st_tby.depositTby(bloom_pool.address, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
+    st_tby.depositTby(bloom_pool.address, EvmMath.parse_decimals(tby_deposit_amount, 6), settings, from_=user)
     
     default_chain.mine(lambda x: x + Constants.ONE_WEEK)
 
@@ -218,7 +223,7 @@ def test_auto_minting():
     user_bal_before = st_tby.balanceOf(user.address)
     user_shares_before = st_tby.sharesOf(user.address)
     bloom_pool.mint(st_tby.address, EvmMath.parse_decimals(usdc_deposit_amount, 6))
-    st_tby.redeemUnderlying(bloom_pool.address, from_=user)
+    st_tby.redeemUnderlying(bloom_pool.address, settings, from_=user, value=0)
     user_bal_after = st_tby.balanceOf(user.address)
     user_shares_after = st_tby.sharesOf(user.address)
 
@@ -276,7 +281,7 @@ def test_deposit_existing_tby():
     bloom_pool.mint(user.address, EvmMath.parse_decimals(mint_amount, 6))
     bloom_pool.approve(st_tby.address, EvmMath.parse_decimals(mint_amount, 6), from_=user)
 
-    st_tby.depositTby(bloom_pool.address, EvmMath.parse_decimals(mint_amount, 6), from_=user)
+    st_tby.depositTby(bloom_pool.address, EvmMath.parse_decimals(mint_amount, 6), settings, from_=user, value=0)
 
     assert st_tby.balanceOf(user.address) == expected_user_balance
     assert st_tby.getTotalUsd() == EvmMath.parse_eth(mint_amount * exchange_rate)
@@ -284,7 +289,6 @@ def test_deposit_existing_tby():
 @default_chain.connect()
 def test_deposit_fee():
     deploy_env(default_chain)
-    stakeup.setFeeProcessed(False)
 
     user = default_chain.accounts[1]
 
@@ -295,4 +299,3 @@ def test_deposit_fee():
     deposit(default_chain, user, EvmMath.parse_decimals(deposit_amount, 6), False)
 
     assert st_tby.balanceOf(stakeup.address) == EvmMath.parse_eth(deposit_fee)
-    assert stakeup.isFeeProcessed() == True

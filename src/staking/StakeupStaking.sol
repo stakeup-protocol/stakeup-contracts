@@ -2,16 +2,16 @@
 pragma solidity 0.8.22;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
+import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 
 import {SUPVesting} from "./SUPVesting.sol";
 
-import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
-import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+import {IStakeupStaking, IStakeupStakingBase} from "../interfaces/IStakeupStaking.sol";
 
 /**
  * @title StakeupStaking
@@ -22,7 +22,12 @@ import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
  * @dev Rewards will be streamed to the staking contract anytime fees are collected and 
  *      are immediately claimable by the user. The rewards are denominated in stTBY shares.
  */
-contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
+contract StakeupStaking is
+    IStakeupStaking,
+    IOAppComposer,
+    SUPVesting,
+    ReentrancyGuard
+{
     using SafeERC20 for IERC20;
     using FixedPointMathLib for uint256;
 
@@ -30,9 +35,6 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
     /// @notice The stTBY token
     IStTBY private immutable _stTBY;
-
-    /// @notice Address of the reward manager
-    IRewardManager private immutable _rewardManager;
 
     /// @dev Global reward data
     RewardData private _rewardData;
@@ -42,6 +44,9 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
     /// @notice The last block number when rewards were distributed
     uint256 private _lastRewardBlock;
+
+    /// @notice The layer zero endpoint associated with the chain
+    address private immutable _layerZeroEndpoint;
 
     /// @dev Mapping of users to their staking data
     mapping(address => StakingData) private _stakingData;
@@ -63,9 +68,11 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
         _;
     }
 
-    /// @notice Only the reward token can call this function
-    modifier onlyReward() {
-        if (msg.sender != address(_stTBY)) revert OnlyRewardToken();
+    /// @notice Only the reward token or the contract itself can call this function
+    modifier authorized() {
+        if (msg.sender != address(_stTBY) && msg.sender != address(this)) {
+            revert UnauthorizedCaller();
+        }
         _;
     }
 
@@ -73,12 +80,12 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
     constructor(
         address stakeupToken,
-        address rewardManager,
-        address stTBY
+        address stTBY,
+        address layerZeroEndpoint
     ) SUPVesting(stakeupToken) {
         _stTBY = IStTBY(stTBY);
-        _rewardManager = IRewardManager(rewardManager);
         _lastRewardBlock = block.number;
+        _layerZeroEndpoint = layerZeroEndpoint;
     }
 
     // ================== functions ==================
@@ -88,15 +95,6 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
         uint256 stakeupAmount
     ) external override updateIndex distributeRewards {
         _stake(msg.sender, stakeupAmount);
-    }
-
-    /// @inheritdoc IStakeupStaking
-    function delegateStake(
-        address receiver,
-        uint256 stakeupAmount
-    ) external override updateIndex {
-        _distributeRewards(receiver);
-        _stake(receiver, stakeupAmount);
     }
 
     /// @inheritdoc IStakeupStaking
@@ -135,8 +133,19 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
         emit RewardsHarvested(msg.sender, rewardAmount);
     }
 
-    /// @inheritdoc IStakeupStaking
-    function processFees() external nonReentrant onlyReward updateIndex {
+    /// @inheritdoc IStakeupStakingBase
+    function processFees(
+        address /*refundRecipient*/,
+        LZBridgeSettings memory /*settings*/
+    )
+        public
+        payable
+        override
+        authorized
+        nonReentrant
+        updateIndex
+        returns (LzBridgeReceipt memory)
+    {
         // solhint-ignore-previous-line no-empty-blocks
     }
 
@@ -153,19 +162,14 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
             );
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeupStakingBase
     function getStakupToken() external view returns (IStakeupToken) {
         return _stakeupToken;
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeupStakingBase
     function getStTBY() external view returns (IStTBY) {
         return _stTBY;
-    }
-
-    /// @inheritdoc IStakeupStaking
-    function getRewardManager() external view override returns (address) {
-        return address(_rewardManager);
     }
 
     /// @inheritdoc IStakeupStaking
@@ -196,15 +200,11 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
         if (amount == 0) revert ZeroTokensStaked();
 
-        // If the reward manager is the sender, then there is no need to transfer tokens
-        // as the tokens will be minted directly to the staking contract
-        if (msg.sender != address(_rewardManager)) {
-            IERC20(address(_stakeupToken)).safeTransferFrom(
-                msg.sender,
-                address(this),
-                amount
-            );
-        }
+        IERC20(address(_stakeupToken)).safeTransferFrom(
+            msg.sender,
+            address(this),
+            amount
+        );
 
         userStakingData.amountStaked += uint128(amount);
         _totalStakeUpStaked += amount;
@@ -323,12 +323,27 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc SUPVesting
-    function _vestTokens(address account) internal override updateIndex {
+    function _updateRewardState(address account) internal override updateIndex {
         _distributeRewards(account);
     }
 
-    /// @inheritdoc SUPVesting
-    function _claimTokens(address account) internal override updateIndex {
-        _distributeRewards(account);
+    /// @inheritdoc ILayerZeroComposer
+    function lzCompose(
+        address _oApp,
+        bytes32 /*_guid*/,
+        bytes calldata _message,
+        address /*Executor*/,
+        bytes calldata /*Executor Data*/
+    ) external payable override {
+        if (_oApp != address(_stTBY)) revert InvalidOApp();
+        if (msg.sender != _layerZeroEndpoint) revert UnauthorizedCaller();
+
+        bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(
+            _message
+        );
+
+        (bool success, ) = address(this).call(_composeMsgContent);
+
+        if (!success) revert LZComposeFailed();
     }
 }

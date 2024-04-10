@@ -4,11 +4,12 @@ pragma solidity 0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
+import {ILzBridgeConfig} from "src/interfaces/ILzBridgeConfig.sol";
 
 import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
+import {IStakeupStakingBase} from "src/interfaces/IStakeupStakingBase.sol";
 
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockRewardManager} from "../mocks/MockRewardManager.sol";
 
 contract StakeupStakingTest is Test {
     using FixedPointMathLib for uint256;
@@ -16,7 +17,6 @@ contract StakeupStakingTest is Test {
     StakeupStaking public stakeupStaking;
     MockERC20 public mockStakeupToken;
     MockERC20 public mockStTBY;
-    MockRewardManager public rewardManager;
 
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
@@ -37,8 +37,8 @@ contract StakeupStakingTest is Test {
 
         stakeupStaking = new StakeupStaking(
            address(mockStakeupToken),
-           address(rewardManager),
-           address(mockStTBY)
+           address(mockStTBY),
+           address(1111)
         );
         vm.label(address(stakeupStaking), "stakeupStaking");
     }
@@ -114,8 +114,9 @@ contract StakeupStakingTest is Test {
         
         // Reverts if someone other than stTBY calls this function
         vm.startPrank(alice);
-        vm.expectRevert(IStakeupStaking.OnlyRewardToken.selector);
-        stakeupStaking.processFees();
+        vm.expectRevert(IStakeupStakingBase.UnauthorizedCaller.selector);
+        ILzBridgeConfig.LZBridgeSettings memory settings;
+        stakeupStaking.processFees(address(0), settings);
         vm.stopPrank();
 
         /// There must be some staked tokens in the contract to process fees
@@ -391,7 +392,8 @@ contract StakeupStakingTest is Test {
 
     function _processFees() internal {
         vm.startPrank(address(mockStTBY));
-        stakeupStaking.processFees();
+        ILzBridgeConfig.LZBridgeSettings memory settings;
+        stakeupStaking.processFees(address(0), settings);
         vm.stopPrank();
     }
 }

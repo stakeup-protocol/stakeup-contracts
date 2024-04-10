@@ -1,43 +1,33 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity ^0.8.0;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
-abstract contract RewardBase {
-    using FixedPointMathLib for uint256;
+/**
+ * @title StakeUpRewardMathLib
+ * @notice Libraries that provides mint reward cutoffs for different chains as well as logic to set the
+ *         mint reward allocation for a given stTBY deployment based on the chain ID.
+ * @dev This library contains the mint rewards for chains that support native minting and burning as well as
+ *      testnets.
+ */
+library StakeUpRewardMathLib {
 
-    address internal immutable _stTBY;
-    address internal immutable _stakeupToken;
-    address internal immutable _stakeupStaking;
+    /// @notice One year in seconds
+    uint256 private constant ONE_YEAR = 52 weeks;
 
-    uint256 internal constant DECIMAL_SCALING = 1e18;
-    uint256 internal constant SUP_MAX_SUPPLY = 1_000_000_000 * DECIMAL_SCALING;
-    // Additional reward allocations; Follow a 5-year annual halving schedule
-    uint256 internal constant POOL_REWARDS =
-        (SUP_MAX_SUPPLY * 2e17) / DECIMAL_SCALING; // 20% of total supply
+    /// @notice Fixed point representation of 1 scaled to 18 decimal places
+    uint256 private constant FIXED_POINT_ONE = 1e18;
 
-    uint256 internal constant LAUNCH_MINT_REWARDS =
-        (SUP_MAX_SUPPLY * 1e17) / DECIMAL_SCALING; // 10% of total supply
+    /// @notice Amount of rewards to be distributed to users for poking the contract (mainnet only)
+    uint256 internal constant POKE_REWARDS = 10_000_000e18;
 
-    // Amount of stTBY that is eligible for minting rewards
-    uint256 internal constant STTBY_MINT_THREASHOLD = 200_000_000 * DECIMAL_SCALING;
-    
-    uint256 internal constant POKE_REWARDS =
-        (SUP_MAX_SUPPLY * 1e16) / DECIMAL_SCALING; // 1% of total supply
-    
-    uint256 internal constant ONE_YEAR = 52 weeks;
-
-    constructor(
-        address stTBY,
-        address stakeupToken,
-        address stakeupStaking
-    ) {
-        _stTBY = stTBY;
-        _stakeupToken = stakeupToken;
-        _stakeupStaking = stakeupStaking;
-    }
-
+    /**
+     * @notice Calculates the amount of tokens to drip via a linear halving schedule over 5 years
+     * @param rewardSupply The total amount of rewards to be distributed during the 5 year period
+     * @param startTimestamp The timestamp when the reward period started
+     * @param rewardsRemaining The amount of rewards that have not been distributed
+     * @param isRewardGauge True if the reward is for a reward gauge, false otherwise
+     */
     function _calculateDripAmount(
         uint256 rewardSupply,
         uint256 startTimestamp,
@@ -65,12 +55,12 @@ abstract contract RewardBase {
             tokensUnlocked = rewardSupply;
         } else {
             // Calculate total tokens unlocked using the formula for the sum of a geometric series
-            tokensUnlocked = rewardSupply * (DECIMAL_SCALING - (DECIMAL_SCALING / 2**year)) / DECIMAL_SCALING;
+            tokensUnlocked = rewardSupply * (FIXED_POINT_ONE - (FIXED_POINT_ONE / 2**year)) / FIXED_POINT_ONE;
         }
         
         if (year > 1 && timeElapsed % ONE_YEAR != 0) {
             uint256 previousYear = year - 1;
-            previousYearAllocation = rewardSupply * (DECIMAL_SCALING - (DECIMAL_SCALING / 2**previousYear)) / DECIMAL_SCALING;
+            previousYearAllocation = rewardSupply * (FIXED_POINT_ONE - (FIXED_POINT_ONE / 2**previousYear)) / FIXED_POINT_ONE;
 
             if (rewardsPaid > 0) {
                 uint256 previousYearsRewardsPaid = Math.min(rewardsPaid, previousYearAllocation);

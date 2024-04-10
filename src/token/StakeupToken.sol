@@ -2,36 +2,48 @@
 
 pragma solidity 0.8.22;
 
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {OFT, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
+import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
 contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
+    
+    /// @notice Address of the StakeUp Staking contract
     address private immutable _stakeupStaking;
-    address private immutable _rewardManager;
 
+    /// @notice Mapping of authorized minters status'
+    mapping(address => bool) private _authorizedMinters;
+
+    /// @notice Token decimal scaling for precision
     uint256 internal constant DECIMAL_SCALING = 1e18;
-    uint256 internal constant MAX_SUPPLY = 1_000_000_000 * DECIMAL_SCALING;
 
-    modifier onlyManager() {
-        if (msg.sender != _rewardManager) revert CallerNotRewardManager();
+    /// @notice Maximum supply of SUP tokens
+    uint256 internal constant MAX_SUPPLY = 1_000_000_000e18;
+
+    modifier onlyAuthorized() {
+        if (!_authorizedMinters[msg.sender]) {
+            revert CallerAuthorizedMinter();
+        }
         _;
     }
 
     constructor(
-        address layerZeroEndpoint,
         address stakeupStaking,
-        address rewardManager,
-        address owner
-    ) OFT("Stakeup Token", "SUP", layerZeroEndpoint) Ownable2Step() {
+        address gaugeDistributor, // Optional parameter for the gauge distributor
+        address owner,
+        address layerZeroEndpoint,
+        address _layerZeroDelegate
+    ) OFT("Stakeup Token", "SUP", layerZeroEndpoint, _layerZeroDelegate) Ownable2Step() {
         _stakeupStaking = stakeupStaking;
-        _rewardManager = rewardManager;
 
-        IRewardManager(rewardManager).initialize();
+        _authorizedMinters[_stakeupStaking] = true;
+        _authorizedMinters[address(IStakeupStaking(stakeupStaking).getStTBY())] = true;
+
+        if (gaugeDistributor != address(0)) {
+            _authorizedMinters[gaugeDistributor] = true;
+        }
 
         _transferOwnership(owner);
     }
@@ -68,7 +80,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
     }
 
     /// @inheritdoc IStakeupToken
-    function mintRewards(address recipient, uint256 amount) external override onlyManager {
+    function mintRewards(address recipient, uint256 amount) external override onlyAuthorized {
         _mint(recipient, amount);
     }
 

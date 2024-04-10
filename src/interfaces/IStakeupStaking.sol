@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
+import {IStakeupStakingBase} from "../interfaces/IStakeupStakingBase.sol";
 import {IStakeupToken} from "./IStakeupToken.sol";
 import {IStTBY} from "./IStTBY.sol";
 import {ISUPVesting} from "./ISUPVesting.sol";
 
-interface IStakeupStaking is ISUPVesting {
+interface IStakeupStaking is IStakeupStakingBase, ISUPVesting {
 
     // @notice Token amount is 0
     error ZeroTokensStaked();
@@ -16,14 +17,20 @@ interface IStakeupStaking is ISUPVesting {
     // @notice User has no rewards to claim
     error NoRewardsToClaim();
 
-    // @notice Only the reward token can call this function
-    error OnlyRewardToken();
+    // @notice Only stTBY can call this function
+    error CallerNotStTBY();
 
     // @notice No Fees were sent to the contract
     error NoFeesToProcess();
 
     // @notice The address is 0
     error ZeroAddress();
+
+    // @notice If the LZ Compose call fails
+    error LZComposeFailed();
+
+    // @notice If the originating OApp of the LZCompose call is invalid 
+    error InvalidOApp();
 
     // =================== Structs ====================
     /**
@@ -73,21 +80,11 @@ interface IStakeupStaking is ISUPVesting {
      */
     event RewardsHarvested(address indexed user, uint256 shares);
 
-
-    function processFees() external;
-
     /**
      * @notice Stake Stakeup Token's to earn stTBY rewards
      * @param stakeupAmount Amount of STAKEUP to stake
      */
     function stake(uint256 stakeupAmount) external;
-
-    /**
-     * @notice Stake Stakeup Token's to earn stTBY rewards on behalf of another user
-     * @param receiver The address of the user who will receive the staked STAKEUP
-     * @param stakeupAmount Amount of STAKEUP to stake
-     */
-    function delegateStake(address receiver, uint256 stakeupAmount) external;
 
     /**
      * @notice Unstakes the user's STAKEUP and sends it back to them, along with their accumulated stTBY gains
@@ -106,15 +103,6 @@ interface IStakeupStaking is ISUPVesting {
      * @param shares Amount of shares of stTBY to add to the reward pool
      */
     function claimableRewards(address shares) external view returns (uint256);
-    
-    /// @notice Returns the Stakeup Token
-    function getStakupToken() external view returns (IStakeupToken);
-    
-    /// @notice Returns the stTBY token
-    function getStTBY() external view returns (IStTBY);
-
-    /// @notice Returns the address of the Reward Manager
-    function getRewardManager() external view returns (address);
     
     /// @notice Returns the total amount of STAKEUP staked within the contract
     function totalStakeUpStaked() external view returns (uint256);

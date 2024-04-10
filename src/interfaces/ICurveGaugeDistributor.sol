@@ -11,6 +11,12 @@ interface ICurveGaugeDistributor {
 
     /// @notice Emitted if the reward allocation is not met
     error RewardAllocationNotMet();
+
+    /// @notice Emitted if the contract is not initialized
+    error NotInitialized();
+
+    /// @notice Emitted if the contract is already initialized
+    error ContractInitialized();
     
     /** 
      * @notice Data for a Curve pool
@@ -26,6 +32,16 @@ interface ICurveGaugeDistributor {
         address curveFactory;
         uint256 rewardsRemaining;
         uint256 maxRewards;
+    }
+
+    /**
+     * @notice Data for the timestamps regarding the seeding of the gauges
+     * @param rewardStart The timestamps of the first reward distribution to the gauges
+     * @param lastSeed The timestamp of the last time the gauges were seeded with SUP
+     */
+    struct SeedTimestamp {
+        uint128 rewardStart;
+        uint128 lastSeed;
     }
 
     /**
@@ -49,9 +65,12 @@ interface ICurveGaugeDistributor {
      */
     function seedGauges() external;
 
+    // /// @notice Deploys Curve gauges for all pools set during deployment
+    // function deployCurveGauges() external;
+    function initialize(CurvePoolData[] calldata curvePools, address stakeupToken) external;
     /**
      * @notice Returns the data for all Curve pool registered with the distributor
+     * @return CurvePoolData[] Array of Curve pool data
      */
     function getCurvePoolData() external view returns (CurvePoolData[] memory);
-
 }

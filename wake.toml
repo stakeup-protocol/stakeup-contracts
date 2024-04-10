@@ -5,27 +5,32 @@ exclude_paths = [
     ".venv",
     "lib",
     "script",
-    "test",
-    "certora",
+    "tests/foundry",
+    "certora"
 ]
 include_paths = ["node_modules"]
+via_IR = true
+
+evm_version = 'paris'
 
 remappings = [
     "solmate/=lib/solmate/src/",
     "@openzeppelin/=lib/openzeppelin-contracts/",
     "solady/=lib/solady/src/",
-    "@layerzerolabs/=lib/solidity-examples/contracts/",
     "ds-test/=lib/forge-std/lib/ds-test/src/",
     "erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/",
     "forge-std/=lib/forge-std/src/",
     "openzeppelin-contracts/=lib/openzeppelin-contracts/",
     "openzeppelin/=lib/openzeppelin-contracts/contracts/",
-    "solidity-examples/=lib/solidity-examples/contracts/",
+    "@LayerZero/=lib/LayerZero-v2/oapp/contracts/",
+    "@layerzerolabs/=lib/LayerZero-v2/oapp/node_modules/@layerzerolabs/",
+    "@LayerZeroTesting/=lib/LayerZero-v2/oapp/test/",
+    "solidity-bytes-utils/=lib/LayerZero-v2/oapp/node_modules/solidity-bytes-utils/",
 ]
 
 [compiler.solc.optimizer]
 enabled = true
-runs = 200
+runs = 5_000
 
 [detectors]
 exclude = []
@@ -39,7 +44,7 @@ cmd = "anvil"
 cmd_args = "--prune-history 100 --transaction-block-keeper 10 --steps-tracing --silent"
 
 [testing.ganache]
-cmd_args = "-k istanbul -q"
+cmd_args = "-k paris -q"
 
 [testing.hardhat]
 cmd_args = ""
