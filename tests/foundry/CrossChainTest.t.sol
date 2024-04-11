@@ -12,12 +12,15 @@ import { MessagingFee, SendParam } from "@LayerZero/oft/interfaces/IOFT.sol";
 import {MockBloomPool} from "../mocks/MockBloomPool.sol";
 import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockRegistry} from "../mocks/MockRegistry.sol";
+import {MockSwapFacility} from "../mocks/MockSwapFacility.sol";
 
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
 import {StakeupStakingL2} from "src/staking/StakeupStakingL2.sol";
 import {StTBY} from "src/token/StTBY.sol";
 import {StakeupToken} from "src/token/StakeupToken.sol";
 import {ILzBridgeConfig} from "src/interfaces/ILzBridgeConfig.sol";
+import {IBloomPool} from "src/interfaces/bloom/IBloomPool.sol";
 
 contract CrossChainTest is TestHelper {
     using FixedPointMathLib for uint256;
@@ -35,6 +38,11 @@ contract CrossChainTest is TestHelper {
     StakeupStaking internal stakeupStaking;
     StakeupStakingL2 internal stakeupStakingL2;
 
+    MockRegistry internal registry;
+    MockBloomPool internal pool;
+    MockSwapFacility internal swap;
+    MockBloomFactory internal bloomFactory;
+
     uint32 aEid = 1;
     uint32 bEid = 2;
 
@@ -45,95 +53,106 @@ contract CrossChainTest is TestHelper {
         super.setUp();
         setUpEndpoints(2, LibraryType.UltraLightNode);
 
-        MockBloomFactory bloomFactory = new MockBloomFactory();
-        address registry = makeAddr("registry");
         address wstTBY = makeAddr("wstTBY");
-        address swap = makeAddr("swap");
+        swap = new MockSwapFacility(usdc, bill);
 
-        MockBloomPool pool = new MockBloomPool(
+        pool = new MockBloomPool(
             address(usdc),
             address(bill),
             address(swap),
             6
         );
+        {
+            registry = new MockRegistry(address(pool));
+            bloomFactory = new MockBloomFactory();
 
-        bloomFactory.setLastCreatedPool(address(pool));
+            bloomFactory.setLastCreatedPool(address(pool));
 
-        address expectedSupAAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 1);
-        address expectedstTBYAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 2);
+            address expectedSupAAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 1);
+            address expectedstTBYAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 2);
 
-        stakeupStaking = new StakeupStaking(
-            address(expectedSupAAddress), 
-            address(expectedstTBYAddress),
-            endpoints[aEid]
-        );
+            stakeupStaking = new StakeupStaking(
+                address(expectedSupAAddress), 
+                address(expectedstTBYAddress),
+                endpoints[aEid]
+            );
 
-        supA = new StakeupToken(
-            address(stakeupStaking),
-            address(0),
-            address(this),
-            address(endpoints[aEid]),
-            address(this)
-        );
+            supA = new StakeupToken(
+                address(stakeupStaking),
+                address(0),
+                address(this),
+                address(endpoints[aEid]),
+                address(this)
+            );
 
-        stTBYA = new StTBY(
-            address(usdc),
-            address(stakeupStaking),
-            address(bloomFactory),
-            address(registry),
-            1,
-            0,
-            0,
-            wstTBY,
-            false,
-            address(endpoints[aEid]),
-            address(this)
-        );
+            stTBYA = new StTBY(
+                address(usdc),
+                address(stakeupStaking),
+                address(bloomFactory),
+                address(registry),
+                1,
+                0,
+                0,
+                wstTBY,
+                false,
+                address(endpoints[aEid]),
+                address(this)
+            );
+        }
 
-        address expectedSupBAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 1);
-        address expectedstTBYBAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 2);
+        {
+            address expectedSupBAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 1);
+            address expectedstTBYBAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 2);
 
-        stakeupStakingL2 = new StakeupStakingL2(
-            address(expectedSupBAddress),
-            address(expectedstTBYBAddress),
-            address(stakeupStaking),
-            aEid,
-            address(endpoints[bEid]),
-            address(this)
-        );
+            stakeupStakingL2 = new StakeupStakingL2(
+                address(expectedSupBAddress),
+                address(expectedstTBYBAddress),
+                address(stakeupStaking),
+                aEid,
+                address(endpoints[bEid]),
+                address(this)
+            );
 
-        supB = new StakeupToken(
-            address(stakeupStakingL2),
-            address(0),
-            address(this),
-            address(endpoints[bEid]),
-            address(this)
-        );
+            supB = new StakeupToken(
+                address(stakeupStakingL2),
+                address(0),
+                address(this),
+                address(endpoints[bEid]),
+                address(this)
+            );
 
-        stTBYB = new StTBY(
-            address(usdc),
-            address(stakeupStakingL2),
-            address(bloomFactory),
-            address(registry),
-            1,
-            0,
-            0,
-            wstTBY,
-            false,
-            address(endpoints[bEid]),
-            address(this)
-        );
+            stTBYB = new StTBY(
+                address(usdc),
+                address(stakeupStakingL2),
+                address(bloomFactory),
+                address(registry),
+                1,
+                0,
+                0,
+                wstTBY,
+                false,
+                address(endpoints[bEid]),
+                address(this)
+            );
+        }
+        pool.setCommitPhaseEnd(block.timestamp + 25 hours);
+        pool.setState(IBloomPool.State.Commit);
+        registry.setTokenInfos(true);
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(address(pool));
+        registry.setActiveTokens(tokens);
+        {
+            // config and wire the oapps
+            address[] memory stTBYs = new address[](2);
+            stTBYs[0] = address(stTBYA);
+            stTBYs[1] = address(stTBYB);
+            this.wireOApps(stTBYs);
 
-        // config and wire the oapps
-        address[] memory stTBYs = new address[](2);
-        stTBYs[0] = address(stTBYA);
-        stTBYs[1] = address(stTBYB);
-        this.wireOApps(stTBYs);
-
-        address[] memory sups = new address[](2);
-        sups[0] = address(supA);
-        sups[1] = address(supA);
-        this.wireOApps(sups);
+            address[] memory sups = new address[](2);
+            sups[0] = address(supA);
+            sups[1] = address(supA);
+            this.wireOApps(sups);
+        }
     }
 
     function testBridge() public {
@@ -240,5 +259,104 @@ contract CrossChainTest is TestHelper {
         uint256 balance = stTBYA.balanceOf(address(stakeupStaking));
         assertGt(balance, 0);
         assertGt(stakeupStaking.getLastRewardBlock(), initialRewardBlock);
+    }
+
+    function testGlobalShares() public {
+        uint256 amount = 10000e6;
+        usdc.mint(address(this), amount * 2);
+        usdc.approve(address(stTBYA), amount);
+        ILzBridgeConfig.LZBridgeSettings memory settings = ILzBridgeConfig.LZBridgeSettings({
+            options: "",
+            fee: MessagingFee({
+                nativeFee: 0,
+                lzTokenFee: 0
+            })
+        });
+        stTBYA.depositUnderlying{value: settings.fee.nativeFee}(amount, settings);
+        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+
+        assertEq(stTBYA.getGlobalShares(), 10000e18);
+        assertEq(stTBYA.getGlobalShares(), stTBYB.getGlobalShares());
+        assertEq(stTBYA.getSupplyIndex(), 1e18);
+        assertEq(stTBYB.getSupplyIndex(), 0);
+        {
+            /// Bridge 25% to chain B
+            bytes memory options = OptionsBuilder
+                .newOptions()
+                .addExecutorLzReceiveOption(200000, 0);
+            SendParam memory sendParam = SendParam(
+                bEid, // Destination ID 
+                addressToBytes32(address(this)),
+                2500e18,
+                2500e18,
+                options,
+                "",
+                ""
+            );
+            MessagingFee memory fee = stTBYA.quoteSend(sendParam, false);
+
+            stTBYA.send{ value: fee.nativeFee }(sendParam, fee, payable(address(this)));
+            verifyPackets(bEid, addressToBytes32(address(stTBYB)));
+        }
+
+        assertEq(stTBYA.getGlobalShares(), 10000e18);
+        assertEq(stTBYB.getGlobalShares(), 10000e18);
+        assertEq(stTBYA.getSupplyIndex(), 75e16);
+        assertEq(stTBYA.getSupplyIndex(), 25e16);
+    }
+
+    function testYieldDistribution() public {
+        uint256 amount = 10000e6;
+        usdc.mint(address(this), amount * 2);
+        usdc.approve(address(stTBYA), amount);    
+                ILzBridgeConfig.LZBridgeSettings memory settings = ILzBridgeConfig.LZBridgeSettings({
+            options: "",
+            fee: MessagingFee({
+                nativeFee: 0,
+                lzTokenFee: 0
+            })
+        });
+        stTBYA.depositUnderlying{value: settings.fee.nativeFee}(amount, settings);
+        
+        skip(3 days);
+        /// Bridge 50% to chain B
+        bytes memory options = OptionsBuilder
+            .newOptions()
+            .addExecutorLzReceiveOption(200000, 0);
+        SendParam memory sendParam = SendParam(
+            bEid, // Destination ID 
+            addressToBytes32(address(this)),
+            5000e18,
+            5000e18,
+            options,
+            "",
+            ""
+        );
+        MessagingFee memory fee = stTBYA.quoteSend(sendParam, false);
+
+        stTBYA.send{ value: fee.nativeFee }(sendParam, fee, payable(address(this)));
+        verifyPackets(bEid, addressToBytes32(address(stTBYB)));
+
+        /// Update rates to simulate adding yield to the system
+        usdc.mint(address(pool), 1_100000);
+        vm.startPrank(address(stTBYA));
+        swap.setRate(1e18);
+        pool.initiatePreHoldSwap();
+        swap.completeNextSwap();
+        vm.stopPrank();
+
+        swap.setRate(1.1e18);
+        registry.setExchangeRate(address(pool), 1.1e18);
+        pool.initiatePostHoldSwap();
+        swap.completeNextSwap();
+        pool.setState(IBloomPool.State.FinalWithdraw);
+
+        // Value should be accrued evenly throughout the system due to the rate change
+        stTBYA.poke();
+        assertEq(stTBYA.getSupplyIndex(), 5e17); // Supply Index should be 50% and unchanged by yield
+        assertEq(stTBYA.getSupplyIndex(), 5e17); // Supply Index should be 50% and unchanged by yield
+        assertEq(stTBYA.getTotalUsd(), 5500e18);
+        assertEq(stTBYB.getTotalUsd(), 5500e18);
+        assertEq(stTBYA.getTotalUsd() + stTBYB.getTotalUsd(), 11000e18);
     }
 }

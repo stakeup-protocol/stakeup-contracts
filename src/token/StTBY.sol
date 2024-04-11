@@ -5,6 +5,7 @@ import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {MessagingReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {StakeUpRewardMathLib} from "../rewards/lib/StakeUpRewardMathLib.sol";
 import {StakeUpMintRewardLib} from "../rewards/lib/StakeUpMintRewardLib.sol";
@@ -73,6 +74,9 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
     /// @dev Scaling factor for underlying token
     uint256 private immutable _scalingFactor;
+
+    /// @dev An array of peer endpoint Ids
+    uint32[] public peerEids;
 
     /// @dev Mapping of TBYs that have been redeemed
     mapping(address => bool) private _tbyRedeemed;
@@ -281,6 +285,18 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Registers a new OFT instance on a remote chain
+     * @dev This function has been overridden to allow for iteration over all peers
+     * @param _eid The endpoint ID
+     * @param _peer Address of the peer to be associated with the corresponding endpoint in bytes32
+     */
+    function setPeer(uint32 _eid, bytes32 _peer) public virtual override onlyOwner {
+        peers[_eid] = _peer;
+        peerEids.push(_eid);
+        emit PeerSet(_eid, _peer);
+    }
+
     /// @inheritdoc IStTBY
     function getWstTBY() external view returns (IWstTBY) {
         return _wstTBY;
@@ -363,6 +379,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         if (sharesAmount == 0) revert ZeroAmount();
         _mintShares(msg.sender, sharesAmount);
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
+        _increaseGlobalSharesOutbound(sharesAmount + sharesFeeAmount, settings.options);
 
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
 
@@ -436,6 +453,8 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             _underlyingToken.safeTransfer(account, underlyingAmount);
 
             _burnShares(account, shares);
+            _decreaseGlobalSharesOutbound(shares, settings.options);
+
             _setTotalUsd(_getTotalUsd() - amount);
             bridgingReceipt = _stakeupStaking.processFees{ value: msg.value }(msg.sender, settings);
         }
@@ -459,6 +478,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         if (performanceFee > 0) {
             uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
             _mintShares(address(_stakeupStaking), sharesFeeAmount);
+            _increaseGlobalSharesOutbound(sharesFeeAmount, settings.options);
 
             emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
         }
@@ -493,7 +513,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             _lastDepositAmount += underlyingBalance;
 
             uint256 scaledUnregisteredBalance = unregisteredBalance * _scalingFactor;
-
+            
             _setTotalUsd(_getTotalUsd() + scaledUnregisteredBalance);
 
             emit TBYAutoMinted(address(pool), underlyingBalance);
@@ -597,6 +617,57 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
                 _pokeRewardsRemaining -= amount;
                 IStakeupToken(_stakeupToken).mintRewards(msg.sender, amount);
             }
+        }
+    }
+
+    /**
+     * @notice Increases the total amount of shares in existence across all chains
+     * @dev This function invokes a batch send message w/ LayerZero
+     * @param shares Amount of shares to add to global shares value
+     */
+    function _increaseGlobalSharesOutbound(uint256 shares, bytes memory options) internal {
+        _globalShares += shares;
+
+        bytes memory message = abi.encodeWithSignature(
+            "_increaseGlobalSharesInbound(uint256)",
+            shares
+        );
+
+        _batchSend(message, options);
+    }
+
+    /**
+     * @notice Decreases the total amount of shares in existence across all chains
+     * @dev This function invokes a batch send message w/ LayerZero
+     * @param shares Amount of shares to subtract from the global shares value
+     */
+    function _decreaseGlobalSharesOutbound(uint256 shares, bytes memory options) internal {
+        _globalShares -= shares;
+
+        bytes memory message = abi.encodeWithSignature(
+            "_decreaseGlobalSharesInbound(uint256)",
+            shares
+        );
+
+        _batchSend(message, options);
+    }
+
+    function _batchSend(bytes memory message, bytes memory options) internal returns (MessagingReceipt[] memory receipts) {
+        uint32[] memory eids = peerEids;
+        uint256 length = eids.length;
+
+        uint256 providedFee = msg.value;
+        for (uint256 i = 0; i < length; ++i) {
+            MessagingReceipt memory receipt = _lzSend(
+                eids[i],
+                message,
+                options,
+                MessagingFee(providedFee, 0),
+                payable(msg.sender)
+            );
+
+            providedFee -= receipt.fee.nativeFee;
+            receipts[i] = receipt;
         }
     }
 }

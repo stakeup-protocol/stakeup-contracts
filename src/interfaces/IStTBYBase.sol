@@ -55,4 +55,9 @@ interface IStTBYBase {
      */
     function getUsdByShares(uint256 sharesAmount) external view returns (uint256);
 
+    /// @notice The total shares of stTBY tokens in circulation on all chains    
+    function getGlobalShares() external view returns (uint256);
+
+    /// @notice The percentage of the global supply that exists on this chain
+    function getSupplyIndex() external view returns (uint256);
 }
