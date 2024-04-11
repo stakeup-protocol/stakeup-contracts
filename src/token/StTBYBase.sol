@@ -34,6 +34,9 @@ contract StTBYBase is IStTBYBase, OFT {
     /// @dev Total amount of Usd
     uint256 internal _totalUsd;
 
+    /// @dev The total amount of stTBY shares in circulation on all chains
+    uint256 internal _globalShares;
+
     // =================== Functions ===================
 
     constructor(address _layerZeroEndpoint, address _layerZeroDelegate) 
@@ -207,6 +210,16 @@ contract StTBYBase is IStTBYBase, OFT {
         return sharesAmount.mulWadUp(_getTotalUsd()).divWadUp(totalShares);
     }
 
+    /// @inheritdoc IStTBYBase
+    function getGlobalShares() public view override returns (uint256) {
+        return _globalShares;
+    }
+
+    /// @inheritdoc IStTBYBase
+    function getSupplyIndex() external view override returns (uint256) {
+        return _getTotalShares().divWadUp(_globalShares);
+    }
+
     /**
      * @notice Transfer shares from caller to recipient
      * @dev Emits a `TransferShares` event.
@@ -261,7 +274,7 @@ contract StTBYBase is IStTBYBase, OFT {
      * @dev Set the total amount of Usd.
      * @param amount Amount
      */
-    function _setTotalUsd(uint256 amount) internal {
+    function _setTotalUsd(uint256 amount) internal virtual {
         _totalUsd = amount;
     }
 
@@ -400,6 +413,32 @@ contract StTBYBase is IStTBYBase, OFT {
     function _emitTransferEvents(address from, address to, uint256 tokenAmount, uint256 sharesAmount) internal {
         emit Transfer(from, to, tokenAmount);
         emit TransferShares(from, to, sharesAmount);
+    }
+
+    /**
+     * @notice Sets the total amount of shares in existence across all chains
+     * @param shares Total amount of shares in existence across all chains
+     */
+    function _setGlobalShares(uint256 shares) internal {
+        _globalShares = shares;
+    }
+
+    /**
+     * @notice increases the total amount of shares in existence using
+     *         inbound messages from stTBY instances on other chains
+     * @param shares Amount of shares to increase the global shares by
+     */
+    function _increaseGlobalSharesInbound(uint256 shares) internal {
+        _globalShares += shares;
+    }
+
+    /**
+     * @notice decreases the total amount of shares in existence using
+     *         inbound messages from stTBY instances on other chains
+     * @param shares Amount of shares to decrease the global shares by
+     */
+    function _decreaseGlobalSharesInbound(uint256 shares) internal {
+        _globalShares -= shares;
     }
 
     function _debit(

@@ -46,6 +46,7 @@ contract MockBloomPool is IBloomPool, MockERC20 {
         uint256 amountToSwap = underlyingToken.balanceOf(address(this));
         underlyingToken.safeApprove(address(swap), amountToSwap);
         swap.swap(underlyingToken, billToken, amountToSwap, new bytes32[](0));
+        _mint(msg.sender, amountToSwap);
     }
 
     function initiatePostHoldSwap() external {
