@@ -7,14 +7,16 @@ import {LibRLP} from "solady/utils/LibRLP.sol";
 import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 import { TestHelper } from "@LayerZeroTesting/TestHelper.sol";
-import { MessagingFee, SendParam } from "@LayerZero/oft/interfaces/IOFT.sol";
+import { MessagingFee, SendParam, MessagingReceipt } from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {MockBloomPool} from "../mocks/MockBloomPool.sol";
 import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockRegistry} from "../mocks/MockRegistry.sol";
 import {MockSwapFacility} from "../mocks/MockSwapFacility.sol";
+import {MessagingHelpers} from "./MessagingHelpers.t.sol";
 
+import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
 import {StakeupStakingL2} from "src/staking/StakeupStakingL2.sol";
 import {StTBY} from "src/token/StTBY.sol";
@@ -22,7 +24,7 @@ import {StakeupToken} from "src/token/StakeupToken.sol";
 import {ILzBridgeConfig} from "src/interfaces/ILzBridgeConfig.sol";
 import {IBloomPool} from "src/interfaces/bloom/IBloomPool.sol";
 
-contract CrossChainTest is TestHelper {
+contract CrossChainTest is TestHelper, MessagingHelpers {
     using FixedPointMathLib for uint256;
     using OFTComposeMsgCodec for address;
     using OptionsBuilder for bytes;
@@ -37,6 +39,9 @@ contract CrossChainTest is TestHelper {
 
     StakeupStaking internal stakeupStaking;
     StakeupStakingL2 internal stakeupStakingL2;
+
+    StakeUpMessenger internal messengerA;
+    StakeUpMessenger internal messengerB;
 
     MockRegistry internal registry;
     MockBloomPool internal pool;
@@ -70,6 +75,7 @@ contract CrossChainTest is TestHelper {
 
             address expectedSupAAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 1);
             address expectedstTBYAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 2);
+            address expectedMessengerAAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 3);
 
             stakeupStaking = new StakeupStaking(
                 address(expectedSupAAddress), 
@@ -94,15 +100,19 @@ contract CrossChainTest is TestHelper {
                 0,
                 0,
                 wstTBY,
+                expectedMessengerAAddress,
                 false,
                 address(endpoints[aEid]),
                 address(this)
             );
+
+            messengerA = new StakeUpMessenger(address(stTBYA), endpoints[aEid], address(this));
         }
 
         {
             address expectedSupBAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 1);
             address expectedstTBYBAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 2);
+            address expectedMessengerAddress = LibRLP.computeAddress(address(this), vm.getNonce(address(this)) + 3);
 
             stakeupStakingL2 = new StakeupStakingL2(
                 address(expectedSupBAddress),
@@ -130,10 +140,13 @@ contract CrossChainTest is TestHelper {
                 0,
                 0,
                 wstTBY,
+                expectedMessengerAddress,
                 false,
                 address(endpoints[bEid]),
                 address(this)
             );
+
+            messengerB = new StakeUpMessenger(address(stTBYB), endpoints[bEid], address(this));
         }
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         pool.setState(IBloomPool.State.Commit);
@@ -152,6 +165,11 @@ contract CrossChainTest is TestHelper {
             sups[0] = address(supA);
             sups[1] = address(supA);
             this.wireOApps(sups);
+
+            address[] memory messengers = new address[](2);
+            messengers[0] = stTBYA.getMessenger();
+            messengers[1] = stTBYB.getMessenger();
+            this.wireOApps(messengers);
         }
     }
 
@@ -159,14 +177,15 @@ contract CrossChainTest is TestHelper {
         uint256 amount = 10000e6;
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);
-        ILzBridgeConfig.LZBridgeSettings memory settings = ILzBridgeConfig.LZBridgeSettings({
-            options: "",
-            fee: MessagingFee({
-                nativeFee: 0,
-                lzTokenFee: 0
-            })
-        });
-        stTBYA.depositUnderlying{value: 100000010526}(amount, settings);
+
+        ILzBridgeConfig.LzSettings memory settings = _generateSettings(
+            messengerB,
+            Operation.Deposit,
+            l2BridgeEmpty
+        );
+
+        uint256 depositValue = settings.bridgeSettings.fee.nativeFee + settings.messageSettings.fee.nativeFee;
+        stTBYA.depositUnderlying{ value: depositValue }(amount, settings);
         
         uint256 initialBalanceA = stTBYA.balanceOf(address(this));
         uint256 tokensToSend = 1 ether;
@@ -227,17 +246,21 @@ contract CrossChainTest is TestHelper {
 
         MessagingFee memory fee = stTBYB.quoteSend(sendParam, false);
 
-        ILzBridgeConfig.LZBridgeSettings memory settings = ILzBridgeConfig.LZBridgeSettings({
-            options: options,
-            fee: MessagingFee({
-                nativeFee: fee.nativeFee,
-                lzTokenFee: fee.lzTokenFee
-            })
+        BridgeOptions memory l2Bridge = BridgeOptions({
+            sendParam: sendParam,
+            fee: fee
         });
 
-        (ILzBridgeConfig.LzBridgeReceipt memory receipt) = stTBYB.depositUnderlying{value: fee.nativeFee}(amount, settings);
-        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messengerB, Operation.Deposit, l2Bridge);
+        uint256 depositValue = settings.bridgeSettings.fee.nativeFee + settings.messageSettings.fee.nativeFee;
         
+        (
+            ILzBridgeConfig.LzBridgeReceipt memory receipt,
+            MessagingReceipt[] memory msgReceipts
+        ) = stTBYB.depositUnderlying{value: depositValue}(amount, settings);
+        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+        verifyPackets(aEid, addressToBytes32(address(messengerA)));
+            
         uint32 dstEid_ = aEid;
         address from_ = address(stTBYA);
         bytes memory options_ = options;
@@ -265,15 +288,14 @@ contract CrossChainTest is TestHelper {
         uint256 amount = 10000e6;
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);
-        ILzBridgeConfig.LZBridgeSettings memory settings = ILzBridgeConfig.LZBridgeSettings({
-            options: "",
-            fee: MessagingFee({
-                nativeFee: 0,
-                lzTokenFee: 0
-            })
-        });
-        stTBYA.depositUnderlying{value: settings.fee.nativeFee}(amount, settings);
+
+        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messengerB, Operation.Deposit, l2BridgeEmpty);
+        (
+            ILzBridgeConfig.LzBridgeReceipt memory receipt,
+            MessagingReceipt[] memory msgReceipts
+        ) = stTBYA.depositUnderlying{value: 1e18}(amount, settings);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+        verifyPackets(bEid, addressToBytes32(address(messengerB)));
 
         assertEq(stTBYA.getGlobalShares(), 10000e18);
         assertEq(stTBYA.getGlobalShares(), stTBYB.getGlobalShares());
@@ -302,22 +324,22 @@ contract CrossChainTest is TestHelper {
         assertEq(stTBYA.getGlobalShares(), 10000e18);
         assertEq(stTBYB.getGlobalShares(), 10000e18);
         assertEq(stTBYA.getSupplyIndex(), 75e16);
-        assertEq(stTBYA.getSupplyIndex(), 25e16);
+        assertEq(stTBYB.getSupplyIndex(), 25e16);
     }
 
     function testYieldDistribution() public {
         uint256 amount = 10000e6;
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);    
-                ILzBridgeConfig.LZBridgeSettings memory settings = ILzBridgeConfig.LZBridgeSettings({
-            options: "",
-            fee: MessagingFee({
-                nativeFee: 0,
-                lzTokenFee: 0
-            })
-        });
-        stTBYA.depositUnderlying{value: settings.fee.nativeFee}(amount, settings);
         
+        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messengerB, Operation.Deposit, l2BridgeEmpty);
+        (
+            ILzBridgeConfig.LzBridgeReceipt memory receipt,
+            MessagingReceipt[] memory msgReceipts
+        ) = stTBYA.depositUnderlying{value: 1e18}(amount, settings);
+        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+        verifyPackets(bEid, addressToBytes32(address(messengerB)));
+
         skip(3 days);
         /// Bridge 50% to chain B
         bytes memory options = OptionsBuilder
@@ -338,21 +360,17 @@ contract CrossChainTest is TestHelper {
         verifyPackets(bEid, addressToBytes32(address(stTBYB)));
 
         /// Update rates to simulate adding yield to the system
-        usdc.mint(address(pool), 1_100000);
-        vm.startPrank(address(stTBYA));
-        swap.setRate(1e18);
-        pool.initiatePreHoldSwap();
-        swap.completeNextSwap();
-        vm.stopPrank();
+        pool.mint(address(stTBYA), 10000e6);
 
         swap.setRate(1.1e18);
         registry.setExchangeRate(address(pool), 1.1e18);
-        pool.initiatePostHoldSwap();
-        swap.completeNextSwap();
-        pool.setState(IBloomPool.State.FinalWithdraw);
 
         // Value should be accrued evenly throughout the system due to the rate change
-        stTBYA.poke();
+        ILzBridgeConfig.LzSettings memory settings2 = _generateSettings(messengerB, Operation.Poke, l2BridgeEmpty);
+        stTBYA.poke{ value: 1e18 }(settings2);
+        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+        verifyPackets(bEid, addressToBytes32(address(messengerB)));
+
         assertEq(stTBYA.getSupplyIndex(), 5e17); // Supply Index should be 50% and unchanged by yield
         assertEq(stTBYA.getSupplyIndex(), 5e17); // Supply Index should be 50% and unchanged by yield
         assertEq(stTBYA.getTotalUsd(), 5500e18);
