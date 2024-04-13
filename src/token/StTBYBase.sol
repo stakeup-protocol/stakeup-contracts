@@ -2,13 +2,16 @@
 pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-
 import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
+
+import {StakeUpMessenger} from "../messaging/StakeUpMessenger.sol";
+
 import {IStTBYBase} from "../interfaces/IStTBYBase.sol";
 
 /// @title Staked TBY Base Contract
 contract StTBYBase is IStTBYBase, OFT {
     using FixedPointMathLib for uint256;
+
     // =================== Constants ===================
 
     uint256 internal constant INFINITE_ALLOWANCE = type(uint256).max;
@@ -37,12 +40,58 @@ contract StTBYBase is IStTBYBase, OFT {
     /// @dev The total amount of stTBY shares in circulation on all chains
     uint256 internal _globalShares;
 
+    /// @dev The address of the messenger contract
+    address internal _messenger;
+
+    // =================== Modifiers ===================
+
+    modifier onlyMessenger() {
+        if (msg.sender != _messenger) revert UnauthorizedCaller();
+        _;
+    }
+
     // =================== Functions ===================
 
-    constructor(address _layerZeroEndpoint, address _layerZeroDelegate) 
+    constructor(address messenger, address _layerZeroEndpoint, address _layerZeroDelegate) 
         OFT("Staked TBY", "stTBY", _layerZeroEndpoint, _layerZeroDelegate)
     {
-        // solhint-disable-next-line-no-empty-blocks
+        _messenger = messenger;
+    }
+
+    /// @inheritdoc IStTBYBase
+    function increaseGlobalShares(
+        uint256 prevGlobalShares,
+        uint256 shares
+    ) external onlyMessenger {
+        // If globalShares hasn't been set yet, set it to the previous value of the inbound message
+        if (_globalShares == 0 && prevGlobalShares != 0) {
+            _setGlobalShares(prevGlobalShares + shares);
+        } else {
+            _setGlobalShares(getGlobalShares() + shares);
+        }
+    }
+
+    /// @inheritdoc IStTBYBase
+    function decreaseGlobalShares(
+        uint256 prevGlobalShares,
+        uint256 shares
+    ) external onlyMessenger {
+        // If globalShares hasn't been set yet, set it to the previous value of the inbound message
+        if (_globalShares == 0 && prevGlobalShares != 0) {
+            _setGlobalShares(prevGlobalShares - shares);
+        } else {
+            _setGlobalShares(getGlobalShares() - shares);
+        } 
+    }
+
+    /// @inheritdoc IStTBYBase
+    function accrueYield(uint256 amount) external onlyMessenger {
+        _accrueYield(amount);
+    }
+
+    /// @inheritdoc IStTBYBase
+    function removeYield(uint256 amount) external onlyMessenger {
+        _accrueYield(amount);
     }
 
     /**
@@ -216,8 +265,17 @@ contract StTBYBase is IStTBYBase, OFT {
     }
 
     /// @inheritdoc IStTBYBase
-    function getSupplyIndex() external view override returns (uint256) {
-        return _getTotalShares().divWadUp(_globalShares);
+    function getSupplyIndex() public view override returns (uint256) {
+        uint256 globalShares = getGlobalShares();
+        if (globalShares == 0) {
+            return 0;
+        }
+        return _getTotalShares().divWadUp(globalShares);
+    }
+
+    /// @inheritdoc IStTBYBase
+    function getMessenger() external view override returns (address) {
+        return _messenger;
     }
 
     /**
@@ -423,22 +481,16 @@ contract StTBYBase is IStTBYBase, OFT {
         _globalShares = shares;
     }
 
-    /**
-     * @notice increases the total amount of shares in existence using
-     *         inbound messages from stTBY instances on other chains
-     * @param shares Amount of shares to increase the global shares by
-     */
-    function _increaseGlobalSharesInbound(uint256 shares) internal {
-        _globalShares += shares;
+    /// @dev This is called on the base chain before distributing yield to other chains
+    function _accrueYield(uint256 amount) internal {
+        uint256 yieldAccrued = getSupplyIndex().mulWad(amount);
+        _setTotalUsd(_getTotalUsd() + yieldAccrued);
     }
 
-    /**
-     * @notice decreases the total amount of shares in existence using
-     *         inbound messages from stTBY instances on other chains
-     * @param shares Amount of shares to decrease the global shares by
-     */
-    function _decreaseGlobalSharesInbound(uint256 shares) internal {
-        _globalShares -= shares;
+    /// @dev This is called on the base chain before before removing yield from other chains
+    function _removeYield(uint256 amount) internal {
+        uint256 yieldRemoved = getSupplyIndex().mulWad(amount);
+        _setTotalUsd(_getTotalUsd() - yieldRemoved);
     }
 
     function _debit(

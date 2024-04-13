@@ -5,7 +5,7 @@ libs = ["lib"]
 test = "tests"
 via_ir = true
 optimizer = true
-optimizer-runs = 5_000
+optimizer-runs = 200
 evm_version = "paris"
 
 solc = "0.8.22"
