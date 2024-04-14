@@ -448,7 +448,6 @@ contract StTBYTest is MessagingHelpers {
         uint256 bobRedeemFees = (bobMintedShares * redeemBps) / BPS;
         uint256 expectedPerformanceFee = 3e16; // 10% of yield
         // ###########################################
-        uint256 expectedAliceBalance = aliceMintedShares * 1.9e18 / 1e18 - aliceRedeemFees; 
 
         ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
 
@@ -511,10 +510,11 @@ contract StTBYTest is MessagingHelpers {
 
         // ####### Redeem state Tests ####################
         uint256 aliceShares = stTBY.sharesOf(alice);
+        uint256 aliceBalance1 = stTBY.balanceOf(alice);
         uint256 bobWrappedAmount = wstTBY.balanceOf(bob);
 
         uint256 scaler = 10 ** (18 + (18 - stableToken.decimals()));
-        uint256 aliceExpectedStableBalance = expectedAliceBalance * .995e18 / scaler;
+        uint256 aliceExpectedStableBalance = aliceBalance1 * .995e18 / scaler;
         uint256 bobExpectedStableBalance = stTBY.getUsdByShares(bobWrappedAmount) * .995e18 / scaler;
 
         vm.startPrank(alice);
@@ -525,18 +525,18 @@ contract StTBYTest is MessagingHelpers {
         stTBY.redeemStTBY(stTBY.balanceOf(alice), withdrawSettings);
         vm.stopPrank();
 
-        // vm.startPrank(bob);
-        // wstTBY.approve(address(stTBY), UINT256_MAX);
-        // vm.expectEmit(true, true, true, true);
-        // emit Redeemed(bob, bobWrappedAmount - bobRedeemFees, bobExpectedStableBalance);
-        // stTBY.redeemWstTBY(bobWrappedAmount, withdrawSettings);
-        // vm.stopPrank();
+        vm.startPrank(bob);
+        wstTBY.approve(address(stTBY), UINT256_MAX);
+        vm.expectEmit(true, true, true, true);
+        emit Redeemed(bob, bobWrappedAmount - bobRedeemFees, bobExpectedStableBalance);
+        stTBY.redeemWstTBY(bobWrappedAmount, withdrawSettings);
+        vm.stopPrank();
 
         assertEq(stTBY.balanceOf(alice), 0);
         assertEq(stableToken.balanceOf(alice), aliceExpectedStableBalance);
 
-        // assertEq(stTBY.sharesOf(bob), 0);
-        // assertEq(stableToken.balanceOf(bob), bobExpectedStableBalance);
+        assertEq(stTBY.sharesOf(bob), 0);
+        assertEq(stableToken.balanceOf(bob), bobExpectedStableBalance);
 
         assertEq(stTBY.sharesOf(address(staking)), stakeupStakingShares + performanceFeeInShares + aliceRedeemFees + bobRedeemFees);
         // ###############################################

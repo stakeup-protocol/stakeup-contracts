@@ -20,7 +20,7 @@ import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
-import "forge-std/Console2.sol";
+
 /// @title Staked TBY Contract
 contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     using Math for uint256;
@@ -270,10 +270,15 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         if (withdrawn == 0) revert InvalidRedemption();
 
-        uint256 realizedValue = _lastRate[tby] * _scalingFactor * amount / 1e18;
-        uint256 proceeds = withdrawn * _scalingFactor;
+        uint256 lastRate = _lastRate[tby] == 0 ? 1e18 : _lastRate[tby];
+        uint256 realizedValue = lastRate * _scalingFactor * amount / 1e18;
 
-        (bridgingReceipt, msgReceipts) = _processProceeds(proceeds, realizedValue, settings);
+        (bridgingReceipt, msgReceipts) = _processProceeds(
+            amount,
+            withdrawn,
+            realizedValue,
+            settings
+        );
 
         if (!_tbyRedeemed[tby]) {
             _tbyRedeemed[tby] = true;
@@ -514,13 +519,15 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     /**
      * @notice Process the proceeds of TBYs and pay fees to Stakeup
      *   Staking
-     * @param proceeds Proceeds in USD scaled to 1e18
+     * @param startingAmount Amount of USD that was initially deposited
+     * @param amountWithdrawn Amount of USD that was withdrawn
      * @param realizedValue Value of proceeds that have already been 
      *        accounted for in the protocol's total USD value
      * @param settings LZBridge settings
      */
     function _processProceeds(
-        uint256 proceeds,
+        uint256 startingAmount,
+        uint256 amountWithdrawn,
         uint256 realizedValue,
         LzSettings memory settings
     ) 
@@ -530,7 +537,9 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             MessagingReceipt[] memory msgReceipts
         )
     {
-        uint256 performanceFee = (proceeds * performanceBps) / BPS;
+        uint256 proceeds = amountWithdrawn - startingAmount;
+        uint256 yieldScaled = proceeds * _scalingFactor;
+        uint256 performanceFee = (yieldScaled * performanceBps) / BPS;
 
         if (performanceFee > 0) {
             uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
@@ -548,11 +557,12 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             _remainingBalance += proceeds;
         }
 
-        // TODO: Batchcall
+        // TODO: Batchcall to LayerZero
+        uint256 withdrawnScaled = amountWithdrawn * _scalingFactor;
 
         // If we have previously overestimated the yield, we need to remove the excess
-        if (realizedValue > proceeds) {
-            uint256 valueCorrection = realizedValue - proceeds;
+        if (realizedValue > withdrawnScaled) {
+            uint256 valueCorrection = realizedValue - withdrawnScaled;
             _syncDecreaseYield(
                 valueCorrection,
                 settings.messageSettings.options,
@@ -561,8 +571,8 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         }
 
         // If we have underestimated the yield, we need to distribute the difference
-        if (proceeds > realizedValue) {
-            uint256 unrealizedGains = proceeds - realizedValue;
+        if ((amountWithdrawn * _scalingFactor) > realizedValue) {
+            uint256 unrealizedGains = withdrawnScaled - realizedValue;
             msgReceipts = _syncIncreaseYield(
                 unrealizedGains,
                 settings.messageSettings.options,
