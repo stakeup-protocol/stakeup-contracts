@@ -1,6 +1,7 @@
 from eth_typing import Address
 from wake.testing import *
 from pytypes.src.token.StTBY import StTBY
+from pytypes.src.messaging.StakeUpMessenger import StakeUpMessenger
 from pytypes.tests.mocks.MockERC20 import MockERC20
 from pytypes.tests.mocks.MockSwapFacility import MockSwapFacility
 from pytypes.tests.mocks.MockBloomPool import MockBloomPool
@@ -41,7 +42,9 @@ class StTBYTestEnv:
 
         self.stakeup = self.__setup_stakeup()
         self.st_tby = self.__setup_st_tby()
+        print("ST TBY ADDRESS: ", self.st_tby.address)
         self.wst_tby = WstTBY.deploy(self.st_tby.address)
+        self.messenger = StakeUpMessenger.deploy(self.st_tby.address, self.endpoint, self.deployer)
 
     def __setup_token(self, config: ContractConfig, d=18):
         if config.is_mock:
@@ -67,6 +70,7 @@ class StTBYTestEnv:
     
     def __setup_st_tby(self):
         wrapper_address = get_create_address(self.deployer, self.deployer.nonce + 1)
+        messenger_address = get_create_address(self.deployer, self.deployer.nonce + 2)
         return StTBY.deploy(
             self.stablecoin.address,
             self.stakeup.address,
@@ -76,6 +80,7 @@ class StTBYTestEnv:
             50, # .5%
             1000, # 10%
             wrapper_address,
+            messenger_address,
             True,
             self.endpoint,
             self.deployer
