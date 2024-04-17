@@ -301,8 +301,9 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         // If we haven't updated the values of TBYs in 12 hours, update it now
         if (block.timestamp - _lastRateUpdate >= 12 hours) {
             _lastRateUpdate = block.timestamp;
-            msgReceipts = _syncIncreaseYield(
+            msgReceipts = _syncYield(
                 unregisteredBalance,
+                true, // Increasing yield
                 settings.messageSettings.options,
                 settings.messageSettings.fee.nativeFee
             );
@@ -397,8 +398,9 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
 
         _mintShares(msg.sender, sharesAmount);
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
-        msgReceipts = _syncIncreaseShares(
+        msgReceipts = _syncShares(
             sharesAmount + sharesFeeAmount,
+            true, // Increasing shares
             settings.messageSettings.options,
             settings.messageSettings.fee.nativeFee
         );
@@ -487,8 +489,9 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             _burnShares(account, shares);
             _setTotalUsd(_getTotalUsd() - amount);
 
-            msgReceipts = _syncDecreaseShares(
+            msgReceipts = _syncShares(
                 shares,
+                false, // Decreasing shares
                 settings.messageSettings.options,
                 settings.messageSettings.fee.nativeFee
             );

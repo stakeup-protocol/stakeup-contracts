@@ -34,7 +34,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         uint256 originalShares,
         uint256 sharesAdded,
         uint256 totalUsd,
-        bool yieldIncreased,
+        bool yieldIncrease,
         uint32[] memory peerEids,
         bytes memory options,
         address refundRecipient
@@ -46,7 +46,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
                     originalShares,
                     sharesAdded,
                     totalUsd,
-                    yieldIncreased
+                    yieldIncrease
                 ),
                 peerEids,
                 options,
@@ -55,15 +55,18 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     }
 
     /// @inheritdoc IStakeUpMessenger
-    function syncIncreaseYield(
+    function syncYield(
         uint256 totalUsdAdded,
+        bool increase,
         uint32[] memory peerEids,
         bytes memory options,
         address refundRecipient
     ) external payable onlyStTBY returns (MessagingReceipt[] memory receipts) {
         return
             _batchSend(
-                MessageType.IncreaseYield,
+                increase
+                    ? MessageType.IncreaseYield
+                    : MessageType.DecreaseYield,
                 abi.encode(totalUsdAdded),
                 peerEids,
                 options,
@@ -72,52 +75,20 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     }
 
     /// @inheritdoc IStakeUpMessenger
-    function syncDecreaseYield(
-        uint256 totalUsdRemoved,
-        uint32[] memory peerEids,
-        bytes memory options,
-        address refundRecipient
-    ) external payable onlyStTBY returns (MessagingReceipt[] memory receipts) {
-        return
-            _batchSend(
-                MessageType.DecreaseYield,
-                abi.encode(totalUsdRemoved),
-                peerEids,
-                options,
-                refundRecipient
-            );
-    }
-
-    /// @inheritdoc IStakeUpMessenger
-    function syncIncreaseShares(
+    function syncShares(
         uint256 originalShares,
-        uint256 sharesAdded,
+        uint256 shares,
+        bool increase,
         uint32[] memory peerEids,
         bytes memory options,
         address refundRecipient
     ) external payable onlyStTBY returns (MessagingReceipt[] memory receipts) {
         return
             _batchSend(
-                MessageType.IncreaseShares,
-                abi.encode(originalShares, sharesAdded),
-                peerEids,
-                options,
-                refundRecipient
-            );
-    }
-
-    /// @inheritdoc IStakeUpMessenger
-    function syncDecreaseShares(
-        uint256 originalShares,
-        uint256 sharesRemoved,
-        uint32[] memory peerEids,
-        bytes memory options,
-        address refundRecipient
-    ) external payable onlyStTBY returns (MessagingReceipt[] memory receipts) {
-        return
-            _batchSend(
-                MessageType.DecreaseShares,
-                abi.encode(originalShares, sharesRemoved),
+                increase
+                    ? MessageType.IncreaseShares
+                    : MessageType.DecreaseShares,
+                abi.encode(originalShares, shares),
                 peerEids,
                 options,
                 refundRecipient
