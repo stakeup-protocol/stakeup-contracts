@@ -4,8 +4,6 @@ pragma solidity 0.8.22;
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
 
-import {StakeUpMessenger} from "../messaging/StakeUpMessenger.sol";
-
 import {IStTBYBase} from "../interfaces/IStTBYBase.sol";
 
 /// @title Staked TBY Base Contract

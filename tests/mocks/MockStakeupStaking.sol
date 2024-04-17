@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.22;
 
-import {IOFT, SendParam, MessagingFee, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {MessagingFee, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {IStakeupStaking} from "src/interfaces/IStakeupStaking.sol";
 import {IStakeupToken} from "src/interfaces/IStakeupToken.sol";
 import {IStTBY} from "src/interfaces/IStTBY.sol";
-import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
 
 contract MockStakeupStaking is IStakeupStaking {
     address private _stTBY;
