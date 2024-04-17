@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT                                                           
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
@@ -330,8 +330,10 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         // If we haven't updated the values of TBYs in 12 hours, update it now
         if (block.timestamp - _lastRateUpdate >= 12 hours) {
             _lastRateUpdate = block.timestamp;
+            uint256 yieldIncrease = _getTbyYield() + unregisteredBalance;
+
             msgReceipts = _syncYield(
-                unregisteredBalance,
+                yieldIncrease,
                 true, // Increasing yield
                 settings.messageSettings.options,
                 settings.messageSettings.fee.nativeFee
