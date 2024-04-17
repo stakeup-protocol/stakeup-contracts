@@ -57,7 +57,7 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
     }
 
     /// @inheritdoc IStakeupStakingBase
-    function processFees(address refundRecipient, LZBridgeSettings memory settings)
+    function processFees(address refundRecipient, LZBridgeSettings calldata settings)
         external
         payable
         override
@@ -93,7 +93,7 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
      * @param amount The minimum amount of tokens to send
      * @param options The executor options for the send operation
      */
-    function _setSendParam(uint256 amount, bytes memory options) internal view returns (SendParam memory) {
+    function _setSendParam(uint256 amount, bytes calldata options) internal view returns (SendParam memory) {
         return SendParam({
             dstEid: _baseChainEid,
             to: _baseChainInstance.addressToBytes32(),
