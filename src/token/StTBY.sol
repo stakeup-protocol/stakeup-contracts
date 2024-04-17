@@ -290,8 +290,11 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
 
         if (withdrawn == 0) revert Errors.InvalidRedemption();
 
-        uint256 lastRate = _lastRate[tby] == 0 ? 1e18 : _lastRate[tby];
-        uint256 realizedValue = (lastRate * _scalingFactor * amount) / 1e18;
+        uint256 lastRate = _lastRate[tby] == 0
+            ? Constants.FIXED_POINT_ONE
+            : _lastRate[tby];
+        uint256 realizedValue = (lastRate * _scalingFactor * amount) /
+            Constants.FIXED_POINT_ONE;
 
         (bridgingReceipt, msgReceipts) = _processProceeds(
             amount,
@@ -639,7 +642,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
      * the newest Bloom Pool's commit phase
      * @param pool The latest Bloom pool
      * @return unregisteredBalanceScaled The amount of liquidity added to the system
-     *         that was not previously accounted for scaled to 1e18
+     *         that was not previously accounted for scaled to Constants.FIXED_POINT_ONE
      */
     function _autoMintTBY(
         IBloomPool pool
@@ -751,7 +754,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
                 uint256 lastRate = _lastRate[tokens[i]];
 
                 if (lastRate == 0) {
-                    lastRate = 1e18;
+                    lastRate = Constants.FIXED_POINT_ONE;
                 }
 
                 uint256 rateDiff = rate - lastRate;
