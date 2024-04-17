@@ -295,7 +295,6 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
 
         (
             ILayerZeroSettings.LzBridgeReceipt memory receipt,
-            MessagingReceipt[] memory msgReceipts
         ) = stTBYB.depositUnderlying{value: depositValue}(amount, settings);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
         verifyPackets(aEid, addressToBytes32(address(messengerA)));
@@ -336,10 +335,8 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             Operation.Deposit,
             l2BridgeEmpty
         );
-        (
-            ILayerZeroSettings.LzBridgeReceipt memory receipt,
-            MessagingReceipt[] memory msgReceipts
-        ) = stTBYA.depositUnderlying{value: 1e18}(amount, settings);
+        
+        stTBYA.depositUnderlying{value: 1e18}(amount, settings);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
 
@@ -387,10 +384,8 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             Operation.Deposit,
             l2BridgeEmpty
         );
-        (
-            ILayerZeroSettings.LzBridgeReceipt memory receipt,
-            MessagingReceipt[] memory msgReceipts
-        ) = stTBYA.depositUnderlying{value: 1e18}(amount, settings);
+        
+        stTBYA.depositUnderlying{value: 1e18}(amount, settings);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
 

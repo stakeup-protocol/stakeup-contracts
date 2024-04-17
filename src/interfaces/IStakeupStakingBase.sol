@@ -12,9 +12,6 @@ import {IStTBY} from "./IStTBY.sol";
  *      used by stTBY and SUP to interact with the Staking contract
  */
 interface IStakeupStakingBase is ILayerZeroSettings {
-    /// @notice An unauthorized caller attempted to call a function
-    error UnauthorizedCaller();
-
     /**
      * @notice Processes stTBY fees and sends them to StakeUp Staking
      * @dev If on a L2 chain, the fees are bridged to the mainnet

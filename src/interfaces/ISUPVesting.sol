@@ -9,9 +9,6 @@ interface ISUPVesting {
         uint256 vestingStartTime;
     }
 
-    /// @notice Caller not the StakeUp token
-    error CallerNotSUP();
-
     /**
      * @notice Get the amount of tokens available to be claimed by an account
      * @param account The account to check

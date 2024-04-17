@@ -4,11 +4,6 @@ pragma solidity 0.8.22;
 import {IStTBY} from "./IStTBY.sol";
 
 interface IWstTBY {
-    // =================== Errors ===================
-
-    /// @notice Zero amount
-    error ZeroAmount();
-
     /**
      * @notice Exchanges stTBY to wstTBY
      * @dev Requirements:

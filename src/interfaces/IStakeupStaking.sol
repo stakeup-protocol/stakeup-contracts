@@ -6,30 +6,6 @@ import {IStTBY} from "./IStTBY.sol";
 import {ISUPVesting} from "./ISUPVesting.sol";
 
 interface IStakeupStaking is IStakeupStakingBase, ISUPVesting {
-    // @notice Token amount is 0
-    error ZeroTokensStaked();
-
-    // @notice User has no current stake
-    error UserHasNoStaked();
-
-    // @notice User has no rewards to claim
-    error NoRewardsToClaim();
-
-    // @notice Only stTBY can call this function
-    error CallerNotStTBY();
-
-    // @notice No Fees were sent to the contract
-    error NoFeesToProcess();
-
-    // @notice The address is 0
-    error ZeroAddress();
-
-    // @notice If the LZ Compose call fails
-    error LZComposeFailed();
-
-    // @notice If the originating OApp of the LZCompose call is invalid
-    error InvalidOApp();
-
     // =================== Structs ====================
     /**
      * @notice Data structure containing information pertaining to a user's stake

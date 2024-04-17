@@ -3,6 +3,8 @@ pragma solidity 0.8.22;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
 import {StTBYBase} from "./StTBYBase.sol";
@@ -21,7 +23,7 @@ contract WstTBY is IWstTBY, ERC20 {
     /// @inheritdoc IWstTBY
     function wrap(uint256 stTBYAmount) external returns (uint256) {
         uint256 wstTBYAmount = _stTBY.getSharesByUsd(stTBYAmount);
-        if (wstTBYAmount == 0) revert ZeroAmount();
+        if (wstTBYAmount == 0) revert Errors.ZeroAmount();
 
         _mint(msg.sender, wstTBYAmount);
         ERC20(address(_stTBY)).transferFrom(
@@ -35,7 +37,7 @@ contract WstTBY is IWstTBY, ERC20 {
     /// @inheritdoc IWstTBY
     function unwrap(uint256 wstTBYAmount) external returns (uint256) {
         uint256 stTBYAmount = _stTBY.getUsdByShares(wstTBYAmount);
-        if (stTBYAmount == 0) revert ZeroAmount();
+        if (stTBYAmount == 0) revert Errors.ZeroAmount();
 
         _burn(msg.sender, wstTBYAmount);
         StTBYBase(address(_stTBY)).transferShares(msg.sender, wstTBYAmount);

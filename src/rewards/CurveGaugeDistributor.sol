@@ -6,6 +6,8 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
+import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
+import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 import {StakeUpRewardMathLib} from "./lib/StakeUpRewardMathLib.sol";
 
 import {ICurveGaugeDistributor} from "../interfaces/ICurveGaugeDistributor.sol";
@@ -32,14 +34,8 @@ contract CurveGaugeDistributor is
     /// @notice If the contract is initialized
     bool internal _initialized;
 
-    /// @notice Curve Reward gauges will be seeded every week
-    uint256 internal constant SEED_INTERVAL = 1 weeks;
-
-    /// @notice Total rewards to be distributed to Curve pools
-    uint256 internal constant POOL_REWARDS = 350_000_000e18;
-
     modifier initialized() {
-        if (!_initialized) revert NotInitialized();
+        if (!_initialized) revert Errors.NotInitialized();
         _;
     }
 
@@ -52,8 +48,8 @@ contract CurveGaugeDistributor is
         CurvePoolData[] calldata curvePools,
         address stakeupToken
     ) external onlyOwner {
-        if (stakeupToken == address(0)) revert InvalidAddress();
-        if (_initialized) revert ContractInitialized();
+        if (stakeupToken == address(0)) revert Errors.InvalidAddress();
+        if (_initialized) revert Errors.ContractInitialized();
 
         _stakeupToken = IStakeupToken(stakeupToken);
         _initialized = true;
@@ -69,8 +65,9 @@ contract CurveGaugeDistributor is
         uint256 length = curvePools.length;
 
         uint256 timeElapsed = block.timestamp - timestamps.lastSeed;
-        if (timestamps.lastSeed != 0 && timeElapsed < SEED_INTERVAL)
-            revert TooEarlyToSeed();
+        if (timestamps.lastSeed != 0 && timeElapsed < Constants.SEED_INTERVAL) {
+            revert Errors.TooEarlyToSeed();
+        }
 
         for (uint256 i = 0; i < length; ++i) {
             // If this is the first time seeding the gauge, then register SUP as the reward token
@@ -124,7 +121,7 @@ contract CurveGaugeDistributor is
     function _deployCurveGauges() internal {
         CurvePoolData[] storage curvePools = _curvePools;
         uint256 length = curvePools.length;
-        uint256 totalRewards = POOL_REWARDS;
+        uint256 totalRewards = Constants.POOL_REWARDS;
 
         for (uint256 i = 0; i < length; ++i) {
             // Deploy the Curve guage and register SUP as the reward token
@@ -136,7 +133,7 @@ contract CurveGaugeDistributor is
 
             emit GaugeDeployed(gauge, curvePools[i].curvePool);
         }
-        if (totalRewards != 0) revert RewardAllocationNotMet();
+        if (totalRewards != 0) revert Errors.RewardAllocationNotMet();
     }
 
     /**
@@ -147,9 +144,13 @@ contract CurveGaugeDistributor is
         uint256 length = curvePools.length;
 
         for (uint i = 0; i < length; ++i) {
-            if (curvePools[i].curveFactory == address(0))
-                revert InvalidAddress();
-            if (curvePools[i].curvePool == address(0)) revert InvalidAddress();
+            if (curvePools[i].curveFactory == address(0)) {
+                revert Errors.ZeroAddress();
+            }
+
+            if (curvePools[i].curvePool == address(0)) {
+                revert Errors.ZeroAddress();
+            }
 
             _curvePools.push(curvePools[i]);
         }

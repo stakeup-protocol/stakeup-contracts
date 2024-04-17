@@ -6,6 +6,8 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
 import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
 
+import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
+
 import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
 import {IStakeupStakingBase} from "src/interfaces/IStakeupStakingBase.sol";
 
@@ -65,7 +67,7 @@ contract StakeupStakingTest is Test {
         // Reverts if stake amount is 0
         vm.startPrank(alice);
         mockStakeupToken.approve(address(stakeupStaking), 0);
-        vm.expectRevert(IStakeupStaking.ZeroTokensStaked.selector);
+        vm.expectRevert(Errors.ZeroTokensStaked.selector);
         stakeupStaking.stake(0);
         vm.stopPrank();
     }
@@ -75,7 +77,7 @@ contract StakeupStakingTest is Test {
 
         // Reverts if stake amount is 0
         vm.startPrank(alice);
-        vm.expectRevert(IStakeupStaking.UserHasNoStaked.selector);
+        vm.expectRevert(Errors.UserHasNoStake.selector);
         stakeupStaking.unstake(1000 ether, false);
         vm.stopPrank();
 
@@ -117,7 +119,7 @@ contract StakeupStakingTest is Test {
 
         // Reverts if someone other than stTBY calls this function
         vm.startPrank(alice);
-        vm.expectRevert(IStakeupStakingBase.UnauthorizedCaller.selector);
+        vm.expectRevert(Errors.UnauthorizedCaller.selector);
         ILayerZeroSettings.LZBridgeSettings memory settings;
         stakeupStaking.processFees(address(0), settings);
         vm.stopPrank();
@@ -182,7 +184,7 @@ contract StakeupStakingTest is Test {
         // Dont allow alice to claim more than she has been allocated
         vm.roll(blockNumber++);
         vm.startPrank(alice);
-        vm.expectRevert(IStakeupStaking.NoRewardsToClaim.selector);
+        vm.expectRevert(Errors.NoRewardsToClaim.selector);
         stakeupStaking.harvest();
         vm.stopPrank();
 
@@ -215,7 +217,7 @@ contract StakeupStakingTest is Test {
 
     function test_InvalidCaller() public {
         mockStakeupToken.mint(address(stakeupStaking), vestAmount);
-        vm.expectRevert(ISUPVesting.CallerNotSUP.selector);
+        vm.expectRevert(Errors.UnauthorizedCaller.selector);
         stakeupStaking.vestTokens(address(this), vestAmount);
     }
 

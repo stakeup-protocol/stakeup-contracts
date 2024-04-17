@@ -7,6 +7,7 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 import {MessagingHelpers} from "./MessagingHelpers.t.sol";
 import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
+import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
@@ -169,7 +170,7 @@ contract StTBYTest is MessagingHelpers {
             l2BridgeEmpty
         );
         registry.setTokenInfos(false);
-        vm.expectRevert(IStTBY.TBYNotActive.selector);
+        vm.expectRevert(Errors.TBYNotActive.selector);
         vm.prank(alice);
         stTBY.depositTby(address(pool), 1 ether, settings);
     }

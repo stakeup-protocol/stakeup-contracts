@@ -12,35 +12,6 @@ import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {IWstTBY} from "./IWstTBY.sol";
 
 interface IStTBY is IStTBYBase, ILayerZeroSettings {
-    // =================== Errors ===================
-
-    /// @notice Invalid address (e.g. zero address)
-    error InvalidAddress();
-
-    /// @notice Parameter out of bounds
-    error ParameterOutOfBounds();
-
-    /// @notice Insufficient balance
-    error InsufficientBalance();
-
-    /// @notice Invalid amount
-    error InvalidAmount();
-
-    /// @notice Invalid Redemption of Underlying Tokens
-    error InvalidRedemption();
-
-    /// @notice Invalid Underlying Token
-    error InvalidUnderlyingToken();
-
-    /// @notice TBY not active
-    error TBYNotActive();
-
-    /// @notice WstTBY already initialized
-    error AlreadyInitialized();
-
-    /// @notice Zero amount
-    error ZeroAmount();
-
     // =================== Struct ====================
 
     /**
