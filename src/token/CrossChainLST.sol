@@ -43,45 +43,29 @@ abstract contract CrossChainLST is StTBYBase {
     }
 
     /**
-     * @notice Increases the total amount of shares in existence across all chains
-     * @dev This function invokes a batch send message w/ LayerZero
-     * @param shares Amount of shares to add to global shares value
-     */
-    function _syncIncreaseShares(
-        uint256 shares,
-        bytes calldata options,
-        uint256 msgFee
-    ) internal returns (MessagingReceipt[] memory) {
-        uint256 prevGlobalShares = _globalShares;
-        _setGlobalShares(prevGlobalShares + shares);
-
-        return
-            IStakeUpMessenger(_messenger).syncIncreaseShares{value: msgFee}(
-                prevGlobalShares,
-                shares,
-                peerEids,
-                options,
-                msg.sender
-            );
-    }
-
-    /**
      * @notice Decreases the total amount of shares in existence across all chains
      * @dev This function invokes a batch send message w/ LayerZero
      * @param shares Amount of shares to subtract from the global shares value
      */
-    function _syncDecreaseShares(
+    function _syncShares(
         uint256 shares,
+        bool increase,
         bytes calldata options,
         uint256 msgFee
     ) internal returns (MessagingReceipt[] memory) {
         uint256 prevGlobalShares = _globalShares;
-        _setGlobalShares(prevGlobalShares - shares);
+
+        if (increase) {
+            _setGlobalShares(prevGlobalShares + shares);
+        } else {
+            _setGlobalShares(prevGlobalShares - shares);
+        }
 
         return
-            IStakeUpMessenger(_messenger).syncDecreaseShares{value: msgFee}(
+            IStakeUpMessenger(_messenger).syncShares{value: msgFee}(
                 prevGlobalShares,
                 shares,
+                increase,
                 peerEids,
                 options,
                 msg.sender
@@ -95,45 +79,22 @@ abstract contract CrossChainLST is StTBYBase {
      * @param options Options for the LayerZero message
      * @param msgFee The fee to send the message
      */
-    function _syncIncreaseYield(
+    function _syncYield(
         uint256 amount,
+        bool increase,
         bytes calldata options,
         uint256 msgFee
     ) internal returns (MessagingReceipt[] memory) {
-        uint256 usdValueAdded = _getTbyYield() + amount;
+        if (increase) {
+            _accrueYield(_getTbyYield() + amount);
+        } else {
+            _removeYield(amount);
+        }
 
-        // Distributes yield to this chain's stTBY holders
-        _accrueYield(usdValueAdded);
-
-        // Distributes yield to other chain's stTBY holders
         return
-            IStakeUpMessenger(_messenger).syncIncreaseYield{value: msgFee}(
-                usdValueAdded,
-                peerEids,
-                options,
-                msg.sender
-            );
-    }
-
-    /**
-     * @notice Makes yield corrections to all stTBY holders on all chains
-     * @dev This function invokes a batch send message w/ LayerZero
-     * @param amount The amount of total USD accrued by the protocol across all chains
-     * @param options Options for the LayerZero message
-     * @param msgFee The fee to send the message
-     */
-    function _syncDecreaseYield(
-        uint256 amount,
-        bytes calldata options,
-        uint256 msgFee
-    ) internal returns (MessagingReceipt[] memory) {
-        // Removes yield from this chain's stTBY holders
-        _removeYield(amount);
-
-        // Removes yield from other chain's stTBY holders
-        return
-            IStakeUpMessenger(_messenger).syncDecreaseYield{value: msgFee}(
+            IStakeUpMessenger(_messenger).syncYield{value: msgFee}(
                 amount,
+                increase,
                 peerEids,
                 options,
                 msg.sender
