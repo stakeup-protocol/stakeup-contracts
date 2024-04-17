@@ -1,37 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {IStakeupStakingBase} from "../interfaces/IStakeupStakingBase.sol";
-import {IStakeupToken} from "./IStakeupToken.sol";
+import {IStakeupStakingBase} from "./IStakeupStakingBase.sol";
 import {IStTBY} from "./IStTBY.sol";
 import {ISUPVesting} from "./ISUPVesting.sol";
 
 interface IStakeupStaking is IStakeupStakingBase, ISUPVesting {
-
-    // @notice Token amount is 0
-    error ZeroTokensStaked();
-
-    // @notice User has no current stake
-    error UserHasNoStaked();
-
-    // @notice User has no rewards to claim
-    error NoRewardsToClaim();
-
-    // @notice Only stTBY can call this function
-    error CallerNotStTBY();
-
-    // @notice No Fees were sent to the contract
-    error NoFeesToProcess();
-
-    // @notice The address is 0
-    error ZeroAddress();
-
-    // @notice If the LZ Compose call fails
-    error LZComposeFailed();
-
-    // @notice If the originating OApp of the LZCompose call is invalid 
-    error InvalidOApp();
-
     // =================== Structs ====================
     /**
      * @notice Data structure containing information pertaining to a user's stake
@@ -103,7 +77,7 @@ interface IStakeupStaking is IStakeupStakingBase, ISUPVesting {
      * @param shares Amount of shares of stTBY to add to the reward pool
      */
     function claimableRewards(address shares) external view returns (uint256);
-    
+
     /// @notice Returns the total amount of STAKEUP staked within the contract
     function totalStakeUpStaked() external view returns (uint256);
 
@@ -114,8 +88,10 @@ interface IStakeupStaking is IStakeupStakingBase, ISUPVesting {
      * @notice Gets the staking data for a user
      * @param user Address of the user to get the staking data for
      */
-    function getUserStakingData(address user) external view returns (StakingData memory);
-    
+    function getUserStakingData(
+        address user
+    ) external view returns (StakingData memory);
+
     /// @notice Returns the last block that global reward data was updated
     function getLastRewardBlock() external view returns (uint256);
 }

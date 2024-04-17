@@ -4,6 +4,8 @@ pragma solidity 0.8.22;
 import {OApp, Origin} from "@LayerZero/oapp/OApp.sol";
 import {MessagingReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
 
+import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
 
@@ -13,13 +15,20 @@ import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
  *         between cross-chain instances.
  */
 contract StakeUpMessenger is IStakeUpMessenger, OApp {
+
+    // =================== Storage ===================
+
     /// @dev Address of stTBY contract
     address private immutable _stTBY;
 
+    // =================== Modifiers ===================
+
     modifier onlyStTBY() {
-        if (msg.sender != _stTBY) revert UnauthorizedCaller();
+        if (msg.sender != _stTBY) revert Errors.UnauthorizedCaller();
         _;
     }
+
+    // ================= Constructor =================
 
     constructor(
         address stTBY,
@@ -28,6 +37,8 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     ) OApp(layerZeroEndpoint, layerZeroDelegate) {
         _stTBY = stTBY;
     }
+
+    // =================== Functions ===================
 
     /// @inheritdoc IStakeUpMessenger
     function fullSync(
@@ -246,6 +257,8 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
 
             return;
         }
+
+        revert Errors.InvalidMessageType();
     }
 
     /**

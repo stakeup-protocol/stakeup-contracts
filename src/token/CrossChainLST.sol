@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {MessagingReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {StTBYBase} from "./StTBYBase.sol";
 
@@ -13,11 +13,15 @@ import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
  *         stTBY holders on all chains.
  */
 abstract contract CrossChainLST is StTBYBase {
+    // =================== Storage ===================
+
     /// @dev An array of peer endpoint Ids
     uint32[] public peerEids;
 
     /// @dev Mapping of TBYs last cached exchange rate
     mapping(address => uint256) internal _lastRate;
+
+    // ================= Constructor =================
 
     constructor(
         address messanger,
@@ -86,7 +90,7 @@ abstract contract CrossChainLST is StTBYBase {
         uint256 msgFee
     ) internal returns (MessagingReceipt[] memory) {
         if (increase) {
-            _accrueYield(_getTbyYield() + amount);
+            _accrueYield(amount);
         } else {
             _removeYield(amount);
         }

@@ -4,12 +4,6 @@ pragma solidity 0.8.22;
 import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 interface IStakeUpMessenger {
-    /// @dev Error emitted when caller is not the stTBY contract
-    error UnauthorizedCaller();
-
-    /// @dev Error emitted when the provided address is the zero address
-    error InvalidMessageType();
-
     /**
      * @notice Enums for different cross-chain messaging types
      * @param None Message type for no action

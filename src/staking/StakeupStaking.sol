@@ -7,6 +7,8 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 
+import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
+import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 import {SUPVesting} from "./SUPVesting.sol";
 
 import {IStTBY} from "../interfaces/IStTBY.sol";
@@ -19,7 +21,7 @@ import {IStakeupStaking, IStakeupStakingBase} from "../interfaces/IStakeupStakin
  *         Tokens can be staked for any amount of time and can be unstaked at any time.
  *         The rewards tracking system is based on the methods similar to those used by
  *         Pendle Finance for rewarding Liquidity Providers.
- * @dev Rewards will be streamed to the staking contract anytime fees are collected and 
+ * @dev Rewards will be streamed to the staking contract anytime fees are collected and
  *      are immediately claimable by the user. The rewards are denominated in stTBY shares.
  */
 contract StakeupStaking is
@@ -51,9 +53,6 @@ contract StakeupStaking is
     /// @dev Mapping of users to their staking data
     mapping(address => StakingData) private _stakingData;
 
-    /// @notice The initial reward index
-    uint256 internal constant INITIAL_REWARD_INDEX = 1;
-
     // =================== Modifiers ===================
 
     /// @notice Updates the global reward index and available reward balance for Stakeup
@@ -71,7 +70,7 @@ contract StakeupStaking is
     /// @notice Only the reward token or the contract itself can call this function
     modifier authorized() {
         if (msg.sender != address(_stTBY) && msg.sender != address(this)) {
-            revert UnauthorizedCaller();
+            revert Errors.UnauthorizedCaller();
         }
         _;
     }
@@ -104,7 +103,7 @@ contract StakeupStaking is
     ) external override nonReentrant updateIndex distributeRewards {
         StakingData storage userStakingData = _stakingData[msg.sender];
 
-        if (userStakingData.amountStaked == 0) revert UserHasNoStaked();
+        if (userStakingData.amountStaked == 0) revert Errors.UserHasNoStake();
 
         if (stakeupAmount > userStakingData.amountStaked) {
             stakeupAmount = userStakingData.amountStaked;
@@ -128,7 +127,7 @@ contract StakeupStaking is
     /// @inheritdoc IStakeupStaking
     function harvest() public nonReentrant updateIndex {
         uint256 rewardAmount = _distributeRewards(msg.sender);
-        if (rewardAmount == 0) revert NoRewardsToClaim();
+        if (rewardAmount == 0) revert Errors.NoRewardsToClaim();
         _transferRewards(msg.sender);
         emit RewardsHarvested(msg.sender, rewardAmount);
     }
@@ -198,7 +197,7 @@ contract StakeupStaking is
     function _stake(address user, uint256 amount) internal nonReentrant {
         StakingData storage userStakingData = _stakingData[user];
 
-        if (amount == 0) revert ZeroTokensStaked();
+        if (amount == 0) revert Errors.ZeroTokensStaked();
 
         IERC20(address(_stakeupToken)).safeTransferFrom(
             msg.sender,
@@ -230,7 +229,7 @@ contract StakeupStaking is
                 rewards.lastBalance;
 
             if (rewards.index == 0) {
-                rewards.index = uint128(INITIAL_REWARD_INDEX);
+                rewards.index = uint128(Constants.INITIAL_REWARD_INDEX);
             }
 
             if (totalStakeupLocked != 0) {
@@ -254,12 +253,12 @@ contract StakeupStaking is
      * @return The updated amount of rewards accrued by the user
      */
     function _distributeRewards(address user) internal returns (uint256) {
-        if (user == address(0)) revert ZeroAddress();
+        if (user == address(0)) revert Errors.ZeroAddress();
 
         StakingData storage userStakingData = _stakingData[user];
 
         if (userStakingData.index == 0) {
-            userStakingData.index = uint128(INITIAL_REWARD_INDEX);
+            userStakingData.index = uint128(Constants.INITIAL_REWARD_INDEX);
         }
 
         uint256 rewardIndex = _rewardData.index;
@@ -293,7 +292,7 @@ contract StakeupStaking is
         uint256 userIndex = userData.index;
 
         if (userIndex == 0) {
-            userIndex = INITIAL_REWARD_INDEX;
+            userIndex = Constants.INITIAL_REWARD_INDEX;
         }
 
         if (userIndex == globalIndex || globalIndex == 0) {
@@ -335,8 +334,9 @@ contract StakeupStaking is
         address /*Executor*/,
         bytes calldata /*Executor Data*/
     ) external payable override {
-        if (_oApp != address(_stTBY)) revert InvalidOApp();
-        if (msg.sender != _layerZeroEndpoint) revert UnauthorizedCaller();
+        if (_oApp != address(_stTBY)) revert Errors.InvalidOApp();
+        if (msg.sender != _layerZeroEndpoint)
+            revert Errors.UnauthorizedCaller();
 
         bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(
             _message
@@ -344,6 +344,6 @@ contract StakeupStaking is
 
         (bool success, ) = address(this).call(_composeMsgContent);
 
-        if (!success) revert LZComposeFailed();
+        if (!success) revert Errors.LZComposeFailed();
     }
 }

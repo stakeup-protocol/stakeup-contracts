@@ -2,23 +2,7 @@
 pragma solidity 0.8.22;
 
 interface ICurveGaugeDistributor {
-
-    /// @notice Emitted if the caller tries to seed the gauges to early
-    error TooEarlyToSeed();
-
-    /// @notice Emitted if the caller passes an invalid address
-    error InvalidAddress();
-
-    /// @notice Emitted if the reward allocation is not met
-    error RewardAllocationNotMet();
-
-    /// @notice Emitted if the contract is not initialized
-    error NotInitialized();
-
-    /// @notice Emitted if the contract is already initialized
-    error ContractInitialized();
-    
-    /** 
+    /**
      * @notice Data for a Curve pool
      * @param curvePool Address of the Curve pool
      * @param curveGauge Address of the Curve gauge
@@ -67,7 +51,11 @@ interface ICurveGaugeDistributor {
 
     // /// @notice Deploys Curve gauges for all pools set during deployment
     // function deployCurveGauges() external;
-    function initialize(CurvePoolData[] calldata curvePools, address stakeupToken) external;
+    function initialize(
+        CurvePoolData[] calldata curvePools,
+        address stakeupToken
+    ) external;
+
     /**
      * @notice Returns the data for all Curve pool registered with the distributor
      * @return CurvePoolData[] Array of Curve pool data
