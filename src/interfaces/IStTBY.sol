@@ -2,15 +2,16 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {MessagingReceipt, MessagingFee, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {IBloomFactory} from "./bloom/IBloomFactory.sol";
 import {IExchangeRateRegistry} from "./bloom/IExchangeRateRegistry.sol";
 import {IStakeupStaking} from "./IStakeupStaking.sol";
 import {IStTBYBase} from "./IStTBYBase.sol";
-import {ILzBridgeConfig} from "./ILzBridgeConfig.sol";
+import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {IWstTBY} from "./IWstTBY.sol";
 
-interface IStTBY is IStTBYBase, ILzBridgeConfig {
+interface IStTBY is IStTBYBase, ILayerZeroSettings {
     // =================== Errors ===================
 
     /// @notice Invalid address (e.g. zero address)
@@ -98,20 +99,26 @@ interface IStTBY is IStTBYBase, ILzBridgeConfig {
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function depositTby(address tby, uint256 amount, LZBridgeSettings memory settings) 
+    function depositTby(address tby, uint256 amount, LzSettings memory settings) 
         external 
         payable
-        returns (LzBridgeReceipt memory bridgingReceipt);
+        returns (
+            LzBridgeReceipt memory bridgingReceipt,
+            MessagingReceipt[] memory msgReceipts
+        );
     /**
      * @notice Deposit underlying tokens and get stTBY minted
      * @param amount Amount of underlying tokens to deposit
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function depositUnderlying(uint256 amount, LZBridgeSettings memory settings)
+    function depositUnderlying(uint256 amount, LzSettings memory settings)
         external 
         payable
-        returns (LzBridgeReceipt memory bridgingReceipt);
+        returns (
+            LzBridgeReceipt memory bridgingReceipt,
+            MessagingReceipt[] memory msgReceipts
+        );
 
     /**
      * @notice Redeem stTBY in exchange for underlying tokens. Underlying
@@ -123,12 +130,13 @@ interface IStTBY is IStTBYBase, ILzBridgeConfig {
      * @return underlyingRedeemed The Amount of underlying tokens redeemed
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function redeemStTBY(uint256 stTBYAmount, LZBridgeSettings memory settings)
+    function redeemStTBY(uint256 stTBYAmount, LzSettings memory settings)
         external 
         payable
         returns (
             uint256 underlyingRedeemed,
-            LzBridgeReceipt memory bridgingReceipt
+            LzBridgeReceipt memory bridgingReceipt,
+            MessagingReceipt[] memory msgReceipts
         );
    
     /**
@@ -141,12 +149,13 @@ interface IStTBY is IStTBYBase, ILzBridgeConfig {
      * @return underlyingRedeemed The Amount of underlying tokens redeemed
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function redeemWstTBY(uint256 wstTBYAmount, LZBridgeSettings memory settings)
+    function redeemWstTBY(uint256 wstTBYAmount, LzSettings memory settings)
         external 
         payable
         returns (
             uint256 underlyingRedeemed,
-            LzBridgeReceipt memory bridgingReceipt
+            LzBridgeReceipt memory bridgingReceipt,
+            MessagingReceipt[] memory msgReceipts
         );
  
     /**
@@ -157,10 +166,27 @@ interface IStTBY is IStTBYBase, ILzBridgeConfig {
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function redeemUnderlying(address tby, LZBridgeSettings memory settings)
+    function redeemUnderlying(address tby, LzSettings memory settings)
         external
         payable
-        returns (LzBridgeReceipt memory bridgingReceipt);
+        returns (
+            LzBridgeReceipt memory bridgingReceipt,
+            MessagingReceipt[] memory msgReceipts
+        );
+
+    /**
+     * @notice Invokes the auto stake feature or adjusts the remaining balance
+     * if the most recent deposit did not get fully staked
+     * @dev autoMint feature is invoked if the last created pool is in
+     * the commit state
+     * @dev remainingBalance adjustment is invoked if the last created pool is
+     * in any other state than commit and deposits dont get fully staked
+     * @dev anyone can call this function for now
+     */
+    function poke(LzSettings memory settings)
+        external
+        payable
+        returns (MessagingReceipt[] memory msgReceipts);
 
     /// @notice Get the total amount of underlying tokens in the pool
     function getRemainingBalance() external view returns (uint256);

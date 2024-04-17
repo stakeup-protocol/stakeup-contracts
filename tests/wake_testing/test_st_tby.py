@@ -4,7 +4,7 @@ from wake.testing.fuzzing import *
 from helpers.wake_st_tby_setup import deploy_st_tby_env
 from helpers.utils import *
 from pytypes.src.interfaces.bloom.IBloomPool import IBloomPool
-from pytypes.src.interfaces.ILzBridgeConfig import ILzBridgeConfig
+from pytypes.src.interfaces.ILayerZeroSettings import ILayerZeroSettings
 from pytypes.src.token.StTBY import StTBY
 from pytypes.src.token.WstTBY import WstTBY
 from pytypes.tests.mocks.MockBloomFactory import MockBloomFactory
@@ -24,7 +24,7 @@ registry: MockRegistry
 swap_facility: MockSwapFacility
 deployer: Account
 factory: MockBloomFactory
-settings = ILzBridgeConfig.LZBridgeSettings
+settings = ILayerZeroSettings.LzSettings
 
 def deploy_env(c):
     global st_tby, wst_tby, usdc, bill, bloom_pool, stakeup, registry, swap_facility, deployer, factory, settings
@@ -40,10 +40,16 @@ def deploy_env(c):
     swap_facility = e.swap_facility
     deployer = e.deployer
     factory = e.factory
-
-    settings = ILzBridgeConfig.LZBridgeSettings(
-        bytearray([0,1,2,3]),
-        (0,0)
+    
+    settings = ILayerZeroSettings.LzSettings(
+        ILayerZeroSettings.LZBridgeSettings(
+            bytearray([0,1,2,3]),
+            (0,0)
+        ),
+        ILayerZeroSettings.LZMessageSettings(
+            bytearray([0,1,2,3]),
+            (0,0)
+        )
     )
 
     tokens = [bloom_pool.address]
@@ -192,7 +198,7 @@ def test_exchange_rate():
     # Uncomment out when poke exchange rate fix is merged
     # registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1.05))
     # print(f'Exchange Rate {registry.getExchangeRate(bloom_pool.address)}')
-    # st_tby.poke()
+    # st_tby.poke(settings)
     # print(f'Total USD {st_tby.getTotalUsd()}')
     # print(f'Total Shares {st_tby.getTotalShares()}')
     # rate = st_tby.getTotalUsd() * 1e18 / st_tby.getTotalShares()
@@ -237,7 +243,7 @@ def test_auto_minting():
     bloom_pool_2.setState(IBloomPool.State.Commit)
     
     factory.setLastCreatedPool(bloom_pool_2.address)
-    st_tby.poke()
+    st_tby.poke(settings)
 
     # TODO Fix: Currently bloom pool tokens are set active in the registry upon deployment. This is a dangerous
     # scenerio in the poke function when we have deposited tokens but have yet to be minted TBY,
@@ -253,14 +259,14 @@ def test_auto_minting():
     default_chain.mine(lambda x: x + Constants.ONE_DAY * 3 - Constants.ONE_HOUR)
 
     # Poke should deposit the remaining balance of usdc into the new bloom pool
-    st_tby.poke()
+    st_tby.poke(settings)
     assert st_tby.getRemainingBalance() == 0
     assert usdc.balanceOf(st_tby.address) == 0
 
     # Mine to past the end of the commit phase and initiate the pending prehold swap
     default_chain.mine(lambda x: x + Constants.ONE_HOUR * 2)
     bloom_pool_2.setState(IBloomPool.State.PendingPreHoldSwap)
-    st_tby.poke()
+    st_tby.poke(settings)
     assert st_tby.getRemainingBalance() == 0
     
 

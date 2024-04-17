@@ -2,6 +2,11 @@
 pragma solidity 0.8.22;
 
 interface IStTBYBase {
+
+    error UnauthorizedCaller();
+
+    error ZeroAddress();
+
     /**
      * @notice An executed shares transfer from `sender` to `recipient`.
      * @dev emitted in pair with an ERC20-defined `Transfer` event.
@@ -24,6 +29,39 @@ interface IStTBYBase {
     event SharesBurnt(
         address indexed account, uint256 preRebaseTokenAmount, uint256 postRebaseTokenAmount, uint256 sharesAmount
     );
+
+    /**
+     * @notice increases the total amount of shares in existence using
+     *         inbound messages from stTBY instances on other chains
+     * @param prevGlobalShares The total amount of shares in existence before the increase
+     * @param shares Amount of shares to increase the global shares by
+     */
+    function increaseGlobalShares(uint256 prevGlobalShares, uint256 shares) external;
+
+    /**
+     * @notice decreases the total amount of shares in existence using
+     *         inbound messages from stTBY instances on other chains
+     * @param prevGlobalShares The total amount of shares in existence before the decrease
+     * @param shares Amount of shares to decrease the global shares by
+     */
+    function decreaseGlobalShares(uint256 prevGlobalShares, uint256 shares) external;
+
+    /**
+     * @notice Distribute yield according to the consentration of shares relative to
+     *         implementations on other chains.
+     * @param amount The amount of total Usd accrued by the protocol across all chains
+     */
+    function accrueYield(uint256 amount) external;
+
+    /**
+     * @notice Remove yield according to the consentration of shares relative to
+     *         implementations on other chains.
+     * @dev This function will only be executed in the event that yield is overestimated
+     *      and the protocol receives less yield than expected at redemption.
+     * @dev This would only occur in the event of a partial redemption during emergency withdrawal.
+     * @param amount The amount of total Usd removed from protocol across all chains
+     */
+    function removeYield(uint256 amount) external;
 
     /**
      * @return the entire amount of Usd controlled by the protocol.
@@ -55,4 +93,12 @@ interface IStTBYBase {
      */
     function getUsdByShares(uint256 sharesAmount) external view returns (uint256);
 
+    /// @notice The total shares of stTBY tokens in circulation on all chains    
+    function getGlobalShares() external view returns (uint256);
+
+    /// @notice The percentage of the global supply that exists on this chain
+    function getSupplyIndex() external view returns (uint256);
+
+    /// @notice The address of the messenger contract
+    function getMessenger() external view returns (address);
 }
