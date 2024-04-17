@@ -3,7 +3,7 @@ pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 
-import {MessagingFee, SendParam, MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {MessagingFee, SendParam} from "@LayerZero/oft/interfaces/IOFT.sol";
 import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
 import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 

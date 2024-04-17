@@ -12,8 +12,6 @@ pragma solidity 0.8.22;
 
 import {IExchangeRateRegistry} from "src/interfaces/bloom/IExchangeRateRegistry.sol";
 
-import {MockERC20} from "./MockERC20.sol";
-
 contract MockRegistry is IExchangeRateRegistry {
     address public pool;
     TokenInfo public tokenInfo;

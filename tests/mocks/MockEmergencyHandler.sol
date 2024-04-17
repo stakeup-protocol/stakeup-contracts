@@ -13,7 +13,7 @@ pragma solidity 0.8.22;
 import {IEmergencyHandler} from "src/interfaces/bloom/IEmergencyHandler.sol";
 import {IBloomPool} from "src/interfaces/bloom/IBloomPool.sol";
 
-import {MockERC20, IERC20} from "./MockERC20.sol";
+import {IERC20} from "./MockERC20.sol";
 import {MockBloomPool} from "./MockBloomPool.sol";
 
 contract MockEmergencyHandler is IEmergencyHandler {

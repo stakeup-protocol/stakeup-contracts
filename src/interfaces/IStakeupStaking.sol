@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {IStakeupStakingBase} from "../interfaces/IStakeupStakingBase.sol";
-import {IStakeupToken} from "./IStakeupToken.sol";
+import {IStakeupStakingBase} from "./IStakeupStakingBase.sol";
 import {IStTBY} from "./IStTBY.sol";
 import {ISUPVesting} from "./ISUPVesting.sol";
 

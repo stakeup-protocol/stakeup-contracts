@@ -2,7 +2,7 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {MessagingReceipt, MessagingFee, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {IBloomFactory} from "./bloom/IBloomFactory.sol";
 import {IExchangeRateRegistry} from "./bloom/IExchangeRateRegistry.sol";

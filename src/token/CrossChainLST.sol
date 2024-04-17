@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {MessagingReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {StTBYBase} from "./StTBYBase.sol";
 
