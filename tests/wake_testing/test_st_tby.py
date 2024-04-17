@@ -4,7 +4,7 @@ from wake.testing.fuzzing import *
 from helpers.wake_st_tby_setup import deploy_st_tby_env
 from helpers.utils import *
 from pytypes.src.interfaces.bloom.IBloomPool import IBloomPool
-from pytypes.src.interfaces.ILzBridgeConfig import ILzBridgeConfig
+from pytypes.src.interfaces.ILayerZeroSettings import ILayerZeroSettings
 from pytypes.src.token.StTBY import StTBY
 from pytypes.src.token.WstTBY import WstTBY
 from pytypes.tests.mocks.MockBloomFactory import MockBloomFactory
@@ -24,7 +24,7 @@ registry: MockRegistry
 swap_facility: MockSwapFacility
 deployer: Account
 factory: MockBloomFactory
-settings = ILzBridgeConfig.LzSettings
+settings = ILayerZeroSettings.LzSettings
 
 def deploy_env(c):
     global st_tby, wst_tby, usdc, bill, bloom_pool, stakeup, registry, swap_facility, deployer, factory, settings
@@ -41,12 +41,12 @@ def deploy_env(c):
     deployer = e.deployer
     factory = e.factory
     
-    settings = ILzBridgeConfig.LzSettings(
-        ILzBridgeConfig.LZBridgeSettings(
+    settings = ILayerZeroSettings.LzSettings(
+        ILayerZeroSettings.LZBridgeSettings(
             bytearray([0,1,2,3]),
             (0,0)
         ),
-        ILzBridgeConfig.LZMessageSettings(
+        ILayerZeroSettings.LZMessageSettings(
             bytearray([0,1,2,3]),
             (0,0)
         )

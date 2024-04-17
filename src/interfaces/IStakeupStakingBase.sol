@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {ILzBridgeConfig} from "./ILzBridgeConfig.sol";
+import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {IStakeupToken} from "./IStakeupToken.sol";
 import {IStTBY} from "./IStTBY.sol";
 
@@ -11,7 +11,7 @@ import {IStTBY} from "./IStTBY.sol";
  * @dev This interface contains only the necessary functions that are
  *      used by stTBY and SUP to interact with the Staking contract
  */
-interface IStakeupStakingBase is ILzBridgeConfig {
+interface IStakeupStakingBase is ILayerZeroSettings {
 
     /// @notice An unauthorized caller attempted to call a function
     error UnauthorizedCaller();

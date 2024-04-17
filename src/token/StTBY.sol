@@ -5,24 +5,23 @@ import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {MessagingReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
+import {CrossChainLST} from "./CrossChainLST.sol";
 import {StakeUpRewardMathLib} from "../rewards/lib/StakeUpRewardMathLib.sol";
 import {StakeUpMintRewardLib} from "../rewards/lib/StakeUpMintRewardLib.sol";
-import {StTBYBase} from "./StTBYBase.sol";
 
 import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/bloom/IBloomPool.sol";
 import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
-import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
 
 /// @title Staked TBY Contract
-contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
+contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IWstTBY;
@@ -76,14 +75,8 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     /// @dev Scaling factor for underlying token
     uint256 private immutable _scalingFactor;
 
-    /// @dev An array of peer endpoint Ids
-    uint32[] public peerEids;
-
     /// @dev Mapping of TBYs that have been redeemed
     mapping(address => bool) private _tbyRedeemed;
-
-    /// @dev Mapping of TBYs last cached exchange rate
-    mapping(address => uint256) private _lastRate;
 
     uint16 private constant BPS = 10000;
 
@@ -105,7 +98,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         bool pokeEligible,
         address layerZeroEndpoint,
         address layerZeroDelegate
-    ) StTBYBase(messanger, layerZeroEndpoint, layerZeroDelegate) {
+    ) CrossChainLST(messanger, layerZeroEndpoint, layerZeroDelegate) {
         if (underlyingToken == address(0)) revert InvalidAddress();
         if (wstTBY == address(0)) revert InvalidAddress();
         if (bloomFactory == address(0)) revert InvalidAddress();
@@ -144,7 +137,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     function depositTby(
         address tby, 
         uint256 amount,
-        LzSettings memory settings
+        LzSettings calldata settings
     ) 
         external
         payable
@@ -172,7 +165,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function depositUnderlying(uint256 amount, LzSettings memory settings) 
+    function depositUnderlying(uint256 amount, LzSettings calldata settings) 
         external
         payable
         nonReentrant
@@ -200,7 +193,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function redeemStTBY(uint256 stTBYAmount, LzSettings memory settings)         
+    function redeemStTBY(uint256 stTBYAmount, LzSettings calldata settings)         
         external 
         payable
         returns (
@@ -213,7 +206,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function redeemWstTBY(uint256 wstTBYAmount, LzSettings memory settings)
+    function redeemWstTBY(uint256 wstTBYAmount, LzSettings calldata settings)
         external
         payable
         nonReentrant
@@ -235,7 +228,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function redeemUnderlying(address tby, LzSettings memory settings)
+    function redeemUnderlying(address tby, LzSettings calldata settings)
         external
         payable
         override
@@ -287,7 +280,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function poke(LzSettings memory settings)
+    function poke(LzSettings calldata settings)
         external
         payable
         nonReentrant
@@ -315,18 +308,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             );
             _distributePokeRewards();
         }
-    }
-
-    /**
-     * @notice Registers a new OFT instance on a remote chain
-     * @dev This function has been overridden to allow for iteration over all peers
-     * @param _eid The endpoint ID
-     * @param _peer Address of the peer to be associated with the corresponding endpoint in bytes32
-     */
-    function setPeer(uint32 _eid, bytes32 _peer) public virtual override onlyOwner {
-        peers[_eid] = _peer;
-        peerEids.push(_eid);
-        emit PeerSet(_eid, _peer);
     }
 
     /// @inheritdoc IStTBY
@@ -385,7 +366,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         address token,
         uint256 amount,
         bool isTby,
-        LzSettings memory settings
+        LzSettings calldata settings
     ) internal returns (
         LzBridgeReceipt memory bridgingReceipt,
         MessagingReceipt[] memory msgReceipts
@@ -445,7 +426,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
      * @return underlyingAmount Amount of underlying tokens withdrawn from stTBY
      * @return bridgingReceipt Receipts for bridging using LayerZero
      */
-    function _redeemStTBY(uint256 stTBYAmount, LzSettings memory settings) 
+    function _redeemStTBY(uint256 stTBYAmount, LzSettings calldata settings) 
         internal
         returns (
             uint256 underlyingAmount,
@@ -463,7 +444,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     function _redeem(
         address account,
         uint256 shares,
-        LzSettings memory settings
+        LzSettings calldata settings
     ) internal returns (
         uint256 underlyingAmount,
         LzBridgeReceipt memory bridgingReceipt,
@@ -486,7 +467,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     function _withdraw(
         address account,
         uint256 shares,
-        LzSettings memory settings
+        LzSettings calldata settings
     ) internal returns (
         uint256 underlyingAmount, 
         LzBridgeReceipt memory bridgingReceipt,
@@ -529,7 +510,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         uint256 startingAmount,
         uint256 amountWithdrawn,
         uint256 realizedValue,
-        LzSettings memory settings
+        LzSettings calldata settings
     ) 
         internal
         returns (
@@ -537,18 +518,14 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             MessagingReceipt[] memory msgReceipts
         )
     {
+        uint256 sharesFeeAmount;
         uint256 proceeds = amountWithdrawn - startingAmount;
         uint256 yieldScaled = proceeds * _scalingFactor;
         uint256 performanceFee = (yieldScaled * performanceBps) / BPS;
 
         if (performanceFee > 0) {
-            uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
+            sharesFeeAmount = getSharesByUsd(performanceFee);
             _mintShares(address(_stakeupStaking), sharesFeeAmount);
-            msgReceipts = _syncIncreaseShares(
-                sharesFeeAmount,
-                settings.messageSettings.options,
-                settings.messageSettings.fee.nativeFee
-            );
 
             emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
         }
@@ -563,18 +540,22 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         // If we have previously overestimated the yield, we need to remove the excess
         if (realizedValue > withdrawnScaled) {
             uint256 valueCorrection = realizedValue - withdrawnScaled;
-            _syncDecreaseYield(
+            msgReceipts = _fullSync(
+                sharesFeeAmount,
                 valueCorrection,
+                false,
                 settings.messageSettings.options,
                 settings.messageSettings.fee.nativeFee
             );
         }
 
         // If we have underestimated the yield, we need to distribute the difference
-        if ((amountWithdrawn * _scalingFactor) > realizedValue) {
+        if (withdrawnScaled > realizedValue) {
             uint256 unrealizedGains = withdrawnScaled - realizedValue;
-            msgReceipts = _syncIncreaseYield(
+            msgReceipts = _fullSync(
+                sharesFeeAmount,
                 unrealizedGains,
+                true,
                 settings.messageSettings.options,
                 settings.messageSettings.fee.nativeFee
             );
@@ -677,7 +658,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     /**
      * @notice Calculates the current value of all TBYs that are staked in stTBY
      */
-    function _getTbyYield() internal returns (uint256 usdYield) {
+    function _getTbyYield() internal override returns (uint256 usdYield) {
         address[] memory tokens = _registry.getActiveTokens();
 
         uint256 length = tokens.length;
@@ -716,84 +697,5 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
                 IStakeupToken(_stakeupToken).mintRewards(msg.sender, amount);
             }
         }
-    }
-
-    /**
-     * @notice Increases the total amount of shares in existence across all chains
-     * @dev This function invokes a batch send message w/ LayerZero
-     * @param shares Amount of shares to add to global shares value
-     */
-    function _syncIncreaseShares(uint256 shares, bytes memory options, uint256 msgFee) internal returns (MessagingReceipt[] memory) {
-        uint256 prevGlobalShares = _globalShares;
-        _setGlobalShares(prevGlobalShares + shares);
-
-        return IStakeUpMessenger(_messenger).syncIncreaseShares{ value: msgFee }(
-            prevGlobalShares,
-            shares,
-            peerEids,
-            options,
-            msg.sender
-        );
-    }
-
-    /**
-     * @notice Decreases the total amount of shares in existence across all chains
-     * @dev This function invokes a batch send message w/ LayerZero
-     * @param shares Amount of shares to subtract from the global shares value
-     */
-    function _syncDecreaseShares(uint256 shares, bytes memory options, uint256 msgFee) internal returns (MessagingReceipt[] memory) {
-        uint256 prevGlobalShares = _globalShares;
-        _setGlobalShares(prevGlobalShares + shares);
-        
-        return IStakeUpMessenger(_messenger).syncDecreaseShares{ value: msgFee }(
-            prevGlobalShares,
-            shares,
-            peerEids,
-            options,
-            msg.sender
-        );
-    }
-
-    /**
-     * @notice Distributes yield to all stTBY holders on all chains
-     * @dev This function invokes a batch send message w/ LayerZero
-     * @param amount The amount of total USD accrued by the protocol across all chains
-     * @param options Options for the LayerZero message
-     * @param msgFee The fee to send the message
-     */
-    function _syncIncreaseYield(
-        uint256 amount, 
-        bytes memory options,
-        uint256 msgFee
-    ) internal returns (MessagingReceipt[] memory) {
-        uint256 usdValueAdded = _getTbyYield() + amount;
-
-        // Distributes yield to this chain's stTBY holders
-        _accrueYield(usdValueAdded);
-
-        // Distributes yield to other chain's stTBY holders
-        return IStakeUpMessenger(_messenger).syncIncreaseYield{ value: msgFee }(
-            usdValueAdded,
-            peerEids,
-            options,
-            msg.sender
-        );
-    }
-
-    function _syncDecreaseYield(
-        uint256 amount,
-        bytes memory options,
-        uint256 msgFee
-    ) internal returns (MessagingReceipt[] memory) {
-        // Removes yield from this chain's stTBY holders
-        _removeYield(amount);
-
-        // Removes yield from other chain's stTBY holders
-        return IStakeUpMessenger(_messenger).syncDecreaseYield{ value: msgFee }(
-            amount,
-            peerEids,
-            options,
-            msg.sender
-        );
     }
 }

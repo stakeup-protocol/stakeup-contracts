@@ -21,7 +21,7 @@ import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
 import {StakeupStakingL2} from "src/staking/StakeupStakingL2.sol";
 import {StTBY} from "src/token/StTBY.sol";
 import {StakeupToken} from "src/token/StakeupToken.sol";
-import {ILzBridgeConfig} from "src/interfaces/ILzBridgeConfig.sol";
+import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
 import {IBloomPool} from "src/interfaces/bloom/IBloomPool.sol";
 
 contract CrossChainTest is TestHelper, MessagingHelpers {
@@ -178,7 +178,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);
 
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messengerB,
             Operation.Deposit,
             l2BridgeEmpty
@@ -251,11 +251,11 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             fee: fee
         });
 
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messengerB, Operation.Deposit, l2Bridge);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messengerB, Operation.Deposit, l2Bridge);
         uint256 depositValue = settings.bridgeSettings.fee.nativeFee + settings.messageSettings.fee.nativeFee;
         
         (
-            ILzBridgeConfig.LzBridgeReceipt memory receipt,
+            ILayerZeroSettings.LzBridgeReceipt memory receipt,
             MessagingReceipt[] memory msgReceipts
         ) = stTBYB.depositUnderlying{value: depositValue}(amount, settings);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
@@ -289,9 +289,9 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);
 
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messengerB, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messengerB, Operation.Deposit, l2BridgeEmpty);
         (
-            ILzBridgeConfig.LzBridgeReceipt memory receipt,
+            ILayerZeroSettings.LzBridgeReceipt memory receipt,
             MessagingReceipt[] memory msgReceipts
         ) = stTBYA.depositUnderlying{value: 1e18}(amount, settings);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
@@ -332,9 +332,9 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);    
         
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messengerB, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messengerB, Operation.Deposit, l2BridgeEmpty);
         (
-            ILzBridgeConfig.LzBridgeReceipt memory receipt,
+            ILayerZeroSettings.LzBridgeReceipt memory receipt,
             MessagingReceipt[] memory msgReceipts
         ) = stTBYA.depositUnderlying{value: 1e18}(amount, settings);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
@@ -366,7 +366,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         registry.setExchangeRate(address(pool), 1.1e18);
 
         // Value should be accrued evenly throughout the system due to the rate change
-        ILzBridgeConfig.LzSettings memory settings2 = _generateSettings(messengerB, Operation.Poke, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings2 = _generateSettings(messengerB, Operation.Poke, l2BridgeEmpty);
         stTBYA.poke{ value: 1e18 }(settings2);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
