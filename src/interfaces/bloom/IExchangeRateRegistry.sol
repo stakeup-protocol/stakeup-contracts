@@ -41,5 +41,4 @@ interface IExchangeRateRegistry {
      * @return The current exchange rate of the given token
      */
     function getExchangeRate(address token) external view returns (uint256);
-
 }

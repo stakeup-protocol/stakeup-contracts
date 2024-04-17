@@ -20,9 +20,16 @@ contract MockEmergencyHandler is IEmergencyHandler {
     uint256 private _tokensToRedeem;
 
     function redeem(IBloomPool _pool) external override returns (uint256) {
-        MockBloomPool(address(_pool)).transferFrom(msg.sender, address(this), _tokensToRedeem);
+        MockBloomPool(address(_pool)).transferFrom(
+            msg.sender,
+            address(this),
+            _tokensToRedeem
+        );
         MockBloomPool(address(_pool)).emergencyBurn(_tokensToRedeem);
-        IERC20(MockBloomPool(address(_pool)).underlyingToken()).transfer(msg.sender, _tokensToRedeem);
+        IERC20(MockBloomPool(address(_pool)).underlyingToken()).transfer(
+            msg.sender,
+            _tokensToRedeem
+        );
         return _tokensToRedeem;
     }
 

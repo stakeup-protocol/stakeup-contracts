@@ -13,7 +13,11 @@ import {ICurvePoolFactory} from "../interfaces/curve/ICurvePoolFactory.sol";
 import {ICurvePoolGauge} from "../interfaces//curve/ICurvePoolGauge.sol";
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 
-contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownable2Step {
+contract CurveGaugeDistributor is
+    ICurveGaugeDistributor,
+    ReentrancyGuard,
+    Ownable2Step
+{
     using SafeERC20 for IERC20;
 
     /// @notice Curve pool data
@@ -38,16 +42,19 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
         if (!_initialized) revert NotInitialized();
         _;
     }
-    
+
     constructor(address owner) Ownable2Step() {
         _initialized = false;
         _transferOwnership(owner);
     }
 
-    function initialize(CurvePoolData[] calldata curvePools, address stakeupToken) external onlyOwner {
+    function initialize(
+        CurvePoolData[] calldata curvePools,
+        address stakeupToken
+    ) external onlyOwner {
         if (stakeupToken == address(0)) revert InvalidAddress();
         if (_initialized) revert ContractInitialized();
-        
+
         _stakeupToken = IStakeupToken(stakeupToken);
         _initialized = true;
 
@@ -60,15 +67,19 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
         CurvePoolData[] memory curvePools = _curvePools;
         SeedTimestamp storage timestamps = _seedTimestamp;
         uint256 length = curvePools.length;
-        
-        uint256 timeElapsed = block.timestamp - timestamps.lastSeed;
-        if (timestamps.lastSeed != 0 && timeElapsed < SEED_INTERVAL) revert TooEarlyToSeed();
 
-        for (uint256 i=0; i < length; ++i) {
+        uint256 timeElapsed = block.timestamp - timestamps.lastSeed;
+        if (timestamps.lastSeed != 0 && timeElapsed < SEED_INTERVAL)
+            revert TooEarlyToSeed();
+
+        for (uint256 i = 0; i < length; ++i) {
             // If this is the first time seeding the gauge, then register SUP as the reward token
             if (timestamps.lastSeed == 0) {
                 timestamps.rewardStart = uint128(block.timestamp);
-                ICurvePoolGauge(curvePools[i].curveGauge).add_reward(address(_stakeupToken), address(this));
+                ICurvePoolGauge(curvePools[i].curveGauge).add_reward(
+                    address(_stakeupToken),
+                    address(this)
+                );
             }
             // Calculate the amount of rewards to mint
             uint256 amount = StakeUpRewardMathLib._calculateDripAmount(
@@ -84,9 +95,15 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
 
                 // Mint the rewards and deposit tokens into the gauge
                 _stakeupToken.mintRewards(address(this), amount);
-                IERC20(address(_stakeupToken)).safeApprove(curvePools[i].curveGauge, amount);
-                ICurvePoolGauge(curvePools[i].curveGauge).deposit_reward_token(address(_stakeupToken), amount);
-                
+                IERC20(address(_stakeupToken)).safeApprove(
+                    curvePools[i].curveGauge,
+                    amount
+                );
+                ICurvePoolGauge(curvePools[i].curveGauge).deposit_reward_token(
+                    address(_stakeupToken),
+                    amount
+                );
+
                 emit GaugeSeeded(curvePools[i].curveGauge, amount);
             }
         }
@@ -94,8 +111,13 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
         timestamps.lastSeed = uint128(block.timestamp);
     }
 
-        /// @inheritdoc ICurveGaugeDistributor
-    function getCurvePoolData() external view override returns (CurvePoolData[] memory) {
+    /// @inheritdoc ICurveGaugeDistributor
+    function getCurvePoolData()
+        external
+        view
+        override
+        returns (CurvePoolData[] memory)
+    {
         return _curvePools;
     }
 
@@ -106,14 +128,15 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
 
         for (uint256 i = 0; i < length; ++i) {
             // Deploy the Curve guage and register SUP as the reward token
-            address gauge = ICurvePoolFactory(curvePools[i].curveFactory).deploy_gauge(curvePools[i].curvePool);
+            address gauge = ICurvePoolFactory(curvePools[i].curveFactory)
+                .deploy_gauge(curvePools[i].curvePool);
             curvePools[i].curveGauge = gauge;
-            
+
             totalRewards -= curvePools[i].maxRewards;
 
             emit GaugeDeployed(gauge, curvePools[i].curvePool);
         }
-        if (totalRewards != 0) revert RewardAllocationNotMet();        
+        if (totalRewards != 0) revert RewardAllocationNotMet();
     }
 
     /**
@@ -124,9 +147,10 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
         uint256 length = curvePools.length;
 
         for (uint i = 0; i < length; ++i) {
-            if (curvePools[i].curveFactory == address(0)) revert InvalidAddress();
+            if (curvePools[i].curveFactory == address(0))
+                revert InvalidAddress();
             if (curvePools[i].curvePool == address(0)) revert InvalidAddress();
-            
+
             _curvePools.push(curvePools[i]);
         }
     }

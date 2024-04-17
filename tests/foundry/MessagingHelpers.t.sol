@@ -3,7 +3,7 @@ pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 
-import { MessagingFee, SendParam, MessagingReceipt } from "@LayerZero/oft/interfaces/IOFT.sol";
+import {MessagingFee, SendParam, MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
 import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 
@@ -46,54 +46,36 @@ abstract contract MessagingHelpers is Test {
 
         uint256 msgFee;
         if (operation == Operation.Deposit) {
-            msgFee = messenger.quoteSyncShares(
-                eids,
-                msgOptions
-            );
+            msgFee = messenger.quoteSyncShares(eids, msgOptions);
         } else if (operation == Operation.Withdraw) {
-            msgFee = messenger.quoteSyncShares(
-                eids,
-                msgOptions
-            );
+            msgFee = messenger.quoteSyncShares(eids, msgOptions);
         } else if (operation == Operation.Poke) {
-            msgFee += messenger.quoteSyncYield(
-                eids,
-                msgOptions
-            );
-            msgFee += messenger.quoteSyncShares(
-                eids,
-                msgOptions
-            );
+            msgFee += messenger.quoteSyncYield(eids, msgOptions);
+            msgFee += messenger.quoteSyncShares(eids, msgOptions);
         } else if (operation == Operation.Redeem) {
-            msgFee += messenger.quoteSyncYield(
-                eids,
-                msgOptions
-            );
-            msgFee += messenger.quoteSyncShares(
-                eids,
-                msgOptions
-            );
+            msgFee += messenger.quoteSyncYield(eids, msgOptions);
+            msgFee += messenger.quoteSyncShares(eids, msgOptions);
         }
 
-        ILayerZeroSettings.LZBridgeSettings memory settings = ILayerZeroSettings.LZBridgeSettings({
-            options: l2Bridge.sendParam.extraOptions,
-            fee: MessagingFee({
-                nativeFee: l2Bridge.fee.nativeFee,
-                lzTokenFee: 0
-            })
-        });
+        ILayerZeroSettings.LZBridgeSettings memory settings = ILayerZeroSettings
+            .LZBridgeSettings({
+                options: l2Bridge.sendParam.extraOptions,
+                fee: MessagingFee({
+                    nativeFee: l2Bridge.fee.nativeFee,
+                    lzTokenFee: 0
+                })
+            });
 
-        ILayerZeroSettings.LZMessageSettings memory messageSettings = ILayerZeroSettings.LZMessageSettings({
-            options: msgOptions,
-            fee: MessagingFee({
-                nativeFee: msgFee,
-                lzTokenFee: 0
-            })
-        });
+        ILayerZeroSettings.LZMessageSettings
+            memory messageSettings = ILayerZeroSettings.LZMessageSettings({
+                options: msgOptions,
+                fee: MessagingFee({nativeFee: msgFee, lzTokenFee: 0})
+            });
 
-        return ILayerZeroSettings.LzSettings({
-            bridgeSettings: settings,
-            messageSettings: messageSettings
-        });    
+        return
+            ILayerZeroSettings.LzSettings({
+                bridgeSettings: settings,
+                messageSettings: messageSettings
+            });
     }
 }

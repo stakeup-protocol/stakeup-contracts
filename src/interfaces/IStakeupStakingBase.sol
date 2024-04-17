@@ -12,7 +12,6 @@ import {IStTBY} from "./IStTBY.sol";
  *      used by stTBY and SUP to interact with the Staking contract
  */
 interface IStakeupStakingBase is ILayerZeroSettings {
-
     /// @notice An unauthorized caller attempted to call a function
     error UnauthorizedCaller();
 
@@ -25,14 +24,14 @@ interface IStakeupStakingBase is ILayerZeroSettings {
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function processFees(address refundRecipient, LZBridgeSettings memory settings)
-        external
-        payable
-        returns (LzBridgeReceipt memory bridgingReceipt);
-    
+    function processFees(
+        address refundRecipient,
+        LZBridgeSettings memory settings
+    ) external payable returns (LzBridgeReceipt memory bridgingReceipt);
+
     /// @notice Returns the Stakeup Token
     function getStakupToken() external view returns (IStakeupToken);
-    
+
     /// @notice Returns the stTBY token
     function getStTBY() external view returns (IStTBY);
 }

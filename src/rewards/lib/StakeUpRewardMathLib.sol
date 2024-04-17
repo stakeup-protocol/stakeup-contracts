@@ -11,7 +11,6 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
  *      testnets.
  */
 library StakeUpRewardMathLib {
-
     /// @notice One year in seconds
     uint256 private constant ONE_YEAR = 52 weeks;
 
@@ -55,23 +54,39 @@ library StakeUpRewardMathLib {
             tokensUnlocked = rewardSupply;
         } else {
             // Calculate total tokens unlocked using the formula for the sum of a geometric series
-            tokensUnlocked = rewardSupply * (FIXED_POINT_ONE - (FIXED_POINT_ONE / 2**year)) / FIXED_POINT_ONE;
+            tokensUnlocked =
+                (rewardSupply *
+                    (FIXED_POINT_ONE - (FIXED_POINT_ONE / 2 ** year))) /
+                FIXED_POINT_ONE;
         }
-        
+
         if (year > 1 && timeElapsed % ONE_YEAR != 0) {
             uint256 previousYear = year - 1;
-            previousYearAllocation = rewardSupply * (FIXED_POINT_ONE - (FIXED_POINT_ONE / 2**previousYear)) / FIXED_POINT_ONE;
+            previousYearAllocation =
+                (rewardSupply *
+                    (FIXED_POINT_ONE - (FIXED_POINT_ONE / 2 ** previousYear))) /
+                FIXED_POINT_ONE;
 
             if (rewardsPaid > 0) {
-                uint256 previousYearsRewardsPaid = Math.min(rewardsPaid, previousYearAllocation);
-                leftoverRewards = previousYearAllocation - previousYearsRewardsPaid;
+                uint256 previousYearsRewardsPaid = Math.min(
+                    rewardsPaid,
+                    previousYearAllocation
+                );
+                leftoverRewards =
+                    previousYearAllocation -
+                    previousYearsRewardsPaid;
                 rewardsPaid -= previousYearsRewardsPaid;
             }
         }
 
         uint256 allocationForYear = tokensUnlocked - previousYearAllocation;
-        uint256 timeElapsedInYear = timeElapsed % ONE_YEAR == 0 ? ONE_YEAR : timeElapsed % ONE_YEAR;
+        uint256 timeElapsedInYear = timeElapsed % ONE_YEAR == 0
+            ? ONE_YEAR
+            : timeElapsed % ONE_YEAR;
 
-        return (timeElapsedInYear * allocationForYear / ONE_YEAR) + leftoverRewards - rewardsPaid;
+        return
+            ((timeElapsedInYear * allocationForYear) / ONE_YEAR) +
+            leftoverRewards -
+            rewardsPaid;
     }
 }
