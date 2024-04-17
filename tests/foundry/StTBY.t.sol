@@ -13,7 +13,7 @@ import {WstTBY} from "src/token/WstTBY.sol";
 import {StakeupStaking} from "src/staking/StakeupStaking.sol";
 
 import {IStTBY} from "src/interfaces/IStTBY.sol";
-import {ILzBridgeConfig} from "src/interfaces/ILzBridgeConfig.sol";
+import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
 
 import {MockEndpoint} from "../mocks/MockEndpoint.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
@@ -145,7 +145,7 @@ contract StTBYTest is MessagingHelpers {
     }
 
     function test_deposit_fail_with_TBYNotActive() public {
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
         registry.setTokenInfos(false);
         vm.expectRevert(IStTBY.TBYNotActive.selector);
         vm.prank(alice);
@@ -155,7 +155,7 @@ contract StTBYTest is MessagingHelpers {
     function test_deposit_fail_with_InsufficientBalance() public {
         pool.mint(alice, 0.5 ether);
         registry.setTokenInfos(true);
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
 
         vm.startPrank(alice);
         pool.approve(address(stTBY), 1 ether);
@@ -167,7 +167,7 @@ contract StTBYTest is MessagingHelpers {
     function test_deposit_fail_with_InsufficientAllowance() public {
         pool.mint(alice, 1 ether);
         registry.setTokenInfos(true);
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
 
 
         vm.startPrank(alice);
@@ -189,7 +189,7 @@ contract StTBYTest is MessagingHelpers {
         pool.approve(address(stTBY), amountTBY);
         vm.expectEmit(true, true, true, true);
         emit Deposit(alice, address(pool), amountTBY, amountStTBY - fee);
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
         stTBY.depositTby(address(pool), amountTBY, settings);
         vm.stopPrank();
 
@@ -209,7 +209,7 @@ contract StTBYTest is MessagingHelpers {
         stableToken.approve(address(stTBY), amount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(alice, address(stableToken), amount, amountStTBY - fee);
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
         stTBY.depositUnderlying(amount, settings);
         vm.stopPrank();
 
@@ -223,7 +223,7 @@ contract StTBYTest is MessagingHelpers {
         stableToken.approve(address(stTBY), amount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(bob, address(stableToken), amount, amountStTBY - fee);
-        ILzBridgeConfig.LzSettings memory settings2 = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings2 = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
         stTBY.depositUnderlying(amount, settings2);
         vm.stopPrank();
 
@@ -242,7 +242,7 @@ contract StTBYTest is MessagingHelpers {
 
         vm.startPrank(alice);
         pool.approve(address(stTBY), amount);
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
         stTBY.depositTby(address(pool), amount, settings);
         vm.stopPrank();
 
@@ -310,7 +310,7 @@ contract StTBYTest is MessagingHelpers {
         vm.startPrank(alice);
         stableToken.approve(address(stTBY), donationAmount);
         stableToken.mint(alice, startingUSDCAliceBalance);
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
         stTBY.depositUnderlying(startingUSDCAliceBalance, settings);
         vm.stopPrank();
         
@@ -375,7 +375,7 @@ contract StTBYTest is MessagingHelpers {
         pool.mint(alice, amount);
         vm.startPrank(alice);
         pool.approve(address(stTBY), amount);
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
         stTBY.depositTby(address(pool), amount, settings);
         vm.stopPrank();
 
@@ -449,7 +449,7 @@ contract StTBYTest is MessagingHelpers {
         uint256 expectedPerformanceFee = 3e16; // 10% of yield
         // ###########################################
 
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty);
 
         /// ########## Deposit Functionality ##########
         vm.startPrank(alice);
@@ -496,9 +496,9 @@ contract StTBYTest is MessagingHelpers {
         // ####### Verify performance fee #################
         uint256 stakeupStakingShares = stTBY.sharesOf(address(staking));
         uint256 performanceFeeInShares = stTBY.getSharesByUsd(expectedPerformanceFee);
-        ILzBridgeConfig.LzSettings memory pokeSettings = _generateSettings(messenger, Operation.Poke, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory pokeSettings = _generateSettings(messenger, Operation.Poke, l2BridgeEmpty);
         stTBY.poke(pokeSettings);
-        ILzBridgeConfig.LzSettings memory redeemSettings = _generateSettings(messenger, Operation.Redeem, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory redeemSettings = _generateSettings(messenger, Operation.Redeem, l2BridgeEmpty);
         stTBY.redeemUnderlying(address(pool), redeemSettings);
 
         uint256 sharesPerUsd = stTBY.getTotalShares() * 1e18 / stTBY.getTotalUsd();
@@ -521,7 +521,7 @@ contract StTBYTest is MessagingHelpers {
         stTBY.approve(address(stTBY), UINT256_MAX);
         vm.expectEmit(true, true, true, true);
         emit Redeemed(alice, aliceShares - aliceRedeemFees, aliceExpectedStableBalance);
-        ILzBridgeConfig.LzSettings memory withdrawSettings = _generateSettings(messenger, Operation.Withdraw, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory withdrawSettings = _generateSettings(messenger, Operation.Withdraw, l2BridgeEmpty);
         stTBY.redeemStTBY(stTBY.balanceOf(alice), withdrawSettings);
         vm.stopPrank();
 
@@ -556,7 +556,7 @@ contract StTBYTest is MessagingHelpers {
 
         uint256 expectedReward = 3 days * yearOneRewards / 52 weeks;
         
-        ILzBridgeConfig.LzSettings memory settings = _generateSettings(messenger, Operation.Poke, l2BridgeEmpty);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(messenger, Operation.Poke, l2BridgeEmpty);
 
         vm.startPrank(alice);
         stTBY.poke(settings);

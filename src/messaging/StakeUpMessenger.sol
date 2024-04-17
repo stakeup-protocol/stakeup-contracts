@@ -30,6 +30,31 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     }
 
     /// @inheritdoc IStakeUpMessenger
+    function fullSync(
+        uint256 originalShares,
+        uint256 sharesAdded,
+        uint256 totalUsd,
+        bool yieldIncreased,
+        uint32[] memory peerEids,
+        bytes memory options,
+        address refundRecipient
+    ) external payable returns (MessagingReceipt[] memory receipts) {
+        return
+            _batchSend(
+                MessageType.SharesAndYield,
+                abi.encode(
+                    originalShares,
+                    sharesAdded,
+                    totalUsd,
+                    yieldIncreased
+                ),
+                peerEids,
+                options,
+                refundRecipient
+            );
+    }
+
+    /// @inheritdoc IStakeUpMessenger
     function syncIncreaseYield(
         uint256 totalUsdAdded,
         uint32[] memory peerEids,
@@ -39,8 +64,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         return
             _batchSend(
                 MessageType.IncreaseYield,
-                totalUsdAdded,
-                0,
+                abi.encode(totalUsdAdded),
                 peerEids,
                 options,
                 refundRecipient
@@ -57,8 +81,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         return
             _batchSend(
                 MessageType.DecreaseYield,
-                totalUsdRemoved,
-                0,
+                abi.encode(totalUsdRemoved),
                 peerEids,
                 options,
                 refundRecipient
@@ -76,8 +99,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         return
             _batchSend(
                 MessageType.IncreaseShares,
-                originalShares, // value 1
-                sharesAdded, // value 2
+                abi.encode(originalShares, sharesAdded),
                 peerEids,
                 options,
                 refundRecipient
@@ -95,8 +117,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         return
             _batchSend(
                 MessageType.DecreaseShares,
-                originalShares, // value 1
-                sharesRemoved, // value 2
+                abi.encode(originalShares, sharesRemoved),
                 peerEids,
                 options,
                 refundRecipient
@@ -104,6 +125,8 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     }
 
     // ========================= Quote Functions =========================
+
+    /// @inheritdoc IStakeUpMessenger
     function quoteSyncYield(
         uint32[] memory peerEids,
         bytes memory options
@@ -111,6 +134,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         return _quoteMessage(MessageType.IncreaseYield, peerEids, options);
     }
 
+    /// @inheritdoc IStakeUpMessenger
     function quoteSyncShares(
         uint32[] memory peerEids,
         bytes memory options
@@ -118,10 +142,25 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         return _quoteMessage(MessageType.IncreaseShares, peerEids, options);
     }
 
+    /// @inheritdoc IStakeUpMessenger
+    function quoteFullSync(
+        uint32[] memory peerEids,
+        bytes memory options
+    ) external view returns (uint256 nativeFee) {
+        return _quoteMessage(MessageType.SharesAndYield, peerEids, options);
+    }
+
+    /// @inheritdoc IStakeUpMessenger
     function getStTBY() external view returns (address) {
         return _stTBY;
     }
 
+    /**
+     * @notice Quotes the fee for sending a message to instances on other chains
+     * @param messageType The type of LayerZero message being sent
+     * @param peerEids An array of peer endpoint ids
+     * @param options LayerZero messaging options
+     */
     function _quoteMessage(
         MessageType messageType,
         uint32[] memory peerEids,
@@ -131,7 +170,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         for (uint256 i = 0; i < length; ++i) {
             MessagingFee memory fee = _quote(
                 peerEids[i],
-                abi.encode(messageType, 0, 0),
+                abi.encode(messageType, abi.encode(0, 0)),
                 options,
                 false
             );
@@ -145,21 +184,19 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
      * @dev We allow for 2 values to be sent in the message the second value wont be used for
      *      the Yield message type
      * @param messageType The type of message to send
-     * @param value1 The first value of the message being sent
-     * @param value2 The second value of the message being sent
+     * @param encodedData The encoded data to send
      * @param peerEids An array of peer endpoint ids
      * @param options LayerZero messaging options
      */
     function _batchSend(
         MessageType messageType,
-        uint256 value1,
-        uint256 value2, // WARNING: this value will be ignored for MessageType.Yield
+        bytes memory encodedData,
         uint32[] memory peerEids,
         bytes memory options,
         address refundRecipient
     ) internal returns (MessagingReceipt[] memory receipts) {
         uint256 providedFee = msg.value;
-        bytes memory message = abi.encode(messageType, value1, value2);
+        bytes memory message = abi.encode(messageType, encodedData);
 
         uint256 length = peerEids.length;
         receipts = new MessagingReceipt[](length);
@@ -189,25 +226,77 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         address /*_executor*/,
         bytes calldata /*_extraData*/
     ) internal virtual override {
-        (MessageType messageType, uint256 value1, uint256 value2) = abi.decode(
+        (MessageType messageType, bytes memory encodedData) = abi.decode(
             _message,
-            (MessageType, uint256, uint256)
+            (MessageType, bytes)
         );
 
         if (messageType == MessageType.IncreaseYield) {
-            IStTBY(_stTBY).accrueYield(value1);
+            uint256 totalUsd = _decodeYieldData(encodedData);
+            IStTBY(_stTBY).accrueYield(totalUsd);
+            return;
         }
 
         if (messageType == MessageType.DecreaseYield) {
-            IStTBY(_stTBY).removeYield(value1);
+            uint256 totalUsd = _decodeYieldData(encodedData);
+            IStTBY(_stTBY).removeYield(totalUsd);
+            return;
         }
 
         if (messageType == MessageType.IncreaseShares) {
-            IStTBY(_stTBY).increaseGlobalShares(value1, value2);
+            (uint256 originalShares, uint256 sharesAdded) = _decodeShareData(
+                encodedData
+            );
+            IStTBY(_stTBY).increaseGlobalShares(originalShares, sharesAdded);
+            return;
         }
 
         if (messageType == MessageType.DecreaseShares) {
-            IStTBY(_stTBY).decreaseGlobalShares(value1, value2);
+            (uint256 originalShares, uint256 sharesAdded) = _decodeShareData(
+                encodedData
+            );
+            IStTBY(_stTBY).decreaseGlobalShares(originalShares, sharesAdded);
+            return;
         }
+
+        if (messageType == MessageType.SharesAndYield) {
+            (
+                uint256 originalShares,
+                uint256 sharesAdded,
+                uint256 totalUsd,
+                bool yieldIncreased
+            ) = abi.decode(encodedData, (uint256, uint256, uint256, bool));
+
+            IStTBY(_stTBY).increaseGlobalShares(originalShares, sharesAdded);
+
+            yieldIncreased
+                ? IStTBY(_stTBY).accrueYield(totalUsd)
+                : IStTBY(_stTBY).removeYield(totalUsd);
+
+            return;
+        }
+    }
+
+    /**
+     * @notice Decodes the encoded data for the yield update message types
+     * @param encodedData The encoded data to decode
+     */
+    function _decodeYieldData(
+        bytes memory encodedData
+    ) internal pure returns (uint256 totalUsd) {
+        (totalUsd) = abi.decode(encodedData, (uint256));
+    }
+
+    /**
+     * @notice Decodes the encoded data for share update message types
+     * @param encodedData The encoded data to decode
+     */
+    function _decodeShareData(
+        bytes memory encodedData
+    ) internal pure returns (uint256 originalShares, uint256 sharesAdded) {
+        (originalShares, sharesAdded) = abi.decode(
+            encodedData,
+            (uint256, uint256)
+        );
     }
 }

@@ -8,7 +8,7 @@ import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
 import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 
 import {StTBY} from "src/token/StTBY.sol";
-import {ILzBridgeConfig} from "src/interfaces/ILzBridgeConfig.sol";
+import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
 
 abstract contract MessagingHelpers is Test {
     using OptionsBuilder for bytes;
@@ -31,7 +31,7 @@ abstract contract MessagingHelpers is Test {
         StakeUpMessenger messenger,
         Operation operation,
         BridgeOptions memory l2Bridge
-    ) internal view returns (ILzBridgeConfig.LzSettings memory) {
+    ) internal view returns (ILayerZeroSettings.LzSettings memory) {
         uint32[] memory eids;
         try StTBY(messenger.getStTBY()).peerEids(0) returns (uint32 eid) {
             eids = new uint32[](1);
@@ -75,7 +75,7 @@ abstract contract MessagingHelpers is Test {
             );
         }
 
-        ILzBridgeConfig.LZBridgeSettings memory settings = ILzBridgeConfig.LZBridgeSettings({
+        ILayerZeroSettings.LZBridgeSettings memory settings = ILayerZeroSettings.LZBridgeSettings({
             options: l2Bridge.sendParam.extraOptions,
             fee: MessagingFee({
                 nativeFee: l2Bridge.fee.nativeFee,
@@ -83,7 +83,7 @@ abstract contract MessagingHelpers is Test {
             })
         });
 
-        ILzBridgeConfig.LZMessageSettings memory messageSettings = ILzBridgeConfig.LZMessageSettings({
+        ILayerZeroSettings.LZMessageSettings memory messageSettings = ILayerZeroSettings.LZMessageSettings({
             options: msgOptions,
             fee: MessagingFee({
                 nativeFee: msgFee,
@@ -91,7 +91,7 @@ abstract contract MessagingHelpers is Test {
             })
         });
 
-        return ILzBridgeConfig.LzSettings({
+        return ILayerZeroSettings.LzSettings({
             bridgeSettings: settings,
             messageSettings: messageSettings
         });    

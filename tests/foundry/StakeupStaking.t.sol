@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import {Test} from "forge-std/Test.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
-import {ILzBridgeConfig} from "src/interfaces/ILzBridgeConfig.sol";
+import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
 
 import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
 import {IStakeupStakingBase} from "src/interfaces/IStakeupStakingBase.sol";
@@ -115,7 +115,7 @@ contract StakeupStakingTest is Test {
         // Reverts if someone other than stTBY calls this function
         vm.startPrank(alice);
         vm.expectRevert(IStakeupStakingBase.UnauthorizedCaller.selector);
-        ILzBridgeConfig.LZBridgeSettings memory settings;
+        ILayerZeroSettings.LZBridgeSettings memory settings;
         stakeupStaking.processFees(address(0), settings);
         vm.stopPrank();
 
@@ -392,7 +392,7 @@ contract StakeupStakingTest is Test {
 
     function _processFees() internal {
         vm.startPrank(address(mockStTBY));
-        ILzBridgeConfig.LZBridgeSettings memory settings;
+        ILayerZeroSettings.LZBridgeSettings memory settings;
         stakeupStaking.processFees(address(0), settings);
         vm.stopPrank();
     }

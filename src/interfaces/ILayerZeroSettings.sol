@@ -4,20 +4,11 @@ pragma solidity 0.8.22;
 import {MessagingReceipt, MessagingFee, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 /**
- * @title ILzBridgeConfig
+ * @title ILayerZeroSettings
  * @notice An interfaces for the configuration settings and receipts for bridging using LayerZero
  */
-interface ILzBridgeConfig {
-
-    struct LzSettings {
-        LZBridgeSettings bridgeSettings;
-        LZMessageSettings messageSettings;
-    }
-
-    struct LzReceipts {
-        LzBridgeReceipt bridgeReceipt;
-        MessagingReceipt[] messageReceipts;
-    }
+interface ILayerZeroSettings {
+    // ============================ Settings ============================
 
     /**
      * @notice Messages for bridging using LayerZero
@@ -37,6 +28,28 @@ interface ILzBridgeConfig {
     struct LZBridgeSettings {
         bytes options;
         MessagingFee fee;
+    }
+
+    /**
+     * @notice Configuration settings to be used for bridging using LayerZero
+     * @param bridgeSettings settings for bridging using LayerZero
+     * @param messageSettings settings for messaging using LayerZero
+     */
+    struct LzSettings {
+        LZBridgeSettings bridgeSettings;
+        LZMessageSettings messageSettings;
+    }
+
+    // ============================ Receipts ============================
+
+    /**
+     * @notice Aggregated receipt package for StakeUp transactions
+     * @param bridgeReceipt Receipts for bridging using LayerZero
+     * @param messageReceipts Receipt returned for cross-chain messaging
+     */
+    struct LzReceipts {
+        LzBridgeReceipt bridgeReceipt;
+        MessagingReceipt[] messageReceipts;
     }
 
     /**

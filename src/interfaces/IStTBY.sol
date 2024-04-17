@@ -8,10 +8,10 @@ import {IBloomFactory} from "./bloom/IBloomFactory.sol";
 import {IExchangeRateRegistry} from "./bloom/IExchangeRateRegistry.sol";
 import {IStakeupStaking} from "./IStakeupStaking.sol";
 import {IStTBYBase} from "./IStTBYBase.sol";
-import {ILzBridgeConfig} from "./ILzBridgeConfig.sol";
+import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {IWstTBY} from "./IWstTBY.sol";
 
-interface IStTBY is IStTBYBase, ILzBridgeConfig {
+interface IStTBY is IStTBYBase, ILayerZeroSettings {
     // =================== Errors ===================
 
     /// @notice Invalid address (e.g. zero address)

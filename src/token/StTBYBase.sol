@@ -55,6 +55,7 @@ contract StTBYBase is IStTBYBase, OFT {
     constructor(address messenger, address _layerZeroEndpoint, address _layerZeroDelegate) 
         OFT("Staked TBY", "stTBY", _layerZeroEndpoint, _layerZeroDelegate)
     {
+        if (messenger == address(0)) revert ZeroAddress();
         _messenger = messenger;
     }
 
