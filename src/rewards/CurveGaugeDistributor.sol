@@ -34,22 +34,28 @@ contract CurveGaugeDistributor is
     /// @notice If the contract is initialized
     bool internal _initialized;
 
+    // =================== Modifiers ===================
+
     modifier initialized() {
         if (!_initialized) revert Errors.NotInitialized();
         _;
     }
+
+    // ================= Constructor =================
 
     constructor(address owner) Ownable2Step() {
         _initialized = false;
         _transferOwnership(owner);
     }
 
+    // =================== Functions ===================
+
     function initialize(
         CurvePoolData[] calldata curvePools,
         address stakeupToken
     ) external onlyOwner {
         if (stakeupToken == address(0)) revert Errors.InvalidAddress();
-        if (_initialized) revert Errors.ContractInitialized();
+        if (_initialized) revert Errors.AlreadyInitialized();
 
         _stakeupToken = IStakeupToken(stakeupToken);
         _initialized = true;

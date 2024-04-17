@@ -47,7 +47,7 @@ contract StTBYBase is IStTBYBase, OFT {
         _;
     }
 
-    // =================== Functions ===================
+    // ================== Constructor ==================
 
     constructor(
         address messenger,
@@ -57,6 +57,8 @@ contract StTBYBase is IStTBYBase, OFT {
         if (messenger == address(0)) revert Errors.ZeroAddress();
         _messenger = messenger;
     }
+
+    // =================== Functions ==================
 
     /// @inheritdoc IStTBYBase
     function increaseGlobalShares(

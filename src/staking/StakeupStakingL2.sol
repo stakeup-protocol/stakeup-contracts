@@ -21,6 +21,8 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
     using OFTComposeMsgCodec for address;
     using OptionsBuilder for bytes;
 
+    // =================== Storage ===================
+
     /// @notice StTBY token instance
     IStTBY private immutable _stTBY;
 
@@ -45,6 +47,8 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
             )
         );
 
+    // =================== Modifiers ===================
+
     /// @notice Only the reward token can call this function
     modifier authorized() {
         if (msg.sender != address(_stTBY)) {
@@ -52,6 +56,8 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
         }
         _;
     }
+
+    // ================= Constructor =================
 
     constructor(
         address stakeupToken,
@@ -66,6 +72,8 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
         _baseChainInstance = baseChainInstance;
         _baseChainEid = baseChainEid;
     }
+
+    // =================== Functions ===================
 
     /// @inheritdoc IStakeupStakingBase
     function processFees(

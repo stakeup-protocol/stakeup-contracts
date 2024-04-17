@@ -6,22 +6,13 @@ library StakeUpErrors {
     /// @notice Emitted if the caller tries to seed the gauges to early
     error TooEarlyToSeed();
 
-    /// @notice Emitted if the caller passes an invalid address
-    error InvalidAddress();
-
     /// @notice Emitted if the reward allocation is not met
     error RewardAllocationNotMet();
 
     /// @notice Emitted if the contract is not initialized
     error NotInitialized();
 
-    /// @notice Emitted if the contract is already initialized
-    error ContractInitialized();
-
     // ========================= Staking ===========================
-    /// @dev Error emitted when caller is not the stTBY contract
-    error UnauthorizedCaller();
-
     // @notice Token amount is 0
     error ZeroTokensStaked();
 
@@ -30,12 +21,6 @@ library StakeUpErrors {
 
     // @notice User has no rewards to claim
     error NoRewardsToClaim();
-
-    // @notice No Fees were sent to the contract
-    error NoFeesToProcess();
-
-    // @notice The address is 0
-    error ZeroAddress();
 
     // ========================= Layer Zero ===========================
     /// @dev Error emitted when the provided address is the zero address
@@ -67,15 +52,11 @@ library StakeUpErrors {
     error SharesNotFullyAllocated();
 
     // ========================= StTBY Token ===========================
-
     /// @notice Parameter out of bounds
     error ParameterOutOfBounds();
 
     /// @notice Insufficient balance
     error InsufficientBalance();
-
-    /// @notice Invalid amount
-    error InvalidAmount();
 
     /// @notice Invalid Redemption of Underlying Tokens
     error InvalidRedemption();
@@ -86,9 +67,19 @@ library StakeUpErrors {
     /// @notice TBY not active
     error TBYNotActive();
 
+    // ========================= General ===========================
+    /// @notice Zero amount
+    error ZeroAmount();
+
+    // @notice The address is 0
+    error ZeroAddress();
+
+    /// @dev Error emitted when caller is not allowed to execute a function
+    error UnauthorizedCaller();
+
     /// @notice WstTBY already initialized
     error AlreadyInitialized();
 
-    /// @notice Zero amount
-    error ZeroAmount();
+    /// @notice Emitted if the caller passes an invalid address
+    error InvalidAddress();
 }
