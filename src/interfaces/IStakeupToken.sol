@@ -3,7 +3,6 @@
 pragma solidity 0.8.22;
 
 interface IStakeupToken {
-
     /// @notice Amount being minted is greater than the available tokens
     error ExceedsAvailableTokens();
 
@@ -24,14 +23,14 @@ interface IStakeupToken {
 
     /**
      * @dev Allocation is a struct that represents a specific allocation of tokens
-     * to a group of recipients. 
+     * to a group of recipients.
      * @dev The percentOfSupply is the percentage of the total supply that this allocation
      * represents.
      * @dev The recipients array is an array of TokenRecipients that will receive tokens
      */
     struct Allocation {
         TokenRecipient[] recipients;
-        uint64 percentOfSupply; 
+        uint64 percentOfSupply;
     }
 
     /**
@@ -79,7 +78,7 @@ interface IStakeupToken {
 
     /**
      * @notice Mints the initial supply of tokens
-     * @param allocations An array of token Allocations for the initial supply mint 
+     * @param allocations An array of token Allocations for the initial supply mint
      * @param initialMintPercentage The percentage of the total supply that will be minted
      */
     function mintInitialSupply(
@@ -87,4 +86,3 @@ interface IStakeupToken {
         uint256 initialMintPercentage
     ) external;
 }
-

@@ -82,7 +82,11 @@ contract MockStakeupStaking is IStakeupStaking {
         returns (LzBridgeReceipt memory bridgingReceipt)
     {
         _feeProcessed = true;
-        MessagingReceipt memory msgReceipt = MessagingReceipt("", 0, MessagingFee(0, 0));
+        MessagingReceipt memory msgReceipt = MessagingReceipt(
+            "",
+            0,
+            MessagingFee(0, 0)
+        );
         OFTReceipt memory oftReceipt = OFTReceipt(0, 0);
 
         bridgingReceipt = LzBridgeReceipt(msgReceipt, oftReceipt);

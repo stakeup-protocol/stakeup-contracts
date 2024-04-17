@@ -24,8 +24,7 @@ contract MockCurveFactory is ICurvePoolFactory {
         uint8[] memory /*asset_types*/,
         bytes4[] memory /*methodId*/,
         address[] memory /*oracles*/
-    ) external       pure
-override returns (address) {
+    ) external pure override returns (address) {
         return address(0);
     }
 }

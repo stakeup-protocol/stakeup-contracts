@@ -28,10 +28,10 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
 
     /// @notice Invalid Redemption of Underlying Tokens
     error InvalidRedemption();
-    
+
     /// @notice Invalid Underlying Token
     error InvalidUnderlyingToken();
-    
+
     /// @notice TBY not active
     error TBYNotActive();
 
@@ -90,8 +90,13 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @param amount Amount of tokens deposited
      * @param shares Amount of shares minted to the user
      */
-    event Deposit(address indexed account, address token, uint256 amount, uint256 shares);
-    
+    event Deposit(
+        address indexed account,
+        address token,
+        uint256 amount,
+        uint256 shares
+    );
+
     /**
      * @notice Deposit TBY and get stTBY minted
      * @param tby TBY address
@@ -99,21 +104,29 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function depositTby(address tby, uint256 amount, LzSettings memory settings) 
-        external 
+    function depositTby(
+        address tby,
+        uint256 amount,
+        LzSettings memory settings
+    )
+        external
         payable
         returns (
             LzBridgeReceipt memory bridgingReceipt,
             MessagingReceipt[] memory msgReceipts
         );
+
     /**
      * @notice Deposit underlying tokens and get stTBY minted
      * @param amount Amount of underlying tokens to deposit
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function depositUnderlying(uint256 amount, LzSettings memory settings)
-        external 
+    function depositUnderlying(
+        uint256 amount,
+        LzSettings memory settings
+    )
+        external
         payable
         returns (
             LzBridgeReceipt memory bridgingReceipt,
@@ -130,15 +143,18 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @return underlyingRedeemed The Amount of underlying tokens redeemed
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function redeemStTBY(uint256 stTBYAmount, LzSettings memory settings)
-        external 
+    function redeemStTBY(
+        uint256 stTBYAmount,
+        LzSettings memory settings
+    )
+        external
         payable
         returns (
             uint256 underlyingRedeemed,
             LzBridgeReceipt memory bridgingReceipt,
             MessagingReceipt[] memory msgReceipts
         );
-   
+
     /**
      * @notice Redeem wstTBY in exchange for underlying tokens. Underlying
      * tokens can be withdrawn with the `withdraw()` method, once the
@@ -149,15 +165,18 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @return underlyingRedeemed The Amount of underlying tokens redeemed
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function redeemWstTBY(uint256 wstTBYAmount, LzSettings memory settings)
-        external 
+    function redeemWstTBY(
+        uint256 wstTBYAmount,
+        LzSettings memory settings
+    )
+        external
         payable
         returns (
             uint256 underlyingRedeemed,
             LzBridgeReceipt memory bridgingReceipt,
             MessagingReceipt[] memory msgReceipts
         );
- 
+
     /**
      * @notice Redeems the underlying token from a Bloom Pool in exchange for TBYs
      * @dev Underlying tokens can only be redeemed if stTBY contains a TBY which is
@@ -166,7 +185,10 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function redeemUnderlying(address tby, LzSettings memory settings)
+    function redeemUnderlying(
+        address tby,
+        LzSettings memory settings
+    )
         external
         payable
         returns (
@@ -183,10 +205,9 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * in any other state than commit and deposits dont get fully staked
      * @dev anyone can call this function for now
      */
-    function poke(LzSettings memory settings)
-        external
-        payable
-        returns (MessagingReceipt[] memory msgReceipts);
+    function poke(
+        LzSettings memory settings
+    ) external payable returns (MessagingReceipt[] memory msgReceipts);
 
     /// @notice Get the total amount of underlying tokens in the pool
     function getRemainingBalance() external view returns (uint256);
@@ -201,7 +222,10 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
     function getBloomFactory() external view returns (IBloomFactory);
 
     /// @notice Returns the Exchange Rate Registry
-    function getExchangeRateRegistry() external view returns (IExchangeRateRegistry);
+    function getExchangeRateRegistry()
+        external
+        view
+        returns (IExchangeRateRegistry);
 
     /// @notice Returns the StakeupStaking contract.
     function getStakeupStaking() external view returns (IStakeupStaking);

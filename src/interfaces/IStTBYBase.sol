@@ -2,7 +2,6 @@
 pragma solidity 0.8.22;
 
 interface IStTBYBase {
-
     error UnauthorizedCaller();
 
     error ZeroAddress();
@@ -12,10 +11,14 @@ interface IStTBYBase {
      * @dev emitted in pair with an ERC20-defined `Transfer` event.
      * @param from Address of the sender
      * @param to Address of the recipient
-     * @param sharesAmount Amount of shares transferred 
+     * @param sharesAmount Amount of shares transferred
      */
-    event TransferShares(address indexed from, address indexed to, uint256 sharesAmount);
-    
+    event TransferShares(
+        address indexed from,
+        address indexed to,
+        uint256 sharesAmount
+    );
+
     /**
      * @notice An executed `burnShares` request
      * @dev Reports simultaneously burnt shares amount
@@ -25,9 +28,12 @@ interface IStTBYBase {
      * @param preRebaseTokenAmount amount of stTBY the burnt shares corresponded to before the burn
      * @param postRebaseTokenAmount amount of stTBY the burnt shares corresponded to after the burn
      * @param sharesAmount amount of burnt shares
-    */
+     */
     event SharesBurnt(
-        address indexed account, uint256 preRebaseTokenAmount, uint256 postRebaseTokenAmount, uint256 sharesAmount
+        address indexed account,
+        uint256 preRebaseTokenAmount,
+        uint256 postRebaseTokenAmount,
+        uint256 sharesAmount
     );
 
     /**
@@ -36,7 +42,10 @@ interface IStTBYBase {
      * @param prevGlobalShares The total amount of shares in existence before the increase
      * @param shares Amount of shares to increase the global shares by
      */
-    function increaseGlobalShares(uint256 prevGlobalShares, uint256 shares) external;
+    function increaseGlobalShares(
+        uint256 prevGlobalShares,
+        uint256 shares
+    ) external;
 
     /**
      * @notice decreases the total amount of shares in existence using
@@ -44,7 +53,10 @@ interface IStTBYBase {
      * @param prevGlobalShares The total amount of shares in existence before the decrease
      * @param shares Amount of shares to decrease the global shares by
      */
-    function decreaseGlobalShares(uint256 prevGlobalShares, uint256 shares) external;
+    function decreaseGlobalShares(
+        uint256 prevGlobalShares,
+        uint256 shares
+    ) external;
 
     /**
      * @notice Distribute yield according to the consentration of shares relative to
@@ -68,13 +80,15 @@ interface IStTBYBase {
      * @dev The sum of all USD balances in the protocol, equals to the total supply of stTBY.
      */
     function getTotalUsd() external view returns (uint256);
+
     /**
      * @notice Get the total amount of shares in existence.
      * @dev The sum of all accounts' shares can be an arbitrary number, therefore
      * it is necessary to store it in order to calculate each account's relative share.
      */
     function getTotalShares() external view returns (uint256);
-        /**
+
+    /**
      * @notice Get the amount of shares owned by `_account`
      * @param account Account to get shares of
      */
@@ -91,9 +105,11 @@ interface IStTBYBase {
      * @param sharesAmount Amount of shares
      * @return Amount of Usd that corresponds to `sharesAmount` token shares.
      */
-    function getUsdByShares(uint256 sharesAmount) external view returns (uint256);
+    function getUsdByShares(
+        uint256 sharesAmount
+    ) external view returns (uint256);
 
-    /// @notice The total shares of stTBY tokens in circulation on all chains    
+    /// @notice The total shares of stTBY tokens in circulation on all chains
     function getGlobalShares() external view returns (uint256);
 
     /// @notice The percentage of the global supply that exists on this chain

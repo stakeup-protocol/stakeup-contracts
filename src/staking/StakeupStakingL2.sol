@@ -31,10 +31,17 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
     /// @notice The endpoint ID of the mainnet chain
     uint32 private immutable _baseChainEid;
 
-    bytes constant public PROCESS_FEE_MSG = abi.encodeCall(
-        IStakeupStakingBase.processFees, 
-        ((address(0)), LZBridgeSettings({ options: "", fee: MessagingFee({ nativeFee: 0, lzTokenFee: 0 })}))
-    );
+    bytes public constant PROCESS_FEE_MSG =
+        abi.encodeCall(
+            IStakeupStakingBase.processFees,
+            (
+                (address(0)),
+                LZBridgeSettings({
+                    options: "",
+                    fee: MessagingFee({nativeFee: 0, lzTokenFee: 0})
+                })
+            )
+        );
 
     /// @notice Only the reward token can call this function
     modifier authorized() {
@@ -57,7 +64,10 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
     }
 
     /// @inheritdoc IStakeupStakingBase
-    function processFees(address refundRecipient, LZBridgeSettings calldata settings)
+    function processFees(
+        address refundRecipient,
+        LZBridgeSettings calldata settings
+    )
         external
         payable
         override
@@ -67,13 +77,19 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
         //Get the balance of stTBY in the contract
         uint256 stTbyBalance = IERC20(address(_stTBY)).balanceOf(address(this));
 
-        SendParam memory sendParam = _setSendParam(stTbyBalance, settings.options);
-        
-        (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt) = IOFT(address(_stTBY)).send{ value: msg.value }(
-            sendParam,
-            settings.fee,
-            refundRecipient
+        SendParam memory sendParam = _setSendParam(
+            stTbyBalance,
+            settings.options
         );
+
+        (
+            MessagingReceipt memory msgReceipt,
+            OFTReceipt memory oftReceipt
+        ) = IOFT(address(_stTBY)).send{value: msg.value}(
+                sendParam,
+                settings.fee,
+                refundRecipient
+            );
 
         bridgingReceipt = LzBridgeReceipt(msgReceipt, oftReceipt);
     }
@@ -93,16 +109,20 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
      * @param amount The minimum amount of tokens to send
      * @param options The executor options for the send operation
      */
-    function _setSendParam(uint256 amount, bytes calldata options) internal view returns (SendParam memory) {
-        return SendParam({
-            dstEid: _baseChainEid,
-            to: _baseChainInstance.addressToBytes32(),
-            amountLD: amount,
-            minAmountLD: amount,
-            extraOptions: options,
-            composeMsg: PROCESS_FEE_MSG,
-            oftCmd: ""
-        });
+    function _setSendParam(
+        uint256 amount,
+        bytes calldata options
+    ) internal view returns (SendParam memory) {
+        return
+            SendParam({
+                dstEid: _baseChainEid,
+                to: _baseChainInstance.addressToBytes32(),
+                amountLD: amount,
+                minAmountLD: amount,
+                extraOptions: options,
+                composeMsg: PROCESS_FEE_MSG,
+                oftCmd: ""
+            });
     }
 
     /// @inheritdoc OAppReceiver

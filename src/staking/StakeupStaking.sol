@@ -19,7 +19,7 @@ import {IStakeupStaking, IStakeupStakingBase} from "../interfaces/IStakeupStakin
  *         Tokens can be staked for any amount of time and can be unstaked at any time.
  *         The rewards tracking system is based on the methods similar to those used by
  *         Pendle Finance for rewarding Liquidity Providers.
- * @dev Rewards will be streamed to the staking contract anytime fees are collected and 
+ * @dev Rewards will be streamed to the staking contract anytime fees are collected and
  *      are immediately claimable by the user. The rewards are denominated in stTBY shares.
  */
 contract StakeupStaking is

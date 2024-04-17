@@ -9,7 +9,6 @@ import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
 contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
-    
     /// @notice Address of the StakeUp Staking contract
     address private immutable _stakeupStaking;
 
@@ -35,11 +34,16 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         address owner,
         address layerZeroEndpoint,
         address _layerZeroDelegate
-    ) OFT("Stakeup Token", "SUP", layerZeroEndpoint, _layerZeroDelegate) Ownable2Step() {
+    )
+        OFT("Stakeup Token", "SUP", layerZeroEndpoint, _layerZeroDelegate)
+        Ownable2Step()
+    {
         _stakeupStaking = stakeupStaking;
 
         _authorizedMinters[_stakeupStaking] = true;
-        _authorizedMinters[address(IStakeupStaking(stakeupStaking).getStTBY())] = true;
+        _authorizedMinters[
+            address(IStakeupStaking(stakeupStaking).getStTBY())
+        ] = true;
 
         if (gaugeDistributor != address(0)) {
             _authorizedMinters[gaugeDistributor] = true;
@@ -80,7 +84,10 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
     }
 
     /// @inheritdoc IStakeupToken
-    function mintRewards(address recipient, uint256 amount) external override onlyAuthorized {
+    function mintRewards(
+        address recipient,
+        uint256 amount
+    ) external override onlyAuthorized {
         _mint(recipient, amount);
     }
 
@@ -94,7 +101,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
 
         for (uint256 i = 0; i < length; ++i) {
             if (sharesRemaining < allocations[i].percentOfSupply) {
-                revert ExceedsAvailableTokens();               
+                revert ExceedsAvailableTokens();
             }
             sharesRemaining -= allocations[i].percentOfSupply;
             _mintAndVest(allocations[i], _stakeupStaking);

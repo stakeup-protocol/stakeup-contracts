@@ -22,7 +22,7 @@ contract WstTBY is IWstTBY, ERC20 {
     function wrap(uint256 stTBYAmount) external returns (uint256) {
         uint256 wstTBYAmount = _stTBY.getSharesByUsd(stTBYAmount);
         if (wstTBYAmount == 0) revert ZeroAmount();
-        
+
         _mint(msg.sender, wstTBYAmount);
         ERC20(address(_stTBY)).transferFrom(
             msg.sender,
