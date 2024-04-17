@@ -2,10 +2,6 @@
 pragma solidity 0.8.22;
 
 interface IStTBYBase {
-    error UnauthorizedCaller();
-
-    error ZeroAddress();
-
     /**
      * @notice An executed shares transfer from `sender` to `recipient`.
      * @dev emitted in pair with an ERC20-defined `Transfer` event.

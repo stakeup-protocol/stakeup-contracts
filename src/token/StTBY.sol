@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT                                                           
 pragma solidity 0.8.22;
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
@@ -8,6 +8,8 @@ import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extens
 import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {CrossChainLST} from "./CrossChainLST.sol";
+import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
+import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 import {StakeUpRewardMathLib} from "../rewards/lib/StakeUpRewardMathLib.sol";
 import {StakeUpMintRewardLib} from "../rewards/lib/StakeUpMintRewardLib.sol";
 
@@ -78,12 +80,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     /// @dev Mapping of TBYs that have been redeemed
     mapping(address => bool) private _tbyRedeemed;
 
-    uint16 private constant BPS = 10000;
-
-    uint16 private constant MAX_BPS = 200; // Max 2%
-
-    uint256 private constant AUTO_STAKE_PHASE = 1 days;
-
     // =================== Functions ===================
     constructor(
         address underlyingToken,
@@ -99,13 +95,18 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         address layerZeroEndpoint,
         address layerZeroDelegate
     ) CrossChainLST(messanger, layerZeroEndpoint, layerZeroDelegate) {
-        if (underlyingToken == address(0)) revert InvalidAddress();
-        if (wstTBY == address(0)) revert InvalidAddress();
-        if (bloomFactory == address(0)) revert InvalidAddress();
-        if (registry == address(0)) revert InvalidAddress();
-        if (stakeupStaking == address(0)) revert InvalidAddress();
-        if (mintBps_ > MAX_BPS || redeemBps_ > MAX_BPS) {
-            revert ParameterOutOfBounds();
+        if (
+            underlyingToken == address(0) ||
+            bloomFactory == address(0) ||
+            registry == address(0) ||
+            stakeupStaking == address(0) ||
+            wstTBY == address(0)
+        ) {
+            revert Errors.InvalidAddress();
+        }
+
+        if (mintBps_ > Constants.MAX_BPS || redeemBps_ > Constants.MAX_BPS) {
+            revert Errors.ParameterOutOfBounds();
         }
 
         _underlyingToken = IERC20(underlyingToken);
@@ -125,7 +126,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         _startTimestamp = block.timestamp;
 
         if (pokeEligible) {
-            _pokeRewardsRemaining = StakeUpRewardMathLib.POKE_REWARDS;
+            _pokeRewardsRemaining = Constants.POKE_REWARDS;
         }
 
         _mintRewardsRemaining = StakeUpMintRewardLib._getMintRewardAllocation();
@@ -147,10 +148,10 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             MessagingReceipt[] memory msgReceipts
         )
     {
-        if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
+        if (!_registry.tokenInfos(tby).active) revert Errors.TBYNotActive();
 
         if (IBloomPool(tby).UNDERLYING_TOKEN() != address(_underlyingToken)) {
-            revert InvalidUnderlyingToken();
+            revert Errors.InvalidUnderlyingToken();
         }
 
         IBloomPool latestPool = _getLatestPool();
@@ -181,7 +182,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         IBloomPool latestPool = _getLatestPool();
 
         if (latestPool.UNDERLYING_TOKEN() != address(_underlyingToken)) {
-            revert InvalidUnderlyingToken();
+            revert Errors.InvalidUnderlyingToken();
         }
 
         if (latestPool.state() == IBloomPool.State.Commit) {
@@ -257,7 +258,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             MessagingReceipt[] memory msgReceipts
         )
     {
-        if (!_registry.tokenInfos(tby).active) revert TBYNotActive();
+        if (!_registry.tokenInfos(tby).active) revert Errors.TBYNotActive();
 
         IBloomPool pool = IBloomPool(tby);
         uint256 amount = IERC20(tby).balanceOf(address(this));
@@ -284,7 +285,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         uint256 withdrawn = _underlyingToken.balanceOf(address(this)) -
             beforeUnderlyingBalance;
 
-        if (withdrawn == 0) revert InvalidRedemption();
+        if (withdrawn == 0) revert Errors.InvalidRedemption();
 
         uint256 lastRate = _lastRate[tby] == 0 ? 1e18 : _lastRate[tby];
         uint256 realizedValue = (lastRate * _scalingFactor * amount) / 1e18;
@@ -408,7 +409,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         uint256 amountScaled = amount * _scalingFactor;
 
         uint256 sharesFeeAmount;
-        uint256 mintFee = (amountScaled * mintBps) / BPS;
+        uint256 mintFee = (amountScaled * mintBps) / Constants.BPS_DENOMINATOR;
 
         if (mintFee > 0) {
             sharesFeeAmount = getSharesByUsd(mintFee);
@@ -427,7 +428,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         }
 
         uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
-        if (sharesAmount == 0) revert ZeroAmount();
+        if (sharesAmount == 0) revert Errors.ZeroAmount();
 
         _mintShares(msg.sender, sharesAmount);
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
@@ -476,8 +477,10 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             MessagingReceipt[] memory msgReceipts
         )
     {
-        if (stTBYAmount == 0) revert ParameterOutOfBounds();
-        if (balanceOf(msg.sender) < stTBYAmount) revert InsufficientBalance();
+        if (stTBYAmount == 0) revert Errors.ParameterOutOfBounds();
+        if (balanceOf(msg.sender) < stTBYAmount) {
+            revert Errors.InsufficientBalance();
+        }
 
         uint256 shares = getSharesByUsd(stTBYAmount);
         (underlyingAmount, bridgingReceipt, msgReceipts) = _redeem(
@@ -499,7 +502,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             MessagingReceipt[] memory msgReceipts
         )
     {
-        uint256 redeemFee = (shares * redeemBps) / BPS;
+        uint256 redeemFee = (shares * redeemBps) / Constants.BPS_DENOMINATOR;
 
         if (redeemFee > 0) {
             shares -= redeemFee;
@@ -536,7 +539,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             underlyingAmount = amount / _scalingFactor;
 
             if (underlyingAmount > underlyingBalance) {
-                revert InsufficientBalance();
+                revert Errors.InsufficientBalance();
             }
             _underlyingToken.safeTransfer(account, underlyingAmount);
 
@@ -579,7 +582,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         uint256 sharesFeeAmount;
         uint256 proceeds = amountWithdrawn - startingAmount;
         uint256 yieldScaled = proceeds * _scalingFactor;
-        uint256 performanceFee = (yieldScaled * performanceBps) / BPS;
+        uint256 performanceFee = (yieldScaled * performanceBps) /
+            Constants.BPS_DENOMINATOR;
 
         if (performanceFee > 0) {
             sharesFeeAmount = getSharesByUsd(performanceFee);
@@ -665,7 +669,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     ) internal view returns (bool) {
         uint256 commitPhaseEnd = pool.COMMIT_PHASE_END();
         uint256 last24hoursOfCommitPhase = pool.COMMIT_PHASE_END() -
-            AUTO_STAKE_PHASE;
+            Constants.AUTO_STAKE_PHASE;
 
         if (currentState == IBloomPool.State.Commit) {
             uint256 currentTime = block.timestamp;
@@ -759,7 +763,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     function _distributePokeRewards() internal {
         if (_pokeRewardsRemaining > 0) {
             uint256 amount = StakeUpRewardMathLib._calculateDripAmount(
-                StakeUpRewardMathLib.POKE_REWARDS,
+                Constants.POKE_REWARDS,
                 _startTimestamp,
                 _pokeRewardsRemaining,
                 false

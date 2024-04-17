@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {StakeupStaking} from "src/staking/StakeupStaking.sol";
 import {StakeupToken, IStakeupToken} from "src/token/StakeupToken.sol";
+import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -183,7 +184,7 @@ contract StakeupTokenTest is Test {
             true,
             false,
             false,
-            IStakeupToken.InvalidRecipient.selector
+            Errors.InvalidRecipient.selector
         );
     }
 
@@ -193,7 +194,7 @@ contract StakeupTokenTest is Test {
             false,
             true,
             false,
-            IStakeupToken.ExceedsAvailableTokens.selector
+            Errors.ExceedsAvailableTokens.selector
         );
     }
 
@@ -203,7 +204,7 @@ contract StakeupTokenTest is Test {
             false,
             false,
             true,
-            IStakeupToken.SharesNotFullyAllocated.selector
+            Errors.SharesNotFullyAllocated.selector
         );
     }
 
@@ -334,7 +335,7 @@ contract StakeupTokenTest is Test {
         _deployOneAllocation(initialMintPercentage);
 
         // Fails when caller is not reward manager
-        vm.expectRevert(IStakeupToken.CallerAuthorizedMinter.selector);
+        vm.expectRevert(Errors.UnauthorizedCaller.selector);
         stakeupToken.mintRewards(address(this), rewards);
 
         // Mint rewards

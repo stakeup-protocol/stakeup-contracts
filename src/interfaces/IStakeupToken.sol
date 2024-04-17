@@ -3,24 +3,6 @@
 pragma solidity 0.8.22;
 
 interface IStakeupToken {
-    /// @notice Amount being minted is greater than the available tokens
-    error ExceedsAvailableTokens();
-
-    ///@notice Amount being minted is greater than the allocation limit
-    error ExceedsMaxAllocationLimit();
-
-    /// @notice Amount being minted is greater than the supply cap
-    error ExceedsMaxSupply();
-
-    /// @notice Invalid recipient, must be non-zero address
-    error InvalidRecipient();
-
-    /// @notice Invalid caller, must be StakeUpStaking or the CurveGaugeDistributor
-    error CallerAuthorizedMinter();
-
-    /// @notice The total number of shares have not been fully allocated
-    error SharesNotFullyAllocated();
-
     /**
      * @dev Allocation is a struct that represents a specific allocation of tokens
      * to a group of recipients.

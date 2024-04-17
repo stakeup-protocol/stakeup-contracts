@@ -4,6 +4,8 @@ pragma solidity 0.8.22;
 import {OApp, Origin} from "@LayerZero/oapp/OApp.sol";
 import {MessagingReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
 
+import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
 
@@ -17,7 +19,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     address private immutable _stTBY;
 
     modifier onlyStTBY() {
-        if (msg.sender != _stTBY) revert UnauthorizedCaller();
+        if (msg.sender != _stTBY) revert Errors.UnauthorizedCaller();
         _;
     }
 

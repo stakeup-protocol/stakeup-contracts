@@ -7,6 +7,8 @@ import {OApp, Origin, OAppReceiver} from "@LayerZero/oapp/OApp.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
 
+import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+
 import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStakingBase} from "../interfaces/IStakeupStakingBase.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
@@ -45,7 +47,9 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
 
     /// @notice Only the reward token can call this function
     modifier authorized() {
-        if (msg.sender != address(_stTBY)) revert UnauthorizedCaller();
+        if (msg.sender != address(_stTBY)) {
+            revert Errors.UnauthorizedCaller();
+        }
         _;
     }
 

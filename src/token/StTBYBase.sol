@@ -4,15 +4,14 @@ pragma solidity 0.8.22;
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
 
+import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
+import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+
 import {IStTBYBase} from "../interfaces/IStTBYBase.sol";
 
 /// @title Staked TBY Base Contract
 contract StTBYBase is IStTBYBase, OFT {
     using FixedPointMathLib for uint256;
-
-    // =================== Constants ===================
-
-    uint256 internal constant INFINITE_ALLOWANCE = type(uint256).max;
 
     // =================== Storage ===================
 
@@ -44,7 +43,7 @@ contract StTBYBase is IStTBYBase, OFT {
     // =================== Modifiers ===================
 
     modifier onlyMessenger() {
-        if (msg.sender != _messenger) revert UnauthorizedCaller();
+        if (msg.sender != _messenger) revert Errors.UnauthorizedCaller();
         _;
     }
 
@@ -55,7 +54,7 @@ contract StTBYBase is IStTBYBase, OFT {
         address _layerZeroEndpoint,
         address _layerZeroDelegate
     ) OFT("Staked TBY", "stTBY", _layerZeroEndpoint, _layerZeroDelegate) {
-        if (messenger == address(0)) revert ZeroAddress();
+        if (messenger == address(0)) revert Errors.ZeroAddress();
         _messenger = messenger;
     }
 
@@ -406,7 +405,7 @@ contract StTBYBase is IStTBYBase, OFT {
         uint256 amount
     ) internal override {
         uint256 currentAllowance = _allowances[owner][spender];
-        if (currentAllowance != INFINITE_ALLOWANCE) {
+        if (currentAllowance != Constants.MAX_UINT_256) {
             require(currentAllowance >= amount, "ALLOWANCE_EXCEEDED");
             _approve(owner, spender, currentAllowance - amount);
         }

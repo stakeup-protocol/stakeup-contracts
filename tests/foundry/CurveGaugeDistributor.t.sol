@@ -5,6 +5,7 @@ import {Test, console2} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
 
 import {CurveGaugeDistributor, ICurveGaugeDistributor} from "src/rewards/CurveGaugeDistributor.sol";
+import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockCurveFactory} from "../mocks/Curve/MockCurveFactory.sol";
@@ -72,7 +73,7 @@ contract CurveGaugeDistributorTest is Test {
 
     function test_SeedGauges() public {
         /// Fail to seed the gauges if the contract is not initialized
-        vm.expectRevert(ICurveGaugeDistributor.NotInitialized.selector);
+        vm.expectRevert(Errors.NotInitialized.selector);
         curveGaugeDistributor.seedGauges();
 
         // Successfully initialize and seed the gauges
@@ -102,7 +103,7 @@ contract CurveGaugeDistributorTest is Test {
 
         // Fail to seed the gauges if called too early
         skip(3 days);
-        vm.expectRevert(ICurveGaugeDistributor.TooEarlyToSeed.selector);
+        vm.expectRevert(Errors.TooEarlyToSeed.selector);
         curveGaugeDistributor.seedGauges();
 
         // Seed the gauges if called at the right time
