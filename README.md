@@ -48,7 +48,9 @@ stTBY solves TBYs composability issues by allowing users to deposit their TBYs o
 
 ## Design
 
-![stTBY Design](./stTBY-architecture.png)
+![stTBY Architecture](./StTBYArchitecture.jpeg)
+
+![stTBY Omnichain Architecture](./StTBYOmnichainArchitecture.jpeg)
 
 ### Tokens
 
@@ -64,7 +66,9 @@ stTBY solves TBYs composability issues by allowing users to deposit their TBYs o
 
 ### Staking
 
-- **StakeupStaking**: Stakeup Staking is the heart of the reward system for stTBY. It allows users to stake their SUP to access the reward system of the protocol. `stTBY` from fees are sent to the contract and is used to generate yield for the users of the protocol. Below is the outline of the fee mechanism of stTBY.
+- **StakeupStaking**: Stakeup Staking is the heart of the reward system for stTBY. It allows users to stake their SUP to access the reward system of the protocol. `stTBY` from fees are sent to the contract and is used to generate yield for the users of the protocol. Additionally it manage the distribution of SUP tokens to contributors and investors of the Stakeup Protocol and stTBY. These tokens are considered staked on the Stakeup Protocol and allow users to generate rewards even while locked under vesting schedules. 
+
+Below is the outline of the fee mechanism of stTBY.
 
   - Mint Fees: .01%
   - Redeem Fees: .5%
@@ -72,9 +76,12 @@ stTBY solves TBYs composability issues by allowing users to deposit their TBYs o
 
 ### Rewards
 
-- **RewardManager**: The `RewardManager` acts as the reward distribution system for the Stakeup Protocol. It is responsible for distributing SUP to users who execute the `poke` function on `stTBY` to manage state. The `CurveGaugeDistributor`, a feature of the `RewardManger` deploys CurveGauges and sends weekly emissions to the rewards gauges that are distributed to liquidity provider in the form of swap fees. Below is an outline of the liquidity pools eligible for rewards.
+- **CurveGaugeDistributor**: The `CurveGaugeDistributor`, a feature of the `RewardManger` deploys CurveGauges and sends weekly emissions to the rewards gauges that are distributed to liquidity provider in the form of swap fees. Below is an outline of the liquidity pools eligible for rewards.
 
   - stTBY/3CRV
   - wstTBY/wstETH
   - wstTBY/CHAI
   - stTBY/SUP
+
+### LayerZero Messaging
+- **StakeUpMessenger**: The `StakeUpMessenger` is a contract that manages the messaging that allows stTBY to accrue yield equally on all chains. This occurs by batch sending messages from the base chain to all peer chains, updating `_globalShares` and `_totalUsd`.
