@@ -28,7 +28,7 @@ contract MockBloomPool is IBloomPool, MockERC20 {
 
     State private _state;
     uint256 private _commitPhaseEnd;
-    
+
     address private _emergencyHandler;
 
     constructor(

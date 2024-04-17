@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { IStakeupToken } from "../interfaces/IStakeupToken.sol";
-import { ISUPVesting } from "../interfaces/ISUPVesting.sol";
+import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
+import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+
+import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
+import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
 
 /**
  * @title SUPVesting
@@ -30,16 +33,12 @@ abstract contract SUPVesting is ISUPVesting {
     /// @notice A mapping of user addresses to their vested token allocations
     mapping(address => VestedAllocation) internal _tokenAllocations;
 
-    /// @notice The duration of the cliff users are subject to
-    uint256 private constant CLIFF_DURATION = 52 weeks;
-
-    /// @notice The total duration of the vesting period
-    uint256 private constant VESTING_DURATION = 3 * CLIFF_DURATION;
-
     // =================== Modifiers ===================
 
     modifier onlySUP() {
-        if (msg.sender != address(_stakeupToken)) revert CallerNotSUP();
+        if (msg.sender != address(_stakeupToken)) {
+            revert Errors.UnauthorizedCaller();
+        }
         _;
     }
 
@@ -104,12 +103,12 @@ abstract contract SUPVesting is ISUPVesting {
         uint256 claimedTokens = allocation.startingBalance -
             allocation.currentBalance;
 
-        if (timeElapsed < CLIFF_DURATION) {
+        if (timeElapsed < Constants.CLIFF_DURATION) {
             return 0;
         } else {
             return
                 (allocation.startingBalance * timeElapsed) /
-                VESTING_DURATION -
+                Constants.VESTING_DURATION -
                 claimedTokens;
         }
     }
@@ -128,7 +127,7 @@ abstract contract SUPVesting is ISUPVesting {
     function _validateTimeElapsed(
         uint256 timeUnderVesting
     ) internal pure returns (uint256) {
-        return Math.min(timeUnderVesting, VESTING_DURATION);
+        return Math.min(timeUnderVesting, Constants.VESTING_DURATION);
     }
 
     /**

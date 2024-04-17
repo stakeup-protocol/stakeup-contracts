@@ -9,6 +9,8 @@ pragma solidity ^0.8.0;
  *      testnets.
  */
 library StakeUpMintRewardLib {
+    // =================== Mint Reward Cutoffs ===================
+
     /// @notice Mint reward cutoff for native minting on Ethereum Mainnet | 3% of total SUP supply
     uint256 private constant MINT_REWARD_CUTOFF_MAINNET = 30_000_000e18;
 
@@ -28,16 +30,19 @@ library StakeUpMintRewardLib {
     uint256 private constant MINT_REWARD_CUTOFF_PLUME_TESTNET = 100_000_000e18;
 
     /// @notice Mint reward cutoff for native minting on Berachain Testnet (This is for testing purposes only)
-    uint256 private constant MINT_REWARD_CUTOFF_BERACHAIN_TESTNET = 100_000_000e18;
+    uint256 private constant MINT_REWARD_CUTOFF_BERACHAIN_TESTNET =
+        100_000_000e18;
 
     /// @notice Mint reward cutoff for local development (This is for testing purposes only)
     uint256 private constant MINT_REWARD_CUTOFF_LOCAL = 200_000_000e18;
+
+    // ======================== Functions ========================
 
     /// @notice Returns the mint reward allocation for a given stTBY deployment based on the chain ID
     function _getMintRewardAllocation() internal view returns (uint256) {
         if (block.chainid == 1) {
             return MINT_REWARD_CUTOFF_MAINNET;
-        } 
+        }
         if (block.chainid == 42161) {
             return MINT_REWARD_CUTOFF_ARBITRUM;
         }
@@ -59,7 +64,7 @@ library StakeUpMintRewardLib {
         if (block.chainid == 31337) {
             return MINT_REWARD_CUTOFF_LOCAL;
         }
-        
+
         return 0;
     }
 }

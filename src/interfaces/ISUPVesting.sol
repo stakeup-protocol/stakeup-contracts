@@ -2,7 +2,6 @@
 pragma solidity 0.8.22;
 
 interface ISUPVesting {
-    
     /// @dev The max supply of SUP tokens is 1 billion so we can use uint32 for balances
     struct VestedAllocation {
         uint256 startingBalance;
@@ -10,15 +9,14 @@ interface ISUPVesting {
         uint256 vestingStartTime;
     }
 
-    /// @notice Caller not the StakeUp token
-    error CallerNotSUP();
-
     /**
      * @notice Get the amount of tokens available to be claimed by an account
      * @param account The account to check
      * @return The amount of tokens available to be claimed
      */
-    function getAvailableTokens(address account) external view returns (uint256);
+    function getAvailableTokens(
+        address account
+    ) external view returns (uint256);
 
     /**
      * @notice Set the accounting variables to track vested tokens for an account

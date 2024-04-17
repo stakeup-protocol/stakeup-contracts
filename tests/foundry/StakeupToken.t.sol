@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {StakeupStaking} from "src/staking/StakeupStaking.sol";
 import {StakeupToken, IStakeupToken} from "src/token/StakeupToken.sol";
+import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -20,7 +21,7 @@ contract StakeupTokenTest is Test {
     address internal owner;
     address internal stTBY;
     address internal layerZeroEndpoint;
-    
+
     MockEndpoint internal layerZeroEndpointA;
     MockEndpoint internal layerZeroEndpointB;
     uint32 internal constant EID_A = 1;
@@ -48,10 +49,10 @@ contract StakeupTokenTest is Test {
 
     function testViewFunctions() public {
         uint256 expectedSupply = 1_000_000e18; // .01 * 1 billion
-        
+
         // Alice is the only token recipient
         _deployOneAllocation(initialMintPercentage);
-        
+
         assertEq(stakeupToken.name(), "Stakeup Token");
         assertEq(stakeupToken.symbol(), "SUP");
         assertEq(stakeupToken.token(), address(stakeupToken));
@@ -62,7 +63,7 @@ contract StakeupTokenTest is Test {
         assertEq(stakeupToken.totalSupply(), expectedSupply);
     }
 
-    function testOwnership() public {        
+    function testOwnership() public {
         _deployOneAllocation(initialMintPercentage);
         assertEq(stakeupToken.owner(), owner);
     }
@@ -71,7 +72,10 @@ contract StakeupTokenTest is Test {
         uint256 expectedSupply = 1_000_000e18; // .01 * 1 billion
         _deployOneAllocation(initialMintPercentage);
 
-        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
+        assertEq(
+            stakeupToken.balanceOf(address(stakeupStaking)),
+            expectedSupply
+        );
     }
 
     function testMultiAllocationMint() public {
@@ -79,9 +83,18 @@ contract StakeupTokenTest is Test {
 
         // Alice and bob split the first allocation 50/50, rando gets the second allocation
         // Both allocations are 50% of the total supply
-        _deployMultiAllocation(initialMintPercentage, false, false, false, bytes4(0));
+        _deployMultiAllocation(
+            initialMintPercentage,
+            false,
+            false,
+            false,
+            bytes4(0)
+        );
 
-        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
+        assertEq(
+            stakeupToken.balanceOf(address(stakeupStaking)),
+            expectedSupply
+        );
     }
 
     function testMintLpSupply() public {
@@ -92,7 +105,8 @@ contract StakeupTokenTest is Test {
 
         _deployOneAllocation(initialMintPercentage);
 
-        IStakeupToken.TokenRecipient[] memory lpRecipients = new IStakeupToken.TokenRecipient[](2);
+        IStakeupToken.TokenRecipient[]
+            memory lpRecipients = new IStakeupToken.TokenRecipient[](2);
         lpRecipients[0] = IStakeupToken.TokenRecipient({
             recipient: lp1,
             percentOfAllocation: 5e17 // 50%
@@ -102,7 +116,8 @@ contract StakeupTokenTest is Test {
             percentOfAllocation: 5e17 // 50%
         });
 
-        IStakeupToken.Allocation[] memory lpAllocation = new IStakeupToken.Allocation[](1);
+        IStakeupToken.Allocation[]
+            memory lpAllocation = new IStakeupToken.Allocation[](1);
         lpAllocation[0] = IStakeupToken.Allocation({
             recipients: lpRecipients,
             percentOfSupply: lpPercentage // .01%
@@ -118,7 +133,10 @@ contract StakeupTokenTest is Test {
         vm.stopPrank();
 
         // Check that the LP supply was minted
-        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
+        assertEq(
+            stakeupToken.balanceOf(address(stakeupStaking)),
+            expectedSupply
+        );
         assertEq(stakeupToken.totalSupply(), expectedSupply);
     }
 
@@ -130,7 +148,8 @@ contract StakeupTokenTest is Test {
 
         _deployOneAllocation(initialMintPercentage);
 
-        IStakeupToken.TokenRecipient[] memory airdropRecipients = new IStakeupToken.TokenRecipient[](2);
+        IStakeupToken.TokenRecipient[]
+            memory airdropRecipients = new IStakeupToken.TokenRecipient[](2);
         airdropRecipients[0] = IStakeupToken.TokenRecipient({
             recipient: airdrop1,
             percentOfAllocation: 5e17 // 50%
@@ -150,7 +169,10 @@ contract StakeupTokenTest is Test {
         vm.stopPrank();
 
         // Check that the LP supply was minted
-        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply / 2);
+        assertEq(
+            stakeupToken.balanceOf(address(stakeupStaking)),
+            expectedSupply / 2
+        );
         assertEq(stakeupToken.balanceOf(airdrop1), 500_000e18);
         assertEq(stakeupToken.balanceOf(airdrop2), 500_000e18);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
@@ -162,7 +184,7 @@ contract StakeupTokenTest is Test {
             true,
             false,
             false,
-            IStakeupToken.InvalidRecipient.selector
+            Errors.InvalidRecipient.selector
         );
     }
 
@@ -172,7 +194,7 @@ contract StakeupTokenTest is Test {
             false,
             true,
             false,
-            IStakeupToken.ExceedsAvailableTokens.selector
+            Errors.ExceedsAvailableTokens.selector
         );
     }
 
@@ -182,17 +204,18 @@ contract StakeupTokenTest is Test {
             false,
             false,
             true,
-            IStakeupToken.SharesNotFullyAllocated.selector
+            Errors.SharesNotFullyAllocated.selector
         );
     }
 
     function _deployOneAllocation(uint64 initialMintPercent) internal {
-
-        IStakeupToken.TokenRecipient memory recipient = IStakeupToken.TokenRecipient({
-            recipient: alice,
-            percentOfAllocation: 1e18 // 100%
-        });
-        IStakeupToken.TokenRecipient[] memory recipients = new IStakeupToken.TokenRecipient[](1);
+        IStakeupToken.TokenRecipient memory recipient = IStakeupToken
+            .TokenRecipient({
+                recipient: alice,
+                percentOfAllocation: 1e18 // 100%
+            });
+        IStakeupToken.TokenRecipient[]
+            memory recipients = new IStakeupToken.TokenRecipient[](1);
 
         recipients[0] = recipient;
 
@@ -201,7 +224,8 @@ contract StakeupTokenTest is Test {
             percentOfSupply: initialMintPercent // .1%
         });
 
-        IStakeupToken.Allocation[] memory allocations = new IStakeupToken.Allocation[](1);
+        IStakeupToken.Allocation[]
+            memory allocations = new IStakeupToken.Allocation[](1);
 
         allocations[0] = allocation;
 
@@ -219,7 +243,7 @@ contract StakeupTokenTest is Test {
     }
 
     /**
-     * 
+     *
      * @param initialMintPercent How much of the total supply to mint
      * @param zeroAddress True if we want to send a token to the zero address
      * @param excessTokens True if we want to try and mint excess tokens
@@ -246,28 +270,31 @@ contract StakeupTokenTest is Test {
             aliceAllocation -= 1e16;
         }
 
-        IStakeupToken.TokenRecipient[] memory recipientsList1 = new IStakeupToken.TokenRecipient[](2);
-        IStakeupToken.TokenRecipient[] memory recipientsList2 = new IStakeupToken.TokenRecipient[](1);
+        IStakeupToken.TokenRecipient[]
+            memory recipientsList1 = new IStakeupToken.TokenRecipient[](2);
+        IStakeupToken.TokenRecipient[]
+            memory recipientsList2 = new IStakeupToken.TokenRecipient[](1);
 
-        IStakeupToken.Allocation[] memory allocations = new IStakeupToken.Allocation[](2);
-        
+        IStakeupToken.Allocation[]
+            memory allocations = new IStakeupToken.Allocation[](2);
+
         {
             // First allocation
-            IStakeupToken.TokenRecipient memory recipient1 = IStakeupToken.TokenRecipient({
-                recipient: alice,
-                percentOfAllocation: aliceAllocation
-            });
+            IStakeupToken.TokenRecipient memory recipient1 = IStakeupToken
+                .TokenRecipient({
+                    recipient: alice,
+                    percentOfAllocation: aliceAllocation
+                });
             recipientsList1[0] = recipient1;
-            IStakeupToken.TokenRecipient memory recipient2 = IStakeupToken.TokenRecipient({
-                recipient: bob,
-                percentOfAllocation: 5e17
-            });
+            IStakeupToken.TokenRecipient memory recipient2 = IStakeupToken
+                .TokenRecipient({recipient: bob, percentOfAllocation: 5e17});
             recipientsList1[1] = recipient2;
 
-            IStakeupToken.Allocation memory allocation1 = IStakeupToken.Allocation({
-                recipients: recipientsList1,
-                percentOfSupply: percentPerAllocation
-            });
+            IStakeupToken.Allocation memory allocation1 = IStakeupToken
+                .Allocation({
+                    recipients: recipientsList1,
+                    percentOfSupply: percentPerAllocation
+                });
 
             allocations[0] = allocation1;
 
@@ -275,11 +302,12 @@ contract StakeupTokenTest is Test {
                 recipient: rando,
                 percentOfAllocation: 1e18 // 100%
             });
-            
-            IStakeupToken.Allocation memory allocation2 = IStakeupToken.Allocation({
-                recipients: recipientsList2,
-                percentOfSupply: percentPerAllocation
-            });
+
+            IStakeupToken.Allocation memory allocation2 = IStakeupToken
+                .Allocation({
+                    recipients: recipientsList2,
+                    percentOfSupply: percentPerAllocation
+                });
             allocations[1] = allocation2;
 
             stakeupToken = new StakeupToken(
@@ -307,7 +335,7 @@ contract StakeupTokenTest is Test {
         _deployOneAllocation(initialMintPercentage);
 
         // Fails when caller is not reward manager
-        vm.expectRevert(IStakeupToken.CallerAuthorizedMinter.selector);
+        vm.expectRevert(Errors.UnauthorizedCaller.selector);
         stakeupToken.mintRewards(address(this), rewards);
 
         // Mint rewards
