@@ -90,7 +90,6 @@ abstract contract CrossChainLST is StTBYBase {
         uint256 msgFee
     ) internal returns (MessagingReceipt[] memory) {
         if (increase) {
-            amount = _getTbyYield() + amount;
             _accrueYield(amount);
         } else {
             _removeYield(amount);
