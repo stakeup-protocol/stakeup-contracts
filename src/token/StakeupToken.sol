@@ -12,11 +12,15 @@ import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
 import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
 
 contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
+    // =================== Storage ===================
+
     /// @notice Address of the StakeUp Staking contract
     address private immutable _stakeupStaking;
 
     /// @notice Mapping of authorized minters status'
     mapping(address => bool) private _authorizedMinters;
+
+    // =================== Modifiers ===================
 
     modifier onlyAuthorized() {
         if (!_authorizedMinters[msg.sender]) {
@@ -24,6 +28,8 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         }
         _;
     }
+
+    // ================= Constructor =================
 
     constructor(
         address stakeupStaking,

@@ -14,11 +14,13 @@ contract WstTBY is IWstTBY, ERC20 {
 
     IStTBY private immutable _stTBY;
 
-    // =================== Functions ===================
+    // ================== Constructor ==================
 
     constructor(address stTBY) ERC20("Wrapped staked TBY", "wstTBY") {
         _stTBY = IStTBY(stTBY);
     }
+
+    // =================== Functions ===================
 
     /// @inheritdoc IWstTBY
     function wrap(uint256 stTBYAmount) external returns (uint256) {

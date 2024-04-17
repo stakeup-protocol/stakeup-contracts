@@ -13,11 +13,15 @@ import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
  *         stTBY holders on all chains.
  */
 abstract contract CrossChainLST is StTBYBase {
+    // =================== Storage ===================
+
     /// @dev An array of peer endpoint Ids
     uint32[] public peerEids;
 
     /// @dev Mapping of TBYs last cached exchange rate
     mapping(address => uint256) internal _lastRate;
+
+    // ================= Constructor =================
 
     constructor(
         address messanger,

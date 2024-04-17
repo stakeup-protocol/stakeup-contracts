@@ -80,7 +80,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     /// @dev Mapping of TBYs that have been redeemed
     mapping(address => bool) private _tbyRedeemed;
 
-    // =================== Functions ===================
+    // ================== Constructor ==================
+
     constructor(
         address underlyingToken,
         address stakeupStaking,
@@ -133,6 +134,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
 
         _wstTBY = IWstTBY(wstTBY);
     }
+
+    // =================== Functions ==================
 
     /// @inheritdoc IStTBY
     function depositTby(
