@@ -31,8 +31,27 @@ interface IWstTBY is ILayerZeroSettings {
     function unwrap(uint256 wstTBYAmount) external returns (uint256);
 
     /**
-     * @notice Mints wstTBY directly to the user
-     * @param tby TBY address. To deposit stTBY underlying token enter address(0)
+     * @notice Mints wstTBY directly to the user using stTBY underlying token
+     * @param amount Underlying amount to deposit
+     * @param settings Configuration settings for bridging using LayerZero
+     * @return amountMinted Amount of wstTBY minted
+     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
+     */
+    function mintWstTBY(
+        uint256 amount,
+        LzSettings memory settings
+    )
+        external
+        payable
+        returns (
+            uint256 amountMinted,
+            LzBridgeReceipt memory bridgingReceipt,
+            MessagingReceipt[] memory msgReceipts
+        );
+
+    /**
+     * @notice Mints wstTBY directly to the user using TBYs
+     * @param tby TBY address to deposit
      * @param amount TBY amount to deposit
      * @param settings Configuration settings for bridging using LayerZero
      * @return amountMinted Amount of wstTBY minted
