@@ -17,5 +17,5 @@ interface IWstTBYBridge is ILayerZeroSettings {
         uint256 wstTBYAmount,
         uint32 dstEid,
         LZBridgeSettings calldata settings
-    ) external returns (LzBridgeReceipt memory bridgingReceipt);
+    ) external payable returns (LzBridgeReceipt memory bridgingReceipt);
 }
