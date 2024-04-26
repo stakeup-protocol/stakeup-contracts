@@ -294,6 +294,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             settings.messageSettings.fee.nativeFee;
 
         (
+            ,
             ILayerZeroSettings.LzBridgeReceipt memory receipt,
         ) = stTBYB.depositUnderlying{value: depositValue}(amount, settings);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));

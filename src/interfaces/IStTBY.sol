@@ -73,7 +73,9 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @param tby TBY address
      * @param amount TBY amount to deposit
      * @param settings Configuration settings for bridging using LayerZero
+     * @return amountMinted Amount of stTBY minted
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
+     * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
     function depositTby(
         address tby,
@@ -83,6 +85,7 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
         external
         payable
         returns (
+            uint256 amountMinted,
             LzBridgeReceipt memory bridgingReceipt,
             MessagingReceipt[] memory msgReceipts
         );
@@ -91,7 +94,9 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @notice Deposit underlying tokens and get stTBY minted
      * @param amount Amount of underlying tokens to deposit
      * @param settings Configuration settings for bridging using LayerZero
+     * @return amountMinted Amount of stTBY minted
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
+     * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
     function depositUnderlying(
         uint256 amount,
@@ -100,6 +105,7 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
         external
         payable
         returns (
+            uint256 amountMinted,
             LzBridgeReceipt memory bridgingReceipt,
             MessagingReceipt[] memory msgReceipts
         );

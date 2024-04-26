@@ -2,6 +2,7 @@
 pragma solidity 0.8.22;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
@@ -23,7 +24,7 @@ contract WstTBY is IWstTBY, ERC20 {
     // =================== Functions ===================
 
     /// @inheritdoc IWstTBY
-    function wrap(uint256 stTBYAmount) external returns (uint256) {
+    function wrap(uint256 stTBYAmount) public returns (uint256) {
         uint256 wstTBYAmount = _stTBY.getSharesByUsd(stTBYAmount);
         if (wstTBYAmount == 0) revert Errors.ZeroAmount();
 
@@ -37,13 +38,35 @@ contract WstTBY is IWstTBY, ERC20 {
     }
 
     /// @inheritdoc IWstTBY
-    function unwrap(uint256 wstTBYAmount) external returns (uint256) {
+    function unwrap(uint256 wstTBYAmount) public returns (uint256) {
         uint256 stTBYAmount = _stTBY.getUsdByShares(wstTBYAmount);
         if (stTBYAmount == 0) revert Errors.ZeroAmount();
 
         _burn(msg.sender, wstTBYAmount);
         StTBYBase(address(_stTBY)).transferShares(msg.sender, wstTBYAmount);
         return stTBYAmount;
+    }
+
+    /// @inheritdoc IWstTBY
+    function mintWstTBY(
+        address tby,
+        uint256 amount,
+        LzSettings memory settings
+    )
+        external
+        payable
+        override
+        returns (
+            uint256 amountMinted,
+            LzBridgeReceipt memory bridgingReceipt,
+            MessagingReceipt[] memory msgReceipts
+        )
+    {
+        (amountMinted, bridgingReceipt, msgReceipts) = (tby != address(0))
+            ? _stTBY.depositTby(tby, amount, settings)
+            : _stTBY.depositUnderlying(amount, settings);
+
+        amountMinted = wrap(amountMinted);
     }
 
     /// @inheritdoc IWstTBY

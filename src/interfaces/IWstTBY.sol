@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
+import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
+
+import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {IStTBY} from "./IStTBY.sol";
 
-interface IWstTBY {
+interface IWstTBY is ILayerZeroSettings {
     /**
      * @notice Exchanges stTBY to wstTBY
      * @dev Requirements:
@@ -26,6 +29,27 @@ interface IWstTBY {
      * @return Amount of stTBY user receives after unwrap
      */
     function unwrap(uint256 wstTBYAmount) external returns (uint256);
+
+    /**
+     * @notice Mints wstTBY directly to the user
+     * @param tby TBY address. To deposit stTBY underlying token enter address(0)
+     * @param amount TBY amount to deposit
+     * @param settings Configuration settings for bridging using LayerZero
+     * @return amountMinted Amount of wstTBY minted
+     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
+     */
+    function mintWstTBY(
+        address tby,
+        uint256 amount,
+        LzSettings memory settings
+    )
+        external
+        payable
+        returns (
+            uint256 amountMinted,
+            LzBridgeReceipt memory bridgingReceipt,
+            MessagingReceipt[] memory msgReceipts
+        );
 
     /**
      * @notice Get amount of wstTBY for a given amount of stTBY
