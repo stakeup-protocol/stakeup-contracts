@@ -147,6 +147,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         payable
         nonReentrant
         returns (
+            uint256 amountMinted,
             LzBridgeReceipt memory bridgingReceipt,
             MessagingReceipt[] memory msgReceipts
         )
@@ -177,6 +178,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         payable
         nonReentrant
         returns (
+            uint256 amountMinted,
             LzBridgeReceipt memory bridgingReceipt,
             MessagingReceipt[] memory msgReceipts
         )
@@ -409,6 +411,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     )
         internal
         returns (
+            uint256 amountMinted,
             LzBridgeReceipt memory bridgingReceipt,
             MessagingReceipt[] memory msgReceipts
         )
@@ -435,7 +438,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             );
         }
 
-        uint256 sharesAmount = getSharesByUsd(amountScaled - mintFee);
+        amountMinted = amountScaled - mintFee;
+        uint256 sharesAmount = getSharesByUsd(amountMinted);
         if (sharesAmount == 0) revert Errors.ZeroAmount();
 
         _mintShares(msg.sender, sharesAmount);
