@@ -34,13 +34,12 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
     // ================= Constructor =================
 
     constructor(
-        address stTBY,
         address wstTBY,
         address layerZeroEndpoint,
         address layerZeroDelegate
     ) OApp(layerZeroEndpoint, layerZeroDelegate) {
-        _stTBY = stTBY;
         _wstTBY = WstTBY(wstTBY);
+        _stTBY = address(WstTBY(wstTBY).getStTBY());
     }
 
     // =================== Functions ===================
@@ -51,7 +50,7 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
         uint256 wstTBYAmount,
         uint32 dstEid,
         LZBridgeSettings calldata settings
-    ) external returns (LzBridgeReceipt memory bridgingReceipt) {
+    ) external payable returns (LzBridgeReceipt memory bridgingReceipt) {
         _wstTBY.transferFrom(msg.sender, address(this), wstTBYAmount);
         uint256 stTBYAmount = _wstTBY.unwrap(wstTBYAmount);
 
@@ -82,7 +81,7 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
         (
             MessagingReceipt memory msgReceipt,
             OFTReceipt memory oftReceipt
-        ) = IOFT(address(_stTBY)).send{value: msg.value}(
+        ) = IOFT(_stTBY).send{value: msg.value}(
                 sendParam,
                 settings.fee,
                 msg.sender
@@ -137,7 +136,7 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
         address /*Executor*/,
         bytes calldata /*Executor Data*/
     ) external payable override {
-        if (_oApp != address(_stTBY)) revert Errors.InvalidOApp();
+        if (_oApp != _stTBY) revert Errors.InvalidOApp();
         if (msg.sender != address(endpoint)) revert Errors.UnauthorizedCaller();
 
         bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(
