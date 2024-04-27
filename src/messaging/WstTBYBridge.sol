@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OApp, Origin} from "@LayerZero/oapp/OApp.sol";
 import {IOFT, SendParam, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
@@ -49,12 +50,21 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
         address destinationAddress,
         uint256 wstTBYAmount,
         uint32 dstEid,
-        LZBridgeSettings calldata settings
+        LzSettings calldata settings
     ) external payable returns (LzBridgeReceipt memory bridgingReceipt) {
         _wstTBY.transferFrom(msg.sender, address(this), wstTBYAmount);
         uint256 stTBYAmount = _wstTBY.unwrap(wstTBYAmount);
 
         return _bridgeStTBY(destinationAddress, stTBYAmount, dstEid, settings);
+    }
+
+    /// @inheritdoc IWstTBYBridge
+    function setWstTBYBridge(
+        uint32 eid,
+        address bridgeAddress
+    ) external override {
+        if (bridgeAddress == address(0)) revert Errors.ZeroAddress();
+        _wstTBYBridges[eid] = bridgeAddress;
     }
 
     /**
@@ -69,13 +79,14 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
         address destinationAddress,
         uint256 stTBYAmount,
         uint32 dstEid,
-        LZBridgeSettings calldata settings
+        LzSettings calldata settings
     ) internal returns (LzBridgeReceipt memory bridgingReceipt) {
+        LZBridgeSettings calldata bridgeSettings = settings.bridgeSettings;
         SendParam memory sendParam = _setSendParam(
             destinationAddress,
             stTBYAmount,
             dstEid,
-            settings.options
+            bridgeSettings.options
         );
 
         (
@@ -83,8 +94,8 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
             OFTReceipt memory oftReceipt
         ) = IOFT(_stTBY).send{value: msg.value}(
                 sendParam,
-                settings.fee,
-                msg.sender
+                bridgeSettings.fee,
+                settings.refundRecipient
             );
 
         bridgingReceipt = LzBridgeReceipt(msgReceipt, oftReceipt);
@@ -99,6 +110,7 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
         address destinationAddress,
         uint256 stTBYAmount
     ) internal returns (bool) {
+        IERC20(_stTBY).approve(address(_wstTBY), stTBYAmount);
         uint256 wstTBYAmount = _wstTBY.wrap(stTBYAmount);
         return _wstTBY.transfer(destinationAddress, wstTBYAmount);
     }

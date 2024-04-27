@@ -16,6 +16,13 @@ interface IWstTBYBridge is ILayerZeroSettings {
         address destinationAddress,
         uint256 wstTBYAmount,
         uint32 dstEid,
-        LZBridgeSettings calldata settings
+        LzSettings calldata settings
     ) external payable returns (LzBridgeReceipt memory bridgingReceipt);
+
+    /**
+     * @notice Sets the wstTBY bridge address for the given endpoint ID
+     * @param eid The LayerZero Endpoint ID
+     * @param bridgeAddress The address of the wstTBY bridge contract
+     */
+    function setWstTBYBridge(uint32 eid, address bridgeAddress) external;
 }
