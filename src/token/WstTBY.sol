@@ -9,8 +9,11 @@ import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
 import {StTBYBase} from "./StTBYBase.sol";
-import "forge-std/console2.sol";
 
+/**
+ * @title Wrapped Staked TBY
+ * @notice The non-rebasing, wrapped version of the stTBY token that accues yield from TBYs
+ */
 contract WstTBY is IWstTBY, ERC20 {
     // =================== Constants ===================
 
