@@ -10,11 +10,11 @@ import {SUPVesting} from "./SUPVesting.sol";
 
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
-import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
-import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
+import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 
 /**
- * @title StakeupStaking
+ * @title StakeUpStaking
  * @notice Allows users to stake their STAKEUP tokens to earn stTBY rewards.
  *         Tokens can be staked for any amount of time and can be unstaked at any time.
  *         The rewards tracking system is based on the methods similar to those used by
@@ -22,7 +22,7 @@ import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
  * @dev Rewards will be streamed to the staking contract anytime fees are collected and 
  *      are immediately claimable by the user. The rewards are denominated in stTBY shares.
  */
-contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
+contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using FixedPointMathLib for uint256;
 
@@ -51,7 +51,7 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
     // =================== Modifiers ===================
 
-    /// @notice Updates the global reward index and available reward balance for Stakeup
+    /// @notice Updates the global reward index and available reward balance for StakeUp
     modifier updateIndex() {
         _updateRewardIndex();
         _;
@@ -83,14 +83,14 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
     // ================== functions ==================
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function stake(
         uint256 stakeupAmount
     ) external override updateIndex distributeRewards {
         _stake(msg.sender, stakeupAmount);
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function delegateStake(
         address receiver,
         uint256 stakeupAmount
@@ -99,7 +99,7 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
         _stake(receiver, stakeupAmount);
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function unstake(
         uint256 stakeupAmount,
         bool harvestRewards
@@ -124,10 +124,10 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
 
         IERC20(address(_stakeupToken)).safeTransfer(msg.sender, stakeupAmount);
 
-        emit StakeupUnstaked(msg.sender, stakeupAmount);
+        emit StakeUpUnstaked(msg.sender, stakeupAmount);
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function harvest() public nonReentrant updateIndex {
         uint256 rewardAmount = _distributeRewards(msg.sender);
         if (rewardAmount == 0) revert NoRewardsToClaim();
@@ -135,12 +135,12 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
         emit RewardsHarvested(msg.sender, rewardAmount);
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function processFees() external nonReentrant onlyReward updateIndex {
         // solhint-ignore-previous-line no-empty-blocks
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function claimableRewards(
         address account
     ) external view override returns (uint256) {
@@ -153,39 +153,39 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
             );
     }
 
-    /// @inheritdoc IStakeupStaking
-    function getStakupToken() external view returns (IStakeupToken) {
+    /// @inheritdoc IStakeUpStaking
+    function getStakupToken() external view returns (IStakeUpToken) {
         return _stakeupToken;
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function getStTBY() external view returns (IStTBY) {
         return _stTBY;
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function getRewardManager() external view override returns (address) {
         return address(_rewardManager);
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function totalStakeUpStaked() external view returns (uint256) {
         return _totalStakeUpStaked;
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function getRewardData() external view returns (RewardData memory) {
         return _rewardData;
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function getUserStakingData(
         address user
     ) external view returns (StakingData memory) {
         return _stakingData[user];
     }
 
-    /// @inheritdoc IStakeupStaking
+    /// @inheritdoc IStakeUpStaking
     function getLastRewardBlock() external view returns (uint256) {
         return _lastRewardBlock;
     }
@@ -204,11 +204,11 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
                 address(this),
 
 /**************************** Diff Block Start ****************************
-diff --git a/src/staking/StakeupStaking.sol b/src/staking/StakeupStaking.sol
+diff --git a/src/staking/StakeUpStaking.sol b/src/staking/StakeUpStaking.sol
 index 1849631..adfcf0a 100644
---- a/src/staking/StakeupStaking.sol
-+++ b/src/staking/StakeupStaking.sol
-@@ -206,7 +206,7 @@ contract StakeupStaking is IStakeupStaking, SUPVesting, ReentrancyGuard {
+--- a/src/staking/StakeUpStaking.sol
++++ b/src/staking/StakeUpStaking.sol
+@@ -206,7 +206,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
              );
          }
  
@@ -216,7 +216,7 @@ index 1849631..adfcf0a 100644
 +        userStakingData.amountStaked *= uint128(amount);
          _totalStakeUpStaked += amount;
  
-         emit StakeupStaked(user, amount);
+         emit StakeUpStaked(user, amount);
 **************************** Diff Block End *****************************/
 
                 amount
@@ -226,11 +226,11 @@ index 1849631..adfcf0a 100644
         userStakingData.amountStaked *= uint128(amount);
         _totalStakeUpStaked += amount;
 
-        emit StakeupStaked(user, amount);
+        emit StakeUpStaked(user, amount);
     }
 
     /**
-     * @notice Updates the global reward index and balance for Stakeup
+     * @notice Updates the global reward index and balance for StakeUp
      * @dev This function is called every time a user interacts with the staking contract
      *     to ensure that the reward index is up to date
      * @return The updated global reward index
@@ -239,7 +239,7 @@ index 1849631..adfcf0a 100644
         if (_lastRewardBlock != block.number) {
             _lastRewardBlock = block.number;
 
-            uint256 totalStakeupLocked = _totalStakeUpStaked +
+            uint256 totalStakeUpLocked = _totalStakeUpStaked +
                 _totalStakeUpVesting;
             RewardData storage rewards = _rewardData;
 
@@ -250,8 +250,8 @@ index 1849631..adfcf0a 100644
                 rewards.index = uint128(INITIAL_REWARD_INDEX);
             }
 
-            if (totalStakeupLocked != 0) {
-                rewards.index += uint128(accrued.divWad(totalStakeupLocked));
+            if (totalStakeUpLocked != 0) {
+                rewards.index += uint128(accrued.divWad(totalStakeUpLocked));
             }
 
             rewards.lastBalance = uint128(rewards.lastBalance + accrued);

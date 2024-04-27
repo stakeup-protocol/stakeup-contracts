@@ -4,7 +4,7 @@ pragma solidity 0.8.22;
 import { SafeERC20, IERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import { IStakeupToken } from "../interfaces/IStakeupToken.sol";
+import { IStakeUpToken } from "../interfaces/IStakeUpToken.sol";
 import { ISUPVesting } from "../interfaces/ISUPVesting.sol";
 
 /**
@@ -22,7 +22,7 @@ abstract contract SUPVesting is ISUPVesting {
     // =================== Storage ===================
 
     /// @notice The STAKEUP token
-    IStakeupToken internal immutable _stakeupToken;
+    IStakeUpToken internal immutable _stakeupToken;
 
     /// @notice Total amount of STAKEUP locked in vesting
     uint256 internal _totalStakeUpVesting;
@@ -46,7 +46,7 @@ abstract contract SUPVesting is ISUPVesting {
     // ================= Constructor =================
 
     constructor(address stakeupToken) {
-        _stakeupToken = IStakeupToken(stakeupToken);
+        _stakeupToken = IStakeUpToken(stakeupToken);
     }
 
     // =================== Functions ===================

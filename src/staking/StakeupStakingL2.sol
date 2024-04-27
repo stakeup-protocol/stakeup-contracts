@@ -9,15 +9,15 @@ import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
-import {IStakeupStakingBase} from "../interfaces/IStakeupStakingBase.sol";
+import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
+import {IStakeUpStakingBase} from "../interfaces/IStakeUpStakingBase.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 
 /**
- * @title StakeupStakingL2
+ * @title StakeUpStakingL2
  * @notice Bridges stTBY fees to the mainnet StakeUp Staking contract
  */
-contract StakeupStakingL2 is OApp, IStakeupStakingBase {
+contract StakeUpStakingL2 is OApp, IStakeUpStakingBase {
     using OFTComposeMsgCodec for address;
     using OptionsBuilder for bytes;
 
@@ -27,7 +27,7 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
     IStTBY private immutable _stTBY;
 
     /// @notice StakeUp Token instance
-    IStakeupToken private immutable _stakeupToken;
+    IStakeUpToken private immutable _stakeupToken;
 
     /// @notice The address of StakeUp Staking's mainnet instance
     address private immutable _baseChainInstance;
@@ -37,7 +37,7 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
 
     bytes public constant PROCESS_FEE_MSG =
         abi.encodeCall(
-            IStakeupStakingBase.processFees,
+            IStakeUpStakingBase.processFees,
             (
                 (address(0)),
                 LZBridgeSettings({
@@ -67,7 +67,7 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
         address layerZeroEndpoint,
         address layerZeroDelegate
     ) OApp(layerZeroEndpoint, layerZeroDelegate) {
-        _stakeupToken = IStakeupToken(stakeupToken);
+        _stakeupToken = IStakeUpToken(stakeupToken);
         _stTBY = IStTBY(stTBY);
         _baseChainInstance = baseChainInstance;
         _baseChainEid = baseChainEid;
@@ -75,7 +75,7 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
 
     // =================== Functions ===================
 
-    /// @inheritdoc IStakeupStakingBase
+    /// @inheritdoc IStakeUpStakingBase
     function processFees(
         address refundRecipient,
         LZBridgeSettings calldata settings
@@ -106,12 +106,12 @@ contract StakeupStakingL2 is OApp, IStakeupStakingBase {
         bridgingReceipt = LzBridgeReceipt(msgReceipt, oftReceipt);
     }
 
-    /// @inheritdoc IStakeupStakingBase
-    function getStakupToken() external view override returns (IStakeupToken) {
+    /// @inheritdoc IStakeUpStakingBase
+    function getStakupToken() external view override returns (IStakeUpToken) {
         return _stakeupToken;
     }
 
-    /// @inheritdoc IStakeupStakingBase
+    /// @inheritdoc IStakeUpStakingBase
     function getStTBY() external view override returns (IStTBY) {
         return _stTBY;
     }

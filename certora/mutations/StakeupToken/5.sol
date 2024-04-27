@@ -7,10 +7,10 @@ import {OFT, ERC20} from "@layerzerolabs/token/oft/v1/OFT.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
-import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
-import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
+import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 
-contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
+contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
     address private immutable _stakeupStaking;
     address private immutable _rewardManager;
 
@@ -27,7 +27,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         address stakeupStaking,
         address rewardManager,
         address owner
-    ) OFT("Stakeup Token", "SUP", layerZeroEndpoint) Ownable2Step() {
+    ) OFT("StakeUp Token", "SUP", layerZeroEndpoint) Ownable2Step() {
         _stakeupStaking = stakeupStaking;
         _rewardManager = rewardManager;
 
@@ -36,7 +36,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         _transferOwnership(owner);
     }
 
-    /// @inheritdoc IStakeupToken
+    /// @inheritdoc IStakeUpToken
     function mintLpSupply(Allocation[] memory allocations) external onlyOwner {
         uint256 length = allocations.length;
         for (uint256 i = 0; i < length; ++i) {
@@ -44,7 +44,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         }
     }
 
-    /// @inheritdoc IStakeupToken
+    /// @inheritdoc IStakeUpToken
     function airdropTokens(
         TokenRecipient[] memory recipients,
         uint256 percentOfTotalSupply
@@ -67,18 +67,18 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         if (tokensRemaining > 0) revert SharesNotFullyAllocated();
     }
 
-    /// @inheritdoc IStakeupToken
+    /// @inheritdoc IStakeUpToken
     function mintRewards(address recipient, uint256 amount) external override onlyManager {
         _mint(recipient, amount);
     }
 
 
 /**************************** Diff Block Start ****************************
-diff --git a/src/token/StakeupToken.sol b/src/token/StakeupToken.sol
+diff --git a/src/token/StakeUpToken.sol b/src/token/StakeUpToken.sol
 index 59fe17b..b79890b 100644
---- a/src/token/StakeupToken.sol
-+++ b/src/token/StakeupToken.sol
-@@ -76,7 +76,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
+--- a/src/token/StakeUpToken.sol
++++ b/src/token/StakeUpToken.sol
+@@ -76,7 +76,7 @@ contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
      function mintInitialSupply(
          Allocation[] memory allocations,
          uint256 initialMintPercentage
@@ -89,7 +89,7 @@ index 59fe17b..b79890b 100644
  
 **************************** Diff Block End *****************************/
 
-    /// @inheritdoc IStakeupToken
+    /// @inheritdoc IStakeUpToken
     function mintInitialSupply(
         Allocation[] memory allocations,
         uint256 initialMintPercentage
@@ -129,7 +129,7 @@ index 59fe17b..b79890b 100644
             allocationRemaining -= amount;
 
             // Set the vesting state for this recipient in the vesting contract
-            IStakeupStaking(stakeupStaking).vestTokens(recipient, amount);
+            IStakeUpStaking(stakeupStaking).vestTokens(recipient, amount);
 
             // Mint the tokens to the vesting contract
             _mint(stakeupStaking, amount);

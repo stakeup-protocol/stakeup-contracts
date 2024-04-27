@@ -36,7 +36,7 @@ methods {
     function _StTBY.getUnderlyingToken() external returns (address) envfree;
     function _StTBY.getBloomFactory() external returns (address) envfree;
     function _StTBY.getExchangeRateRegistry() external returns (address) envfree;
-    function _StTBY.getStakeupStaking() external returns (address) envfree;
+    function _StTBY.getStakeUpStaking() external returns (address) envfree;
     function _StTBY.getRewardManager() external returns (address) envfree;
     function _StTBY.getRedemptionNFT() external returns (address) envfree;
     function _StTBY.getMintBps() external returns (uint256) envfree;

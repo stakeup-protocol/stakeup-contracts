@@ -17,8 +17,8 @@ import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/bloom/IBloomPool.sol";
 import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
-import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
-import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
+import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
+import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
 
@@ -40,9 +40,9 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
 
     IExchangeRateRegistry private immutable _registry;
 
-    IStakeupStaking private immutable _stakeupStaking;
+    IStakeUpStaking private immutable _stakeupStaking;
 
-    IStakeupToken private immutable _stakeupToken;
+    IStakeUpToken private immutable _stakeupToken;
 
     /// @dev Last deposit amount
     uint256 internal _lastDepositAmount;
@@ -98,9 +98,9 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         _underlyingDecimals = IERC20Metadata(underlyingToken).decimals();
         _bloomFactory = IBloomFactory(bloomFactory);
         _registry = IExchangeRateRegistry(registry);
-        _stakeupStaking = IStakeupStaking(stakeupStaking);
+        _stakeupStaking = IStakeUpStaking(stakeupStaking);
 
-        _stakeupToken = IStakeupStaking(stakeupStaking).getStakupToken();
+        _stakeupToken = IStakeUpStaking(stakeupStaking).getStakupToken();
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
         _lastRateUpdate = block.timestamp;
@@ -352,7 +352,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function getStakeupStaking() external view returns (IStakeupStaking) {
+    function getStakeUpStaking() external view returns (IStakeUpStaking) {
         return _stakeupStaking;
     }
 
@@ -559,7 +559,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     }
 
     /**
-     * @notice Process the proceeds of TBYs and pay fees to Stakeup
+     * @notice Process the proceeds of TBYs and pay fees to StakeUp
      *   Staking
      * @param startingAmount Amount of USD that was initially deposited
      * @param amountWithdrawn Amount of USD that was withdrawn
@@ -774,7 +774,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             if (amount > 0) {
                 amount = Math.min(amount, _pokeRewardsRemaining);
                 _pokeRewardsRemaining -= amount;
-                IStakeupToken(_stakeupToken).mintRewards(msg.sender, amount);
+                IStakeUpToken(_stakeupToken).mintRewards(msg.sender, amount);
             }
         }
     }

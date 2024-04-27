@@ -17,10 +17,10 @@ import {MockSwapFacility} from "../mocks/MockSwapFacility.sol";
 import {MessagingHelpers} from "./MessagingHelpers.t.sol";
 
 import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
-import {StakeupStaking, IStakeupStaking} from "src/staking/StakeupStaking.sol";
-import {StakeupStakingL2} from "src/staking/StakeupStakingL2.sol";
+import {StakeUpStaking, IStakeUpStaking} from "src/staking/StakeUpStaking.sol";
+import {StakeUpStakingL2} from "src/staking/StakeUpStakingL2.sol";
 import {StTBY} from "src/token/StTBY.sol";
-import {StakeupToken} from "src/token/StakeupToken.sol";
+import {StakeUpToken} from "src/token/StakeUpToken.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
 import {WstTBYBridge} from "src/messaging/WstTBYBridge.sol";
 
@@ -37,11 +37,11 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
     StTBY internal stTBYA;
     StTBY internal stTBYB;
 
-    StakeupToken internal supA;
-    StakeupToken internal supB;
+    StakeUpToken internal supA;
+    StakeUpToken internal supB;
 
-    StakeupStaking internal stakeupStaking;
-    StakeupStakingL2 internal stakeupStakingL2;
+    StakeUpStaking internal stakeupStaking;
+    StakeUpStakingL2 internal stakeupStakingL2;
 
     WstTBY internal wstTBYA;
     WstTBYBridge internal wstTBYBridgeA;
@@ -97,13 +97,13 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
                 vm.getNonce(address(this)) + 4
             );
 
-            stakeupStaking = new StakeupStaking(
+            stakeupStaking = new StakeUpStaking(
                 address(expectedSupAAddress),
                 address(expectedstTBYAddress),
                 endpoints[aEid]
             );
 
-            supA = new StakeupToken(
+            supA = new StakeUpToken(
                 address(stakeupStaking),
                 address(0),
                 address(this),
@@ -155,7 +155,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
                 vm.getNonce(address(this)) + 4
             );
 
-            stakeupStakingL2 = new StakeupStakingL2(
+            stakeupStakingL2 = new StakeUpStakingL2(
                 address(expectedSupBAddress),
                 address(expectedstTBYBAddress),
                 address(stakeupStaking),
@@ -164,7 +164,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
                 address(this)
             );
 
-            supB = new StakeupToken(
+            supB = new StakeUpToken(
                 address(stakeupStakingL2),
                 address(0),
                 address(this),

@@ -1,5 +1,5 @@
-import "./base/_StakeupStaking.spec";
-import "./base/_StakeupToken.spec";
+import "./base/_StakeUpStaking.spec";
+import "./base/_StakeUpToken.spec";
 import "./base/_StTBY.spec";
 
 ///////////////// DEFINITIONS /////////////////////
@@ -21,7 +21,7 @@ function mulWadCVL(mathint x, mathint y) returns mathint {
 
 use builtin rule sanity; 
 
-// StakeupStaking valid state
+// StakeUpStaking valid state
 use invariant amountStakedLeqTotalStakeUpStaked;
 use invariant vestingTimestampLeqBlockTimestamp;
 use invariant lastRewardBlockGeqBlockNumber;
@@ -29,24 +29,24 @@ use invariant userStakingDataIndexLeqrewardDataIndex;
 use invariant startingBalanceAlwaysGeqCurrentBalance;
 use invariant tokenAllocationsZeroTimestampSolvency;
 
-// StakeupToken valid state
+// StakeUpToken valid state
 use invariant totalSupplyLeqMaxSupply;
 
 // SK-01 Any stake or unstake action changes token balances
 invariant stakeUnstakeMoveTokens(address user) isStakeActionHappened(user)
     // stake increase current contract balance and decrease user balance
-    ? ghostTotalStakeUpStaked - ghostTotalStakeUpStakedPrev == ghostErc20BalancesPrev_StakeupToken[user] - ghostErc20Balances_StakeupToken[user]
-        && ghostTotalStakeUpStaked - ghostTotalStakeUpStakedPrev == ghostErc20Balances_StakeupToken[currentContract] - ghostErc20BalancesPrev_StakeupToken[currentContract]
+    ? ghostTotalStakeUpStaked - ghostTotalStakeUpStakedPrev == ghostErc20BalancesPrev_StakeUpToken[user] - ghostErc20Balances_StakeUpToken[user]
+        && ghostTotalStakeUpStaked - ghostTotalStakeUpStakedPrev == ghostErc20Balances_StakeUpToken[currentContract] - ghostErc20BalancesPrev_StakeUpToken[currentContract]
     // unstake increase user's balance and decrease current contract balance
-    : ghostTotalStakeUpStakedPrev - ghostTotalStakeUpStaked == ghostErc20Balances_StakeupToken[user] - ghostErc20BalancesPrev_StakeupToken[user]
-        && ghostTotalStakeUpStakedPrev - ghostTotalStakeUpStaked == ghostErc20BalancesPrev_StakeupToken[currentContract] - ghostErc20Balances_StakeupToken[currentContract]
-// claimAvailableTokens() changes balance of ghostErc20BalancesPrev_StakeupToken
+    : ghostTotalStakeUpStakedPrev - ghostTotalStakeUpStaked == ghostErc20Balances_StakeUpToken[user] - ghostErc20BalancesPrev_StakeUpToken[user]
+        && ghostTotalStakeUpStakedPrev - ghostTotalStakeUpStaked == ghostErc20BalancesPrev_StakeUpToken[currentContract] - ghostErc20Balances_StakeUpToken[currentContract]
+// claimAvailableTokens() changes balance of ghostErc20BalancesPrev_StakeUpToken
 filtered { f -> f.selector != sig:claimAvailableTokens().selector } { 
     preserved stake(uint256 stakeupAmount) with (env e) {
         // unsafe uint128 conversion
         require(stakeupAmount <= max_uint128);
         require(user == e.msg.sender);
-        init_StakeupToken();
+        init_StakeUpToken();
         require(e.msg.sender != currentContract);
         require(e.msg.sender != getRewardManager());
     }
@@ -54,7 +54,7 @@ filtered { f -> f.selector != sig:claimAvailableTokens().selector } {
         // unsafe uint128 conversion
         require(stakeupAmount <= max_uint128);
         require(user == e.msg.sender);
-        init_StakeupToken();
+        init_StakeUpToken();
         require(e.msg.sender != currentContract);
         require(e.msg.sender != getRewardManager());
     }
@@ -62,7 +62,7 @@ filtered { f -> f.selector != sig:claimAvailableTokens().selector } {
         // unsafe uint128 conversion
         require(stakeupAmount <= max_uint128);
         require(user == e.msg.sender);
-        init_StakeupToken();
+        init_StakeUpToken();
         require(e.msg.sender != currentContract);
     }
 }
@@ -70,27 +70,27 @@ filtered { f -> f.selector != sig:claimAvailableTokens().selector } {
 // SK-02 Total staked SUP cannot exceed the total SUP supply
 rule totalStakeUpStakedLeqTotalSUPsupply(env e, method f, calldataarg args) {
 
-    init_StakeupToken();
-    init_StakeupStaking(e);
+    init_StakeUpToken();
+    init_StakeUpStaking(e);
 
-    require(ghostTotalStakeUpStaked <= ghostErc20TotalSupply_StakeupToken);
+    require(ghostTotalStakeUpStaked <= ghostErc20TotalSupply_StakeUpToken);
     
     // If the reward manager is the sender, then there is no need to transfer tokens
     // as the tokens will be minted directly to the staking contract
     require(e.msg.sender != getRewardManager());
 
-    require(ghostErc20Balances_StakeupToken[e.msg.sender] 
-        <= ghostErc20TotalSupply_StakeupToken - ghostTotalStakeUpStaked);
+    require(ghostErc20Balances_StakeUpToken[e.msg.sender] 
+        <= ghostErc20TotalSupply_StakeUpToken - ghostTotalStakeUpStaked);
 
     f(e, args);
 
-    assert(ghostTotalStakeUpStaked <= ghostErc20TotalSupply_StakeupToken);
+    assert(ghostTotalStakeUpStaked <= ghostErc20TotalSupply_StakeUpToken);
 }
 
 // SK-03 Claimable rewards are calculated based on staked amounts and global reward index
 rule claimableRewardsIntegrity(env e, address user) {
 
-    init_StakeupStaking(e);
+    init_StakeUpStaking(e);
 
     require(ghostRewardDataIndex != 0);
     require(ghostRewardDataIndex != ghostStakingDataIndex[user]);
@@ -151,7 +151,7 @@ invariant userStakingDataIndexIncreasing()
     // Ignore INITIAL_REWARD_INDEX set, the only case when index could move from 1 to 0
     forall address user. ghostStakingDataIndexPrev[user] != 1 => ghostStakingDataIndex[user] >= ghostStakingDataIndexPrev[user] {
     preserved with (env e) {
-        init_StakeupStaking(e);
+        init_StakeUpStaking(e);
     }
 }
 
@@ -180,33 +180,33 @@ invariant rewardDistributionBlockUpdatedOnEveryRewardDistribution(env eInv)
 invariant rewardDataIndexIncreasing() ghostRewardDataIndex >= ghostRewardDataIndexPrev;
 
 // VT-01 Total vested SUP cannot exceed the total SUP supply
-invariant totalVestingLeqSUPsupply() ghostTotalStakeUpVesting <= ghostErc20TotalSupply_StakeupToken {
+invariant totalVestingLeqSUPsupply() ghostTotalStakeUpVesting <= ghostErc20TotalSupply_StakeUpToken {
     preserved with (env e) {
-        init_StakeupStaking(e);
-        init_StakeupToken();
+        init_StakeUpStaking(e);
+        init_StakeUpToken();
     }
     preserved vestTokens(address account, uint256 amount) with (env e) {
-        init_StakeupStaking(e);
-        init_StakeupToken();
-        // Only StakeupToken can execute vestTokens() and mints amount of tokens preliminarily 
-        require(ghostErc20TotalSupply_StakeupToken - to_mathint(amount) >= ghostTotalStakeUpVesting);
+        init_StakeUpStaking(e);
+        init_StakeUpToken();
+        // Only StakeUpToken can execute vestTokens() and mints amount of tokens preliminarily 
+        require(ghostErc20TotalSupply_StakeUpToken - to_mathint(amount) >= ghostTotalStakeUpVesting);
     }
 }
 
 // VT-02 Sum of _totalStakeUpStaked and _totalStakeUpVesting is always less than or equal to IERC20(address(_stakeupToken)).balanceOf(address(VESTING_CONTRACT))
 invariant sumOftotalStakedAndVestingLeqSUPBalanceOfCurrent() 
-    ghostTotalStakeUpStaked + ghostTotalStakeUpVesting <= ghostErc20Balances_StakeupToken[currentContract] {
+    ghostTotalStakeUpStaked + ghostTotalStakeUpVesting <= ghostErc20Balances_StakeUpToken[currentContract] {
     preserved with (env e) {
-        init_StakeupStaking(e);
-        init_StakeupToken();
+        init_StakeUpStaking(e);
+        init_StakeUpToken();
         // RewardManage can execute stake() and mints amount of tokens preliminarily 
         require(e.msg.sender != getRewardManager() && e.msg.sender != currentContract);
     }
     preserved vestTokens(address account, uint256 amount) with (env e) {
-        init_StakeupStaking(e);
-        init_StakeupToken();
-        // Only StakeupToken can execute vestTokens() and mints amount of tokens preliminarily 
-        require(ghostErc20Balances_StakeupToken[currentContract] - to_mathint(amount) >= ghostTotalStakeUpStaked + ghostTotalStakeUpVesting);
+        init_StakeUpStaking(e);
+        init_StakeUpToken();
+        // Only StakeUpToken can execute vestTokens() and mints amount of tokens preliminarily 
+        require(ghostErc20Balances_StakeUpToken[currentContract] - to_mathint(amount) >= ghostTotalStakeUpStaked + ghostTotalStakeUpVesting);
     }
 }
 
@@ -287,11 +287,11 @@ rule getAvailableTokensNotChangesAfterVestingDuration(env e1, env e2, address us
         );
 }
 
-// VT-09 Only StakeupToken can execute vestTokens()
-rule onlyStakeupTokenCanExecuteVestTokens(env e, calldataarg args) {
+// VT-09 Only StakeUpToken can execute vestTokens()
+rule onlyStakeUpTokenCanExecuteVestTokens(env e, calldataarg args) {
 
     vestTokens@withrevert(e, args);
     bool reverted = lastReverted;
 
-    assert(!reverted => e.msg.sender == _StakeupToken);
+    assert(!reverted => e.msg.sender == _StakeUpToken);
 }

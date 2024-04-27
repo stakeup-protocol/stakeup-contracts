@@ -13,7 +13,7 @@ import {StakeUpRewardMathLib} from "./lib/StakeUpRewardMathLib.sol";
 import {ICurveGaugeDistributor} from "../interfaces/ICurveGaugeDistributor.sol";
 import {ICurvePoolFactory} from "../interfaces/curve/ICurvePoolFactory.sol";
 import {ICurvePoolGauge} from "../interfaces//curve/ICurvePoolGauge.sol";
-import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
+import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 
 contract CurveGaugeDistributor is
     ICurveGaugeDistributor,
@@ -26,7 +26,7 @@ contract CurveGaugeDistributor is
     CurvePoolData[] internal _curvePools;
 
     /// @notice Address of the SUP token
-    IStakeupToken internal _stakeupToken;
+    IStakeUpToken internal _stakeupToken;
 
     /// @notice Timestamp of the pool deployment
     SeedTimestamp internal _seedTimestamp;
@@ -57,7 +57,7 @@ contract CurveGaugeDistributor is
         if (stakeupToken == address(0)) revert Errors.InvalidAddress();
         if (_initialized) revert Errors.AlreadyInitialized();
 
-        _stakeupToken = IStakeupToken(stakeupToken);
+        _stakeupToken = IStakeUpToken(stakeupToken);
         _initialized = true;
 
         _setCurvePools(curvePools);

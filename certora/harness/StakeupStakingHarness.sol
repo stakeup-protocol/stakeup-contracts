@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {StakeupStaking} from "../../src/staking/StakeupStaking.sol";
+import {StakeUpStaking} from "../../src/staking/StakeUpStaking.sol";
 
-contract StakeupStakingHarness is StakeupStaking { 
+contract StakeUpStakingHarness is StakeUpStaking { 
     
     constructor(
         address stakeupToken,
         address rewardManager,
         address stTBY
-    ) StakeupStaking(stakeupToken, rewardManager, stTBY) { }
+    ) StakeUpStaking(stakeupToken, rewardManager, stTBY) { }
 }

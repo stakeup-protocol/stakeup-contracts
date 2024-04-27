@@ -1,2 +1,2 @@
 #/bin/bash
-certoraRun certora/confs/StakeupToken.conf $1
+certoraRun certora/confs/StakeUpToken.conf $1

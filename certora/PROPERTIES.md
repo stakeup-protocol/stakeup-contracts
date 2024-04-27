@@ -28,7 +28,7 @@ List of properties following the categorization by [Certora](https://github.com/
 | ST-07 | `StTBY` withrawals decrease total supply and total shares, and can only be made by redemption NFT contract | State Transitions | ✅ |
 | ST-08 | When calling poke, lastRateUpdate does not change if less than 12 hours between two calls | State Transitions | ✅ |
 | ST-09 | When redeeming underlying if there is yield, totalUsd increases | State Transitions | ✅ |
-| ST-10 | Fees are transferred to StakeupStaking | State Transitions | ✅ |
+| ST-10 | Fees are transferred to StakeUpStaking | State Transitions | ✅ |
 | ST-11 | Remaining balance of underlying assets is accurate post poke | State Transitions | ✅ |
 | ST-12 | Only RedemptionNFT can withdraw | State Transitions | ✅ |
 | ST-13 | Only assets with underlying equal to _underlyingToken can be deposited to the contract | State Transitions | ✅ |
@@ -94,11 +94,11 @@ List of properties following the categorization by [Certora](https://github.com/
 | VT-06 | A user's vested balance decreases as they claim vested tokens | Variable Transitions | ✅ |
 | VT-07 | The vesting start time is set upon the first vesting action for a user | State Transitions | ✅ |
 | VT-08 | For two timestamps after `VESTING_DURATION`, the value returned by `getAvailableTokens` should not change | Variable Transitions | ✅ |
-| VT-09 | Only `StakeupToken` can execute `vestTokens()` | State Transitions | ✅ |
+| VT-09 | Only `StakeUpToken` can execute `vestTokens()` | State Transitions | ✅ |
 | VT-10 | Vesting timestamp always equal or greater `block.timestamp` | Valid State | ✅ |
 | VT-11 | A user's token allocations empty when `block.timestamp` not set | Valid State | ✅ |
 
-## StakeupToken
+## StakeUpToken
 
 | Property | Description | Category | Tested |
 | --- | --- | --- | --- |

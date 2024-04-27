@@ -1,6 +1,6 @@
 import "./base/_RewardManager.spec";
-import "./base/_StakeupToken.spec";
-import "./base/_StakeupStaking.spec";
+import "./base/_StakeUpToken.spec";
+import "./base/_StakeUpStaking.spec";
 import "./base/_StTBY.spec";
 
 ///////////////// DEFINITIONS /////////////////////
@@ -18,10 +18,10 @@ use invariant startTimestampValue;
 use invariant pokeRewardsRemainingLimitationInv;
 use invariant timeStampsSolvency;
 
-// StakeupToken valid state
+// StakeUpToken valid state
 use invariant totalSupplyLeqMaxSupply;
 
-// StakeupStaking valid state
+// StakeUpStaking valid state
 use invariant amountStakedLeqTotalStakeUpStaked;
 use invariant vestingTimestampLeqBlockTimestamp;
 use invariant lastRewardBlockGeqBlockNumber;
@@ -32,16 +32,16 @@ use invariant tokenAllocationsZeroTimestampSolvency;
 // RW-01 Rewards are minted and staked directly to the receiver's account
 rule rewardsMintStakedToReceiver(env e, address rewardReceiver, uint256 stTBYAmount) {
 
-    init_StakeupToken();
-    init_StakeupStaking(e);
+    init_StakeUpToken();
+    init_StakeUpStaking(e);
 
     mathint stakedBefore = ghostStakingDataAmountStaked[rewardReceiver];
-    mathint stakeupStakingBalanceBefore = ghostErc20Balances_StakeupToken[_StakeupStaking];
+    mathint stakeupStakingBalanceBefore = ghostErc20Balances_StakeUpToken[_StakeUpStaking];
 
     distributeMintRewards(e, rewardReceiver, stTBYAmount);
 
     mathint stakedAfter = ghostStakingDataAmountStaked[rewardReceiver];
-    mathint stakeupStakingBalanceAfter = ghostErc20Balances_StakeupToken[_StakeupStaking];
+    mathint stakeupStakingBalanceAfter = ghostErc20Balances_StakeUpToken[_StakeUpStaking];
 
     assert(stakeupStakingBalanceAfter - stakeupStakingBalanceBefore == stakedAfter - stakedBefore);
 }
@@ -49,8 +49,8 @@ rule rewardsMintStakedToReceiver(env e, address rewardReceiver, uint256 stTBYAmo
 // RW-02 Mint rewards are proportional to `stTBY` amount
 rule mintRewardsProportionalStTBYAmount(env e, address rewardReceiver, uint256 stTBYAmount) {
 
-    init_StakeupToken();
-    init_StakeupStaking(e);
+    init_StakeUpToken();
+    init_StakeUpStaking(e);
 
     mathint rewardAmount = (LAUNCH_MINT_REWARDS_HARNESS() * stTBYAmount) / STTBY_MINT_THREASHOLD_HARNESS();
     require(rewardAmount > 0);
@@ -65,34 +65,34 @@ rule mintRewardsProportionalStTBYAmount(env e, address rewardReceiver, uint256 s
 }
 
 // RW-03 After calling `distributePokeRewards` or `distributeMintRewards`, the only account that can see its stakeup balance increase is the stakeup staking contract
-rule distributeRewardsIncreaseOnlyStakeupStakingBalance(env e, method f, calldataarg args) 
+rule distributeRewardsIncreaseOnlyStakeUpStakingBalance(env e, method f, calldataarg args) 
     filtered { f -> DISTRIBUTE_REWARDS_FUNCTIONS(f) } {
 
-    init_StakeupToken();
-    init_StakeupStaking(e);
+    init_StakeUpToken();
+    init_StakeUpStaking(e);
 
-    require(forall address a. ghostErc20Balances_StakeupToken[a] == ghostErc20BalancesPrev_StakeupToken[a]);
+    require(forall address a. ghostErc20Balances_StakeUpToken[a] == ghostErc20BalancesPrev_StakeUpToken[a]);
 
     f(e, args);
 
-    // If SUP balance of account was changed, that accout should be StakeupStaking contract
-    assert(forall address a. ghostErc20Balances_StakeupToken[a] != ghostErc20BalancesPrev_StakeupToken[a] => 
-        a == _StakeupStaking
+    // If SUP balance of account was changed, that accout should be StakeUpStaking contract
+    assert(forall address a. ghostErc20Balances_StakeUpToken[a] != ghostErc20BalancesPrev_StakeUpToken[a] => 
+        a == _StakeUpStaking
     );
 }
 
 // RW-04 After calling `seedGauges`, the only accounts that can see their stakeup balance increase are the curve gauges
 rule seedGaugesIncreaseOnlyCurveBalance(env e, address user) {
 
-    init_StakeupToken();
-    init_StakeupStaking(e);
+    init_StakeUpToken();
+    init_StakeUpStaking(e);
     init_RewardManager(e);
 
-    mathint before = ghostErc20Balances_StakeupToken[user];
+    mathint before = ghostErc20Balances_StakeUpToken[user];
 
     seedGauges(e);
 
-    mathint after = ghostErc20Balances_StakeupToken[user];
+    mathint after = ghostErc20Balances_StakeUpToken[user];
 
     assert(before != after => user == ghostCurvePoolsCurveGauge[0]);
 }
@@ -100,11 +100,11 @@ rule seedGaugesIncreaseOnlyCurveBalance(env e, address user) {
 // RW-05 Rewards are only distributed after initialization
 rule rewardsOnlyDistributedAfterInitialization(env e, method f, calldataarg args) {
 
-    init_StakeupToken();
-    init_StakeupStaking(e);
+    init_StakeUpToken();
+    init_StakeUpStaking(e);
 
     require(forall address a. ghostStakingDataAmountStaked[a] == ghostStakingDataAmountStakedPrev[a]);
-    require(ghostErc20Balances_StakeupToken[_StakeupStaking] == ghostErc20BalancesPrev_StakeupToken[_StakeupStaking]);
+    require(ghostErc20Balances_StakeUpToken[_StakeUpStaking] == ghostErc20BalancesPrev_StakeUpToken[_StakeUpStaking]);
 
     f@withrevert(e, args);
     bool reverted = lastReverted;
@@ -112,14 +112,14 @@ rule rewardsOnlyDistributedAfterInitialization(env e, method f, calldataarg args
     assert(forall address a. ghostStakingDataAmountStaked[a] != ghostStakingDataAmountStakedPrev[a]
         => !reverted => REWARD_MANAGER_INITIALIZED()
     );
-    assert(!reverted && ghostErc20Balances_StakeupToken[_StakeupStaking] != ghostErc20BalancesPrev_StakeupToken[_StakeupStaking]
+    assert(!reverted && ghostErc20Balances_StakeUpToken[_StakeUpStaking] != ghostErc20BalancesPrev_StakeUpToken[_StakeUpStaking]
         => REWARD_MANAGER_INITIALIZED()
     );
 
     assert(forall address a. ghostStakingDataAmountStaked[a] != ghostStakingDataAmountStakedPrev[a] 
         => !REWARD_MANAGER_INITIALIZED() => reverted
     );
-    assert(ghostErc20Balances_StakeupToken[_StakeupStaking] != ghostErc20BalancesPrev_StakeupToken[_StakeupStaking] && !REWARD_MANAGER_INITIALIZED() 
+    assert(ghostErc20Balances_StakeUpToken[_StakeUpStaking] != ghostErc20BalancesPrev_StakeUpToken[_StakeUpStaking] && !REWARD_MANAGER_INITIALIZED() 
         => reverted
     );
 }
@@ -127,18 +127,18 @@ rule rewardsOnlyDistributedAfterInitialization(env e, method f, calldataarg args
 // RW-06 Only the `StTBY` contract can distribute rewards
 rule onlyStTBYDistributeRewards(env e, method f, calldataarg args) {
 
-    init_StakeupToken();
-    init_StakeupStaking(e);
+    init_StakeUpToken();
+    init_StakeUpStaking(e);
 
     require(forall address a. ghostStakingDataAmountStaked[a] == ghostStakingDataAmountStakedPrev[a]);
-    require(ghostErc20Balances_StakeupToken[_StakeupStaking] == ghostErc20BalancesPrev_StakeupToken[_StakeupStaking]);
+    require(ghostErc20Balances_StakeUpToken[_StakeUpStaking] == ghostErc20BalancesPrev_StakeUpToken[_StakeUpStaking]);
 
     f(e, args);
 
     assert(forall address a. ghostStakingDataAmountStaked[a] != ghostStakingDataAmountStakedPrev[a]
         => e.msg.sender == _StTBY
     );
-    assert(ghostErc20Balances_StakeupToken[_StakeupStaking] != ghostErc20BalancesPrev_StakeupToken[_StakeupStaking]
+    assert(ghostErc20Balances_StakeUpToken[_StakeUpStaking] != ghostErc20BalancesPrev_StakeUpToken[_StakeUpStaking]
         => e.msg.sender == _StTBY
     );
 }
@@ -148,14 +148,14 @@ rule gaugeSeedingNotExceedMaxRewards(env e) {
 
     init_RewardManager(e);
 
-    mathint gaugeBalanceBefore = ghostErc20Balances_StakeupToken[ghostCurvePoolsCurveGauge[0]];
+    mathint gaugeBalanceBefore = ghostErc20Balances_StakeUpToken[ghostCurvePoolsCurveGauge[0]];
 
     mathint maxRewards0 = ghostCurvePoolsMaxRewards[0];
     mathint rewardsRemaining0 = ghostCurvePoolsRewardsRemaining[0];
 
     seedGauges(e);
 
-    mathint gaugeBalanceIncrease = ghostErc20Balances_StakeupToken[ghostCurvePoolsCurveGauge[0]] - gaugeBalanceBefore;
+    mathint gaugeBalanceIncrease = ghostErc20Balances_StakeUpToken[ghostCurvePoolsCurveGauge[0]] - gaugeBalanceBefore;
 
     assert(gaugeBalanceIncrease <= rewardsRemaining0);
 }
@@ -200,27 +200,27 @@ rule pokeRewardsRemainingSetInInitialized(env e, method f, calldataarg args) {
     assert(ghostPokeRewardsRemaining > ghostPokeRewardsRemainingPrev
         => (ghostPokeRewardsRemaining == POKE_REWARDS() 
             && f.selector == sig:initialize().selector 
-            && e.msg.sender == _StakeupToken
+            && e.msg.sender == _StakeUpToken
             )
     );
     assert(f.selector == sig:initialize().selector => (
-        ghostPokeRewardsRemaining == POKE_REWARDS() && e.msg.sender == _StakeupToken
+        ghostPokeRewardsRemaining == POKE_REWARDS() && e.msg.sender == _StakeUpToken
     ));
 }
 
 // RW-11 After calling `seedGauges`, `distributePokeRewards` or `distributeMintRewards` no account can see their stakeup balance decrease
-rule noStakeupTokenDecrease(env e, method f, calldataarg args) {
+rule noStakeUpTokenDecrease(env e, method f, calldataarg args) {
 
-    init_StakeupToken();
-    init_StakeupStaking(e);
+    init_StakeUpToken();
+    init_StakeUpStaking(e);
     init_RewardManager(e);
 
-    require(forall address a. ghostErc20Balances_StakeupToken[a] == ghostErc20BalancesPrev_StakeupToken[a]);
+    require(forall address a. ghostErc20Balances_StakeUpToken[a] == ghostErc20BalancesPrev_StakeUpToken[a]);
 
     f(e, args);
 
     // Balance of any user can only increase or stay the same
-    assert(forall address a. ghostErc20Balances_StakeupToken[a] >= ghostErc20BalancesPrev_StakeupToken[a]);
+    assert(forall address a. ghostErc20Balances_StakeUpToken[a] >= ghostErc20BalancesPrev_StakeUpToken[a]);
 }
 
 // RW-12 `_calculateDripAmount` must return a value <= rewards remaining
@@ -235,12 +235,12 @@ rule calculateDripAmountReturnLeqRewardsRemaining(env e, uint256 rewardSupply, u
 rule totalDistributedRewardsNotExceedSUPMaxSupply(env e, method f, calldataarg args)
     filtered { f -> DISTRIBUTE_REWARDS_FUNCTIONS(f) } {
 
-    init_StakeupToken();
-    init_StakeupStaking(e);
+    init_StakeUpToken();
+    init_StakeUpStaking(e);
 
     f@withrevert(e, args);
     bool reverted = lastReverted;
 
-    assert(!reverted => ghostErc20TotalSupply_StakeupToken <= to_mathint(SUP_MAX_SUPPLY_HARNESS()));
-    assert(ghostErc20TotalSupply_StakeupToken > to_mathint(SUP_MAX_SUPPLY_HARNESS()) => reverted);
+    assert(!reverted => ghostErc20TotalSupply_StakeUpToken <= to_mathint(SUP_MAX_SUPPLY_HARNESS()));
+    assert(ghostErc20TotalSupply_StakeUpToken > to_mathint(SUP_MAX_SUPPLY_HARNESS()) => reverted);
 }

@@ -58,15 +58,15 @@ stTBY solves TBYs composability issues by allowing users to deposit their TBYs o
 
 - **wstTBY**: Wrapped stTBY is the wrapped asset of `stTBY`. It is non-rebasing, allowing users to access the underlying value of their stTBY and be more useable in DeFi.
 
-- **StakupToken**: Stakeup Token (SUP), is the reward token of the Stakeup Protocol.
+- **StakupToken**: StakeUp Token (SUP), is the reward token of the StakeUp Protocol.
 
-- **SUPVesting**: SUPVesting is a vesting contract that locks up SUP tokens during predefined vesting schedules. Its purpose is to manage the distribution of SUP tokens to contributors and investors of the Stakeup Protocol and stTBY. These tokens are considered staked on the Stakeup Protocol and allow users to generate rewards even while locked under vesting schedules.
+- **SUPVesting**: SUPVesting is a vesting contract that locks up SUP tokens during predefined vesting schedules. Its purpose is to manage the distribution of SUP tokens to contributors and investors of the StakeUp Protocol and stTBY. These tokens are considered staked on the StakeUp Protocol and allow users to generate rewards even while locked under vesting schedules.
 
 - **RedemptionNFT**: RedemptionNFT is a semi-fungible token minted to users when they redeem their stTBY in preparation for withdrawing their USDC from the contract. This system is similar to Lido's stETH withdrawal system but without a queue, or off-chain oracles.
 
 ### Staking
 
-- **StakeupStaking**: Stakeup Staking is the heart of the reward system for stTBY. It allows users to stake their SUP to access the reward system of the protocol. `stTBY` from fees are sent to the contract and is used to generate yield for the users of the protocol. Additionally it manage the distribution of SUP tokens to contributors and investors of the Stakeup Protocol and stTBY. These tokens are considered staked on the Stakeup Protocol and allow users to generate rewards even while locked under vesting schedules. 
+- **StakeUpStaking**: StakeUp Staking is the heart of the reward system for stTBY. It allows users to stake their SUP to access the reward system of the protocol. `stTBY` from fees are sent to the contract and is used to generate yield for the users of the protocol. Additionally it manage the distribution of SUP tokens to contributors and investors of the StakeUp Protocol and stTBY. These tokens are considered staked on the StakeUp Protocol and allow users to generate rewards even while locked under vesting schedules. 
 
 Below is the outline of the fee mechanism of stTBY.
 

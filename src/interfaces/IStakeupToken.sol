@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.22;
 
-interface IStakeupToken {
+interface IStakeUpToken {
     /**
      * @dev Allocation is a struct that represents a specific allocation of tokens
      * to a group of recipients.

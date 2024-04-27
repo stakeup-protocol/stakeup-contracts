@@ -10,7 +10,7 @@ import {RewardBase} from "./RewardBase.sol";
 import {ICurveGaugeDistributor} from "../interfaces/ICurveGaugeDistributor.sol";
 import {ICurvePoolFactory} from "../interfaces/curve/ICurvePoolFactory.sol";
 import {ICurvePoolGauge} from "../interfaces//curve/ICurvePoolGauge.sol";
-import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
+import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 
 abstract contract CurveGaugeDistributor is ICurveGaugeDistributor, RewardBase, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -75,7 +75,7 @@ index 3579609..097387c 100644
                 _curvePools[i].rewardsRemaining -= amount;
 
                 // Mint the rewards and deposit tokens into the gauge
-                IStakeupToken(_stakeupToken).mintRewards(address(this), amount);
+                IStakeUpToken(_stakeupToken).mintRewards(address(this), amount);
                 IERC20(_stakeupToken).safeApprove(curvePools[i].curveGauge, amount);
                 ICurvePoolGauge(curvePools[i].curveGauge).deposit_reward_token(_stakeupToken, amount);
                 

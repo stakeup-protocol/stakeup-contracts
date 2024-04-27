@@ -1,47 +1,47 @@
-import "./ERC20/ERC20_StakeupToken.spec";
+import "./ERC20/ERC20_StakeUpToken.spec";
 import "./ERC20/IERC20.spec";
 import "./ILayerZeroEndpoint.spec";
 
 //////////////////// USING ////////////////////////
 
-using StakeupTokenHarness as _StakeupToken;
+using StakeUpTokenHarness as _StakeUpToken;
 
 /////////////////// METHODS ///////////////////////
 
 methods {
 
-    // StakeupTokenHarness
-    function _StakeupToken.DECIMAL_SCALING_HARNESS() external returns (uint256) envfree;
-    function _StakeupToken.MAX_SUPPLY_HARNESS() external returns (uint256) envfree;
+    // StakeUpTokenHarness
+    function _StakeUpToken.DECIMAL_SCALING_HARNESS() external returns (uint256) envfree;
+    function _StakeUpToken.MAX_SUPPLY_HARNESS() external returns (uint256) envfree;
 
-    // StakeupToken
-    function _StakeupToken.mintLpSupply(IStakeupToken.Allocation[] allocations) external;
-    function _StakeupToken.airdropTokens(IStakeupToken.TokenRecipient[] recipients, uint256 percentOfTotalSupply) external;
-    function _StakeupToken.mintRewards(address recipient, uint256 amount) external;
-    function _StakeupToken.mintInitialSupply(IStakeupToken.Allocation[] allocations, uint256 initialMintPercentage) external;
+    // StakeUpToken
+    function _StakeUpToken.mintLpSupply(IStakeUpToken.Allocation[] allocations) external;
+    function _StakeUpToken.airdropTokens(IStakeUpToken.TokenRecipient[] recipients, uint256 percentOfTotalSupply) external;
+    function _StakeUpToken.mintRewards(address recipient, uint256 amount) external;
+    function _StakeUpToken.mintInitialSupply(IStakeUpToken.Allocation[] allocations, uint256 initialMintPercentage) external;
 
     // Ownable2Step
-    function _StakeupToken.pendingOwner() external returns (address) envfree;
-    function _StakeupToken.acceptOwnership() external;
+    function _StakeUpToken.pendingOwner() external returns (address) envfree;
+    function _StakeUpToken.acceptOwnership() external;
 
     // Ownable
-    function _StakeupToken.owner() external returns (address) envfree;
-    function _StakeupToken.transferOwnership(address newOwner) external;
-    function _StakeupToken.renounceOwnership() external;
+    function _StakeUpToken.owner() external returns (address) envfree;
+    function _StakeUpToken.transferOwnership(address newOwner) external;
+    function _StakeUpToken.renounceOwnership() external;
 }
 
 ////////////////// FUNCTIONS //////////////////////
 
-function init_StakeupToken() {
-    init_ERC20_StakeupToken();
+function init_StakeUpToken() {
+    init_ERC20_StakeUpToken();
     requireInvariant totalSupplyLeqMaxSupply;
 }
 
 ///////////////// PROPERTIES //////////////////////
 
 // SUP-01 Supply can never surpass MAX_SUPPLY
-invariant totalSupplyLeqMaxSupply() ghostErc20TotalSupply_StakeupToken <= to_mathint(_StakeupToken.MAX_SUPPLY_HARNESS()) {
+invariant totalSupplyLeqMaxSupply() ghostErc20TotalSupply_StakeUpToken <= to_mathint(_StakeUpToken.MAX_SUPPLY_HARNESS()) {
     preserved {
-        init_StakeupToken();
+        init_StakeUpToken();
     }
 }

@@ -12,7 +12,7 @@ from pytypes.tests.mocks.MockEndpoint import MockEndpoint
 from pytypes.src.token.WstTBY import WstTBY
 
 from pytypes.lib.openzeppelincontracts.contracts.token.ERC20 import ERC20
-from pytypes.src.staking.StakeupStaking import StakeupStaking
+from pytypes.src.staking.StakeUpStaking import StakeUpStaking
 
 class ContractConfig:
     def __init__(self, is_mock=False, address=None):
@@ -60,7 +60,7 @@ class StTBYTestEnv:
 
     def __setup_stakeup(self):
         st_tby_address = get_create_address(self.deployer, self.deployer.nonce + 1)
-        stakeupStaking = StakeupStaking.deploy(
+        stakeupStaking = StakeUpStaking.deploy(
             self.sup_token.address,
             st_tby_address,
             self.endpoint
