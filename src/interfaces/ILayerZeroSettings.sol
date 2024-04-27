@@ -34,10 +34,14 @@ interface ILayerZeroSettings {
      * @notice Configuration settings to be used for bridging using LayerZero
      * @param bridgeSettings settings for bridging using LayerZero
      * @param messageSettings settings for messaging using LayerZero
+     * @param refundRecipient The address to refund the excess LayerZero bridging/messaging fees to.
+     *        Is an optional parameter on mainnet and can be set to address(0). Do not set
+     *        this parameter to address(0) on L2 chains or you will lose the excess fees.     
      */
     struct LzSettings {
         LZBridgeSettings bridgeSettings;
         LZMessageSettings messageSettings;
+        address refundRecipient;
     }
 
     // ============================ Receipts ============================

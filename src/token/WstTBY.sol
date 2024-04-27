@@ -6,9 +6,10 @@ import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
+import {StTBYBase} from "./StTBYBase.sol";
+
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
-import {StTBYBase} from "./StTBYBase.sol";
 
 /**
  * @title Wrapped Staked TBY

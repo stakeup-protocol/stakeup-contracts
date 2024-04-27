@@ -30,7 +30,7 @@ remappings = [
 
 [compiler.solc.optimizer]
 enabled = true
-runs = 200
+runs = 150
 
 [detectors]
 exclude = []

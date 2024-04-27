@@ -44,18 +44,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
 
     IStakeupToken private immutable _stakeupToken;
 
-    /// @dev Underlying token decimals
-    uint8 internal immutable _underlyingDecimals;
-
-    /// @notice Mint fee bps
-    uint16 private immutable mintBps;
-
-    /// @notice Redeem fee bps
-    uint16 private immutable redeemBps;
-
-    /// @notice Performance fee bps
-    uint16 private immutable performanceBps;
-
     /// @dev Last deposit amount
     uint256 internal _lastDepositAmount;
 
@@ -77,6 +65,9 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     /// @dev Scaling factor for underlying token
     uint256 private immutable _scalingFactor;
 
+    /// @dev Underlying token decimals
+    uint8 internal immutable _underlyingDecimals;
+
     /// @dev Mapping of TBYs that have been redeemed
     mapping(address => bool) private _tbyRedeemed;
 
@@ -87,9 +78,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         address stakeupStaking,
         address bloomFactory,
         address registry,
-        uint16 mintBps_, // Suggested default 0.5%
-        uint16 redeemBps_, // Suggested default 0.5%
-        uint16 performanceBps_, // Suggested default 10% of yield
         address wstTBY,
         address messanger,
         bool pokeEligible,
@@ -106,10 +94,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             revert Errors.InvalidAddress();
         }
 
-        if (mintBps_ > Constants.MAX_BPS || redeemBps_ > Constants.MAX_BPS) {
-            revert Errors.ParameterOutOfBounds();
-        }
-
         _underlyingToken = IERC20(underlyingToken);
         _underlyingDecimals = IERC20Metadata(underlyingToken).decimals();
         _bloomFactory = IBloomFactory(bloomFactory);
@@ -117,10 +101,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         _stakeupStaking = IStakeupStaking(stakeupStaking);
 
         _stakeupToken = IStakeupStaking(stakeupStaking).getStakupToken();
-
-        mintBps = mintBps_;
-        redeemBps = redeemBps_;
-        performanceBps = performanceBps_;
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
         _lastRateUpdate = block.timestamp;
@@ -340,8 +320,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             msgReceipts = _syncYield(
                 yieldIncrease,
                 true, // Increasing yield
-                settings.messageSettings.options,
-                settings.messageSettings.fee.nativeFee
+                settings.messageSettings,
+                settings.refundRecipient
             );
             _distributePokeRewards();
         }
@@ -377,18 +357,18 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function getMintBps() external view returns (uint256) {
-        return mintBps;
+    function getMintBps() external pure returns (uint256) {
+        return Constants.MINT_BPS;
     }
 
     /// @inheritdoc IStTBY
-    function getRedeemBps() external view returns (uint256) {
-        return redeemBps;
+    function getRedeemBps() external pure returns (uint256) {
+        return Constants.REDEEM_BPS;
     }
 
     /// @inheritdoc IStTBY
-    function getPerformanceBps() external view returns (uint256) {
-        return performanceBps;
+    function getPerformanceBps() external pure returns (uint256) {
+        return Constants.PERFORMANCE_BPS;
     }
 
     /// @inheritdoc IStTBY
@@ -420,7 +400,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         uint256 amountScaled = amount * _scalingFactor;
 
         uint256 sharesFeeAmount;
-        uint256 mintFee = (amountScaled * mintBps) / Constants.BPS_DENOMINATOR;
+        uint256 mintFee = (amountScaled * Constants.MINT_BPS) /
+            Constants.BPS_DENOMINATOR;
 
         if (mintFee > 0) {
             sharesFeeAmount = getSharesByUsd(mintFee);
@@ -447,8 +428,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         msgReceipts = _syncShares(
             sharesAmount + sharesFeeAmount,
             true, // Increasing shares
-            settings.messageSettings.options,
-            settings.messageSettings.fee.nativeFee
+            settings.messageSettings,
+            settings.refundRecipient
         );
 
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
@@ -464,9 +445,12 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         }
 
         _setTotalUsd(_getTotalUsd() + amountScaled);
-        bridgingReceipt = _stakeupStaking.processFees{
-            value: settings.bridgeSettings.fee.nativeFee
-        }(msg.sender, settings.bridgeSettings);
+
+        uint256 bridgingFee = settings.bridgeSettings.fee.nativeFee;
+        bridgingReceipt = _stakeupStaking.processFees{value: bridgingFee}(
+            settings.refundRecipient,
+            settings.bridgeSettings
+        );
 
         emit Deposit(msg.sender, token, amount, sharesAmount);
     }
@@ -514,7 +498,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             MessagingReceipt[] memory msgReceipts
         )
     {
-        uint256 redeemFee = (shares * redeemBps) / Constants.BPS_DENOMINATOR;
+        uint256 redeemFee = (shares * Constants.REDEEM_BPS) /
+            Constants.BPS_DENOMINATOR;
 
         if (redeemFee > 0) {
             shares -= redeemFee;
@@ -561,12 +546,15 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             msgReceipts = _syncShares(
                 shares,
                 false, // Decreasing shares
-                settings.messageSettings.options,
-                settings.messageSettings.fee.nativeFee
+                settings.messageSettings,
+                settings.refundRecipient
             );
-            bridgingReceipt = _stakeupStaking.processFees{
-                value: settings.bridgeSettings.fee.nativeFee
-            }(msg.sender, settings.bridgeSettings);
+
+            uint256 bridgingFee = settings.bridgeSettings.fee.nativeFee;
+            bridgingReceipt = _stakeupStaking.processFees{value: bridgingFee}(
+                settings.refundRecipient,
+                settings.bridgeSettings
+            );
         }
     }
 
@@ -594,7 +582,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         uint256 sharesFeeAmount;
         uint256 proceeds = amountWithdrawn - startingAmount;
         uint256 yieldScaled = proceeds * _scalingFactor;
-        uint256 performanceFee = (yieldScaled * performanceBps) /
+        uint256 performanceFee = (yieldScaled * Constants.PERFORMANCE_BPS) /
             Constants.BPS_DENOMINATOR;
 
         if (performanceFee > 0) {
@@ -618,8 +606,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
                 sharesFeeAmount,
                 valueCorrection,
                 false,
-                settings.messageSettings.options,
-                settings.messageSettings.fee.nativeFee
+                settings.messageSettings,
+                settings.refundRecipient
             );
         }
 
@@ -630,14 +618,16 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
                 sharesFeeAmount,
                 unrealizedGains,
                 true,
-                settings.messageSettings.options,
-                settings.messageSettings.fee.nativeFee
+                settings.messageSettings,
+                settings.refundRecipient
             );
         }
 
-        bridgingReceipt = _stakeupStaking.processFees{
-            value: settings.bridgeSettings.fee.nativeFee
-        }(msg.sender, settings.bridgeSettings);
+        uint256 bridgingFee = settings.bridgeSettings.fee.nativeFee;
+        bridgingReceipt = _stakeupStaking.processFees{value: bridgingFee}(
+            settings.refundRecipient,
+            settings.bridgeSettings
+        );
     }
 
     /**

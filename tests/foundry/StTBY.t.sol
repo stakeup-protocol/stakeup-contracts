@@ -89,7 +89,7 @@ contract StTBYTest is StTBYSetup {
     function test_depositTBY_success() public {
         uint256 amountTBY = 1.1e6;
         uint256 amountStTBY = 1.1e18;
-        uint256 fee = 0.0055e18; // 0.5% of mint
+        uint256 fee = (amountStTBY * mintBps) / BPS;
         pool.mint(alice, amountTBY);
         registry.setTokenInfos(true);
         registry.setExchangeRate(address(pool), 1e18);
@@ -113,7 +113,7 @@ contract StTBYTest is StTBYSetup {
     function test_depositUnderlying_success() public {
         uint256 amount = 1.1e6;
         uint256 amountStTBY = 1.1e18;
-        uint256 fee = 0.0055e18; // 0.5% of mint
+        uint256 fee = (amountStTBY * mintBps) / BPS;
         stableToken.mint(address(alice), amount);
         registry.setTokenInfos(true);
 
@@ -391,9 +391,12 @@ contract StTBYTest is StTBYSetup {
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         registry.setExchangeRate(address(pool), 1e18);
         /// ########## High Level Initial Share Math ##########
-        uint256 aliceMintedShares = .995e18;
-        uint256 bobMintedShares = 1.99e18;
-        uint256 mintedStakeupStakingShares = .015e18; // 0.5% of total minted shares
+        uint256 aliceMintedShares = (aliceAmount -
+            ((aliceAmount * mintBps) / BPS)) * 1e12;
+        uint256 bobMintedShares = (bobAmount - ((bobAmount * mintBps) / BPS)) *
+            1e12;
+        uint256 mintedStakeupStakingShares = 3e18 -
+            (aliceMintedShares + bobMintedShares);
         uint256 aliceRedeemFees = (aliceMintedShares * redeemBps) / BPS;
         uint256 bobRedeemFees = (bobMintedShares * redeemBps) / BPS;
         uint256 expectedPerformanceFee = 3e16; // 10% of yield
