@@ -75,7 +75,8 @@ abstract contract MessagingHelpers is Test {
         return
             ILayerZeroSettings.LzSettings({
                 bridgeSettings: settings,
-                messageSettings: messageSettings
+                messageSettings: messageSettings,
+                refundRecipient: msg.sender
             });
     }
 }

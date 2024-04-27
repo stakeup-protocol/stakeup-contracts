@@ -46,7 +46,7 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
     address internal bob = makeAddr("bob");
 
     // Fees
-    uint16 internal mintBps = 50;
+    uint16 internal mintBps = 1;
     uint16 internal redeemBps = 50;
     uint16 internal performanceFeeBps = 1000;
 
@@ -117,9 +117,6 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
             address(staking),
             address(factory),
             address(registry),
-            mintBps,
-            redeemBps,
-            performanceFeeBps,
             expectedWrapperAddress,
             expectedMessengerAddress,
             true,

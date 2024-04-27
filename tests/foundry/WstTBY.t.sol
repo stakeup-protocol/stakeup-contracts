@@ -24,6 +24,7 @@ import {MockBloomPool, IBloomPool} from "../mocks/MockBloomPool.sol";
 import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
 import {MockEmergencyHandler} from "../mocks/MockEmergencyHandler.sol";
 import {MockRegistry} from "../mocks/MockRegistry.sol";
+import "forge-std/console2.sol";
 
 contract WstTBYTest is StTBYSetup {
     function setUp() public override {
@@ -54,11 +55,13 @@ contract WstTBYTest is StTBYSetup {
     }
 
     function test_mintWstTBY() public {
-        uint256 stTBYAmount = 99.5 ether / 2;
-
+        uint256 depositAmount = 50e6;
+        uint256 expectedMintAmount = (depositAmount -
+            ((depositAmount * mintBps) / BPS)) * 1e12;
+        console2.log("expectedMintAmount", expectedMintAmount);
         /// Mint Stable and pool tokens
-        stableToken.mint(alice, 100e6);
-        pool.mint(bob, 100e6);
+        stableToken.mint(alice, depositAmount);
+        pool.mint(bob, depositAmount);
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         registry.setTokenInfos(true);
         registry.setExchangeRate(address(pool), 1e18);
@@ -71,25 +74,26 @@ contract WstTBYTest is StTBYSetup {
 
         // Mint wstTBY using stable token
         vm.startPrank(alice);
-        uint256 stableAmount = 50e6;
-        stableToken.approve(address(wstTBY), stableAmount);
-        wstTBY.mintWstTBY(stableAmount, settings);
+        stableToken.approve(address(wstTBY), depositAmount);
+        wstTBY.mintWstTBY(depositAmount, settings);
 
         assertEq(stTBY.balanceOf(alice), 0);
-        assertEq(wstTBY.balanceOf(alice), stTBY.getSharesByUsd(stTBYAmount));
+        assertEq(
+            wstTBY.balanceOf(alice),
+            stTBY.getSharesByUsd(expectedMintAmount)
+        );
 
         vm.stopPrank();
 
         // Mint wstTBY using pool token
         vm.startPrank(bob);
-        uint256 poolAmount = 50e6;
-        pool.approve(address(wstTBY), poolAmount);
-        wstTBY.mintWstTBY(address(pool), poolAmount, settings);
+        pool.approve(address(wstTBY), depositAmount);
+        wstTBY.mintWstTBY(address(pool), depositAmount, settings);
 
         assertEq(stTBY.balanceOf(bob), 0);
         assertEq(
             wstTBY.balanceOf(bob),
-            stTBY.getSharesByUsd((poolAmount - .25e6) * 1e12)
+            stTBY.getSharesByUsd(expectedMintAmount)
         );
     }
 }

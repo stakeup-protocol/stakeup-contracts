@@ -116,9 +116,6 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
                 address(stakeupStaking),
                 address(bloomFactory),
                 address(registry),
-                1,
-                0,
-                0,
                 expectedWstTBYAAddress,
                 expectedMessengerAAddress,
                 false,
@@ -180,9 +177,6 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
                 address(stakeupStakingL2),
                 address(bloomFactory),
                 address(registry),
-                1,
-                0,
-                0,
                 expectedWstTBYBAddress,
                 expectedMessengerAddress,
                 false,
@@ -230,6 +224,9 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             wstTBYBridges[0] = address(wstTBYBridgeA);
             wstTBYBridges[1] = address(wstTBYBridgeB);
             this.wireOApps(wstTBYBridges);
+
+            wstTBYBridgeA.setWstTBYBridge(bEid, address(wstTBYBridgeB));
+            wstTBYBridgeB.setWstTBYBridge(aEid, address(wstTBYBridgeA));
         }
     }
 
@@ -498,30 +495,60 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             .newOptions()
             .addExecutorLzReceiveOption(20000000, 0)
             .addExecutorLzComposeOption(0, 50000000, 0);
+
         SendParam memory sendParam = SendParam(
             bEid, // Destination ID
             addressToBytes32(address(this)),
             transferAmount,
             transferAmount,
             options,
-            "",
+            abi.encode(address(this), transferAmount),
             ""
         );
         MessagingFee memory fee = stTBYA.quoteSend(sendParam, false);
 
-        wstTBYBridgeA.bridgeWstTBY{value: 10e18}(
+        settings.bridgeSettings.fee.nativeFee = fee.nativeFee;
+
+        BridgeOptions memory l2Bridge = BridgeOptions({
+            sendParam: sendParam,
+            fee: fee
+        });
+
+        settings = _generateSettings(messengerB, Operation.Deposit, l2Bridge);
+
+        ILayerZeroSettings.LzBridgeReceipt memory receipt = wstTBYBridgeA
+            .bridgeWstTBY{value: settings.bridgeSettings.fee.nativeFee}(
             address(this),
             transferAmount,
             bEid,
-            settings.bridgeSettings
+            settings
         );
-        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+        verifyPackets(bEid, addressToBytes32(address(stTBYB)));
         verifyPackets(bEid, addressToBytes32(address(wstTBYBridgeB)));
+
+        uint32 dstEid_ = bEid;
+        address from_ = address(stTBYB);
+        bytes memory options_ = options;
+        bytes32 guid_ = receipt.msgReceipt.guid;
+        address to_ = address(wstTBYBridgeB);
+        bytes memory composerMsg_ = OFTComposeMsgCodec.encode(
+            receipt.msgReceipt.nonce,
+            aEid,
+            receipt.oftReceipt.amountReceivedLD,
+            abi.encodePacked(
+                addressToBytes32(address(wstTBYBridgeA)),
+                abi.encode(address(this), transferAmount)
+            )
+        );
+
+        vm.startPrank(endpoints[bEid]);
+        this.lzCompose(dstEid_, from_, options_, guid_, to_, composerMsg_);
 
         assertEq(wstTBYA.balanceOf(address(this)), transferAmount);
         assertEq(wstTBYB.balanceOf(address(this)), transferAmount);
 
-        assertEq(stTBYA.getSupplyIndex(), 5e17);
-        assertEq(stTBYB.getSupplyIndex(), 5e17);
+        /// Approx equal due to fees
+        assertApproxEqRel(stTBYA.getSupplyIndex(), 5e17, 1e15);
+        assertApproxEqRel(stTBYB.getSupplyIndex(), 5e17, 1e15);
     }
 }

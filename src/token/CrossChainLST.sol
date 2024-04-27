@@ -5,6 +5,7 @@ import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {StTBYBase} from "./StTBYBase.sol";
 
+import {ILayerZeroSettings} from "../interfaces/ILayerZeroSettings.sol";
 import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
 
 /**
@@ -12,7 +13,7 @@ import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
  * @notice Abstract contract that holds the logic for distributing yield accross
  *         stTBY holders on all chains.
  */
-abstract contract CrossChainLST is StTBYBase {
+abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
     // =================== Storage ===================
 
     /// @dev An array of peer endpoint Ids
@@ -50,12 +51,15 @@ abstract contract CrossChainLST is StTBYBase {
      * @notice Decreases the total amount of shares in existence across all chains
      * @dev This function invokes a batch send message w/ LayerZero
      * @param shares Amount of shares to subtract from the global shares value
+     * @param increase True if shares are being added, false if shares are being removed
+     * @param msgSettings Settings for the LayerZero messages
+     * @param refundRecipient The address to refund the fee to
      */
     function _syncShares(
         uint256 shares,
         bool increase,
-        bytes calldata options,
-        uint256 msgFee
+        LZMessageSettings calldata msgSettings,
+        address refundRecipient
     ) internal returns (MessagingReceipt[] memory) {
         uint256 prevGlobalShares = _globalShares;
 
@@ -66,13 +70,15 @@ abstract contract CrossChainLST is StTBYBase {
         }
 
         return
-            IStakeUpMessenger(_messenger).syncShares{value: msgFee}(
+            IStakeUpMessenger(_messenger).syncShares{
+                value: msgSettings.fee.nativeFee
+            }(
                 prevGlobalShares,
                 shares,
                 increase,
                 peerEids,
-                options,
-                msg.sender
+                msgSettings.options,
+                refundRecipient
             );
     }
 
@@ -80,14 +86,14 @@ abstract contract CrossChainLST is StTBYBase {
      * @notice Distributes yield to all stTBY holders on all chains
      * @dev This function invokes a batch send message w/ LayerZero
      * @param amount The amount of total USD accrued by the protocol across all chains
-     * @param options Options for the LayerZero message
-     * @param msgFee The fee to send the message
+     * @param msgSettings Settings for the LayerZero messages
+     * @param refundRecipient The address to refund the fee to
      */
     function _syncYield(
         uint256 amount,
         bool increase,
-        bytes calldata options,
-        uint256 msgFee
+        LZMessageSettings calldata msgSettings,
+        address refundRecipient
     ) internal returns (MessagingReceipt[] memory) {
         if (increase) {
             _accrueYield(amount);
@@ -96,13 +102,9 @@ abstract contract CrossChainLST is StTBYBase {
         }
 
         return
-            IStakeUpMessenger(_messenger).syncYield{value: msgFee}(
-                amount,
-                increase,
-                peerEids,
-                options,
-                msg.sender
-            );
+            IStakeUpMessenger(_messenger).syncYield{
+                value: msgSettings.fee.nativeFee
+            }(amount, increase, peerEids, msgSettings.options, refundRecipient);
     }
 
     /**
@@ -110,15 +112,15 @@ abstract contract CrossChainLST is StTBYBase {
      * @param sharesAdded Amount of shares to add to global shares value
      * @param yieldAdjustment Amount of total USD accrued or removed from the protocol across all chains
      * @param yieldAdded True if yield was added, false if yield was removed
-     * @param options Options for the LayerZero message
-     * @param msgFee The fee to send the message
+     * @param msgSettings Settings for the LayerZero messages
+     * @param refundRecipient The address to refund the fee to
      */
     function _fullSync(
         uint256 sharesAdded,
         uint256 yieldAdjustment,
         bool yieldAdded,
-        bytes calldata options,
-        uint256 msgFee
+        LZMessageSettings calldata msgSettings,
+        address refundRecipient
     ) internal returns (MessagingReceipt[] memory) {
         uint256 prevGlobalShares = _globalShares;
         _setGlobalShares(prevGlobalShares + sharesAdded);
@@ -130,14 +132,16 @@ abstract contract CrossChainLST is StTBYBase {
         }
 
         return
-            IStakeUpMessenger(_messenger).fullSync{value: msgFee}(
+            IStakeUpMessenger(_messenger).fullSync{
+                value: msgSettings.fee.nativeFee
+            }(
                 prevGlobalShares,
                 sharesAdded,
                 yieldAdjustment,
                 yieldAdded,
                 peerEids,
-                options,
-                msg.sender
+                msgSettings.options,
+                refundRecipient
             );
     }
 
