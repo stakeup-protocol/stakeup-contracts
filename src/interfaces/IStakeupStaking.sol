@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {IStakeupStakingBase} from "./IStakeupStakingBase.sol";
+import {IStakeUpStakingBase} from "./IStakeUpStakingBase.sol";
 import {IStTBY} from "./IStTBY.sol";
 import {ISUPVesting} from "./ISUPVesting.sol";
 
-interface IStakeupStaking is IStakeupStakingBase, ISUPVesting {
+interface IStakeUpStaking is IStakeUpStakingBase, ISUPVesting {
     // =================== Structs ====================
     /**
      * @notice Data structure containing information pertaining to a user's stake
@@ -34,18 +34,18 @@ interface IStakeupStaking is IStakeupStakingBase, ISUPVesting {
     // =================== Events ====================
 
     /**
-     * @notice Emitted when a user's stakes their Stakeup Token
+     * @notice Emitted when a user's stakes their StakeUp Token
      * @param user Address of the user who has staked their STAKEUP
      * @param amount Amount of STAKEUP staked
      */
-    event StakeupStaked(address indexed user, uint256 amount);
+    event StakeUpStaked(address indexed user, uint256 amount);
 
     /**
-     * @notice Emitted when a user's stakes their Stakeup Token
+     * @notice Emitted when a user's stakes their StakeUp Token
      * @param user Address of the user who is unstaking their STAKEUP
      * @param amount Amount of STAKEUP unstaked
      */
-    event StakeupUnstaked(address indexed user, uint256 amount);
+    event StakeUpUnstaked(address indexed user, uint256 amount);
 
     /**
      * @notice Emitted when a user claims their stTBY rewards
@@ -55,7 +55,7 @@ interface IStakeupStaking is IStakeupStakingBase, ISUPVesting {
     event RewardsHarvested(address indexed user, uint256 shares);
 
     /**
-     * @notice Stake Stakeup Token's to earn stTBY rewards
+     * @notice Stake StakeUp Token's to earn stTBY rewards
      * @param stakeupAmount Amount of STAKEUP to stake
      */
     function stake(uint256 stakeupAmount) external;

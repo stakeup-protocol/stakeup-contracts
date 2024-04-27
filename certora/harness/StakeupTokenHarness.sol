@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {StakeupToken} from "../../src/token/StakeupToken.sol";
+import {StakeUpToken} from "../../src/token/StakeUpToken.sol";
 
-contract StakeupTokenHarness is StakeupToken { 
+contract StakeUpTokenHarness is StakeUpToken { 
     
     constructor(
         address layerZeroEndpoint,
         address stakeupStaking,
         address rewardManager,
         address owner
-    ) StakeupToken(layerZeroEndpoint, stakeupStaking, rewardManager, owner) { }
+    ) StakeUpToken(layerZeroEndpoint, stakeupStaking, rewardManager, owner) { }
 
     function DECIMAL_SCALING_HARNESS() external returns (uint256) {
         return DECIMAL_SCALING;

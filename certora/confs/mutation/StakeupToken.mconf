@@ -1,6 +1,6 @@
 { 
    "gambit": {                                                 
-      "filename" : "../../../src/token/StakeupToken.sol",
+      "filename" : "../../../src/token/StakeUpToken.sol",
       "num_mutants": 0,
       "solc_remappings": [
          "solmate/=../../../lib/solmate/src/",
@@ -10,6 +10,6 @@
       ]
    },
    "manual_mutants": {                                                          
-      "../../../src/token/StakeupToken.sol" : "../../mutations/StakeupToken"
+      "../../../src/token/StakeUpToken.sol" : "../../mutations/StakeUpToken"
    }
 }

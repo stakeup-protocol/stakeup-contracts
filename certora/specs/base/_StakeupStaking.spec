@@ -1,33 +1,33 @@
-import "./ReentrancyGuard/ReentrancyGuard_StakeupStaking.spec";
+import "./ReentrancyGuard/ReentrancyGuard_StakeUpStaking.spec";
 
 //////////////////// USING ////////////////////////
 
-using StakeupStakingHarness as _StakeupStaking;
+using StakeUpStakingHarness as _StakeUpStaking;
 
 /////////////////// METHODS ///////////////////////
 
 methods {
 
-    // StakeupStaking
-    function _StakeupStaking.stake(uint256) external;
-    function _StakeupStaking.delegateStake(address receiver, uint256 stakeupAmount) external;
-    function _StakeupStaking.unstake(uint256 stakeupAmount, bool harvestRewards) external;
-    function _StakeupStaking.harvest() external;
-    function _StakeupStaking.processFees() external;
-    function _StakeupStaking.claimableRewards(address account) external returns (uint256) envfree;
-    function _StakeupStaking.getStakupToken() external returns (address) envfree;
-    function _StakeupStaking.getStTBY() external returns (address) envfree;
-    function _StakeupStaking.getRewardManager() external returns (address) envfree;
-    function _StakeupStaking.totalStakeUpStaked() external returns (uint256) envfree;
-    function _StakeupStaking.getRewardData() external returns (IStakeupStaking.RewardData) envfree;
-    function _StakeupStaking.getUserStakingData(address user) external returns (IStakeupStaking.StakingData) envfree;
-    function _StakeupStaking.getLastRewardBlock() external returns (uint256) envfree;
+    // StakeUpStaking
+    function _StakeUpStaking.stake(uint256) external;
+    function _StakeUpStaking.delegateStake(address receiver, uint256 stakeupAmount) external;
+    function _StakeUpStaking.unstake(uint256 stakeupAmount, bool harvestRewards) external;
+    function _StakeUpStaking.harvest() external;
+    function _StakeUpStaking.processFees() external;
+    function _StakeUpStaking.claimableRewards(address account) external returns (uint256) envfree;
+    function _StakeUpStaking.getStakupToken() external returns (address) envfree;
+    function _StakeUpStaking.getStTBY() external returns (address) envfree;
+    function _StakeUpStaking.getRewardManager() external returns (address) envfree;
+    function _StakeUpStaking.totalStakeUpStaked() external returns (uint256) envfree;
+    function _StakeUpStaking.getRewardData() external returns (IStakeUpStaking.RewardData) envfree;
+    function _StakeUpStaking.getUserStakingData(address user) external returns (IStakeUpStaking.StakingData) envfree;
+    function _StakeUpStaking.getLastRewardBlock() external returns (uint256) envfree;
 
     // SUPVesting
-    function _StakeupStaking.vestTokens(address account, uint256 amount) external;
-    function _StakeupStaking.claimAvailableTokens() external returns (uint256);
-    function _StakeupStaking.getAvailableTokens(address account) external returns (uint256);
-    function _StakeupStaking.getCurrentBalance(address account) external returns (uint256) envfree;
+    function _StakeUpStaking.vestTokens(address account, uint256 amount) external;
+    function _StakeUpStaking.claimAvailableTokens() external returns (uint256);
+    function _StakeUpStaking.getAvailableTokens(address account) external returns (uint256);
+    function _StakeUpStaking.getCurrentBalance(address account) external returns (uint256) envfree;
 }
 
 ///////////////// DEFINITIONS /////////////////////
@@ -42,7 +42,7 @@ function envBlockTimestampAssumptions(env e) {
     require(e.block.timestamp > 0 && e.block.timestamp < max_uint40);
 }
 
-function init_StakeupStaking(env e) {
+function init_StakeUpStaking(env e) {
     requireInvariant lastRewardBlockGeqBlockNumber(e);
     requireInvariant vestingTimestampLeqBlockTimestamp(e);
     requireInvariant amountStakedLeqTotalStakeUpStaked;
@@ -70,11 +70,11 @@ ghost mathint ghostRewardDataIndexPrev {
     axiom ghostRewardDataIndexPrev >= 0 && ghostRewardDataIndexPrev <= max_uint128;
 }
 
-hook Sload uint128 val _StakeupStaking._rewardData.index STORAGE {
+hook Sload uint128 val _StakeUpStaking._rewardData.index STORAGE {
     require(require_uint128(ghostRewardDataIndex) == val);
 } 
 
-hook Sstore _StakeupStaking._rewardData.index uint128 val (uint128 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._rewardData.index uint128 val (uint128 valPrev) STORAGE {
     ghostRewardDataIndexPrev = valPrev;
     ghostRewardDataIndex = val;
 }
@@ -91,11 +91,11 @@ ghost mathint ghostRewardDataLastBalancePrev {
     axiom ghostRewardDataLastBalancePrev >= 0 && ghostRewardDataLastBalancePrev <= max_uint128;
 }
 
-hook Sload uint128 val _StakeupStaking._rewardData.lastBalance STORAGE {
+hook Sload uint128 val _StakeUpStaking._rewardData.lastBalance STORAGE {
     require(require_uint128(ghostRewardDataLastBalance) == val);
 } 
 
-hook Sstore _StakeupStaking._rewardData.lastBalance uint128 val (uint128 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._rewardData.lastBalance uint128 val (uint128 valPrev) STORAGE {
     ghostRewardDataLastBalancePrev = valPrev;
     ghostRewardDataLastBalance = val;
 }
@@ -114,11 +114,11 @@ ghost mathint ghostTotalStakeUpStakedPrev {
     axiom ghostTotalStakeUpStakedPrev >= 0 && ghostTotalStakeUpStakedPrev <= max_uint256;
 }
 
-hook Sload uint256 val _StakeupStaking._totalStakeUpStaked STORAGE {
+hook Sload uint256 val _StakeUpStaking._totalStakeUpStaked STORAGE {
     require(require_uint256(ghostTotalStakeUpStaked) == val);
 } 
 
-hook Sstore _StakeupStaking._totalStakeUpStaked uint256 val (uint256 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._totalStakeUpStaked uint256 val (uint256 valPrev) STORAGE {
     ghostTotalStakeUpStakedPrev = valPrev;
     ghostTotalStakeUpStaked = val;
 }
@@ -137,11 +137,11 @@ ghost mathint ghostLastRewardBlockPrev {
     axiom ghostLastRewardBlockPrev >= 0 && ghostLastRewardBlockPrev <= max_uint256;
 }
 
-hook Sload uint256 val _StakeupStaking._lastRewardBlock STORAGE {
+hook Sload uint256 val _StakeUpStaking._lastRewardBlock STORAGE {
     require(require_uint256(ghostLastRewardBlock) == val);
 } 
 
-hook Sstore _StakeupStaking._lastRewardBlock uint256 val (uint256 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._lastRewardBlock uint256 val (uint256 valPrev) STORAGE {
     ghostLastRewardBlockPrev = valPrev;
     ghostLastRewardBlock = val;
 }
@@ -162,11 +162,11 @@ ghost mapping (address => mathint) ghostStakingDataAmountStakedPrev {
     axiom forall address i. ghostStakingDataAmountStakedPrev[i] >= 0 && ghostStakingDataAmountStakedPrev[i] <= max_uint128;
 }
 
-hook Sload uint256 val _StakeupStaking._stakingData[KEY address i].amountStaked STORAGE {
+hook Sload uint256 val _StakeUpStaking._stakingData[KEY address i].amountStaked STORAGE {
     require(require_uint256(ghostStakingDataAmountStaked[i]) == val);
 } 
 
-hook Sstore _StakeupStaking._stakingData[KEY address i].amountStaked uint256 val (uint256 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._stakingData[KEY address i].amountStaked uint256 val (uint256 valPrev) STORAGE {
     ghostStakingDataAmountStakedPrev[i] = valPrev;
     ghostStakingDataAmountStaked[i] = val;
 }
@@ -183,11 +183,11 @@ ghost mapping (address => mathint) ghostStakingDataIndexPrev {
     axiom forall address i. ghostStakingDataIndexPrev[i] >= 0 && ghostStakingDataIndexPrev[i] <= max_uint128;
 }
 
-hook Sload uint128 val _StakeupStaking._stakingData[KEY address i].index STORAGE {
+hook Sload uint128 val _StakeUpStaking._stakingData[KEY address i].index STORAGE {
     require(require_uint128(ghostStakingDataIndex[i]) == val);
 } 
 
-hook Sstore _StakeupStaking._stakingData[KEY address i].index uint128 val (uint128 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._stakingData[KEY address i].index uint128 val (uint128 valPrev) STORAGE {
     ghostStakingDataIndexPrev[i] = valPrev;
     ghostStakingDataIndex[i] = val;
 }
@@ -204,11 +204,11 @@ ghost mapping (address => mathint) ghostStakingDataRewardsAccruedPrev {
     axiom forall address i. ghostStakingDataRewardsAccruedPrev[i] >= 0 && ghostStakingDataRewardsAccruedPrev[i] <= max_uint128;
 }
 
-hook Sload uint128 val _StakeupStaking._stakingData[KEY address i].rewardsAccrued STORAGE {
+hook Sload uint128 val _StakeUpStaking._stakingData[KEY address i].rewardsAccrued STORAGE {
     require(require_uint128(ghostStakingDataRewardsAccrued[i]) == val);
 } 
 
-hook Sstore _StakeupStaking._stakingData[KEY address i].rewardsAccrued uint128 val (uint128 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._stakingData[KEY address i].rewardsAccrued uint128 val (uint128 valPrev) STORAGE {
     ghostStakingDataRewardsAccruedPrev[i] = valPrev;
     ghostStakingDataRewardsAccrued[i] = val;
 }
@@ -227,11 +227,11 @@ ghost mathint ghostTotalStakeUpVestingPrev {
     axiom ghostTotalStakeUpVestingPrev >= 0 && ghostTotalStakeUpVestingPrev <= max_uint256;
 }
 
-hook Sload uint256 val _StakeupStaking._totalStakeUpVesting STORAGE {
+hook Sload uint256 val _StakeUpStaking._totalStakeUpVesting STORAGE {
     require(require_uint256(ghostTotalStakeUpVesting) == val);
 } 
 
-hook Sstore _StakeupStaking._totalStakeUpVesting uint256 val (uint256 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._totalStakeUpVesting uint256 val (uint256 valPrev) STORAGE {
     ghostTotalStakeUpVestingPrev = valPrev;
     ghostTotalStakeUpVesting = val;
 }
@@ -252,11 +252,11 @@ ghost mapping (address => mathint) ghostTAStartingBalancePrev {
     axiom forall address i. ghostTAStartingBalancePrev[i] >= 0 && ghostTAStartingBalancePrev[i] <= max_uint256;
 }
 
-hook Sload uint256 val _StakeupStaking._tokenAllocations[KEY address i].startingBalance STORAGE {
+hook Sload uint256 val _StakeUpStaking._tokenAllocations[KEY address i].startingBalance STORAGE {
     require(require_uint256(ghostTAStartingBalance[i]) == val);
 } 
 
-hook Sstore _StakeupStaking._tokenAllocations[KEY address i].startingBalance uint256 val (uint256 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._tokenAllocations[KEY address i].startingBalance uint256 val (uint256 valPrev) STORAGE {
     ghostTAStartingBalancePrev[i] = valPrev;
     ghostTAStartingBalance[i] = val;
 }
@@ -273,11 +273,11 @@ ghost mapping (address => mathint) ghostTACurrentBalancePrev {
     axiom forall address i. ghostTACurrentBalancePrev[i] >= 0 && ghostTACurrentBalancePrev[i] <= max_uint256;
 }
 
-hook Sload uint256 val _StakeupStaking._tokenAllocations[KEY address i].currentBalance STORAGE {
+hook Sload uint256 val _StakeUpStaking._tokenAllocations[KEY address i].currentBalance STORAGE {
     require(require_uint256(ghostTACurrentBalance[i]) == val);
 } 
 
-hook Sstore _StakeupStaking._tokenAllocations[KEY address i].currentBalance uint256 val (uint256 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._tokenAllocations[KEY address i].currentBalance uint256 val (uint256 valPrev) STORAGE {
     ghostTACurrentBalancePrev[i] = valPrev;
     ghostTACurrentBalance[i] = val;
 }
@@ -294,11 +294,11 @@ ghost mapping (address => mathint) ghostTAVestingStartTimePrev {
     axiom forall address i. ghostTAVestingStartTimePrev[i] >= 0 && ghostTAVestingStartTimePrev[i] <= max_uint256;
 }
 
-hook Sload uint256 val _StakeupStaking._tokenAllocations[KEY address i].vestingStartTime STORAGE {
+hook Sload uint256 val _StakeUpStaking._tokenAllocations[KEY address i].vestingStartTime STORAGE {
     require(require_uint256(ghostTAVestingStartTime[i]) == val);
 } 
 
-hook Sstore _StakeupStaking._tokenAllocations[KEY address i].vestingStartTime uint256 val (uint256 valPrev) STORAGE {
+hook Sstore _StakeUpStaking._tokenAllocations[KEY address i].vestingStartTime uint256 val (uint256 valPrev) STORAGE {
     ghostTAVestingStartTimePrev[i] = valPrev;
     ghostTAVestingStartTime[i] = val;
 }
@@ -317,7 +317,7 @@ invariant lastRewardBlockGeqBlockNumber(env eInv) ghostLastRewardBlock >= to_mat
 
 // SK-12 No uses's amount staked could be greater than total staked
 invariant amountStakedLeqTotalStakeUpStaked() forall address a. ghostStakingDataAmountStaked[a] <= ghostTotalStakeUpStaked {
-    preserved _StakeupStaking.unstake(uint256 stakeupAmount, bool harvestRewards) with (env e) {
+    preserved _StakeUpStaking.unstake(uint256 stakeupAmount, bool harvestRewards) with (env e) {
         // Test unstake with only one sender's address
         require(forall address a. a != e.msg.sender => ghostStakingDataAmountStaked[a] == 0);
     }

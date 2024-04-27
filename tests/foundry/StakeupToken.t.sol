@@ -3,17 +3,17 @@ pragma solidity 0.8.22;
 
 import {Test} from "forge-std/Test.sol";
 
-import {StakeupStaking} from "src/staking/StakeupStaking.sol";
-import {StakeupToken, IStakeupToken} from "src/token/StakeupToken.sol";
+import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
+import {StakeUpToken, IStakeUpToken} from "src/token/StakeUpToken.sol";
 import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {MockEndpoint} from "../mocks/MockEndpoint.sol";
-import {MockStakeupStaking} from "../mocks/MockStakeupStaking.sol";
+import {MockStakeUpStaking} from "../mocks/MockStakeUpStaking.sol";
 
-contract StakeupTokenTest is Test {
-    StakeupToken public stakeupToken;
+contract StakeUpTokenTest is Test {
+    StakeUpToken public stakeupToken;
 
     address internal alice;
     address internal bob;
@@ -27,7 +27,7 @@ contract StakeupTokenTest is Test {
     uint32 internal constant EID_A = 1;
     uint32 internal constant EID_B = 2;
 
-    MockStakeupStaking internal stakeupStaking;
+    MockStakeUpStaking internal stakeupStaking;
 
     uint64 initialMintPercentage = 1e15; // .01%
 
@@ -40,7 +40,7 @@ contract StakeupTokenTest is Test {
 
         owner = makeAddr("owner");
         layerZeroEndpoint = makeAddr("layerZeroEndpoint");
-        stakeupStaking = new MockStakeupStaking();
+        stakeupStaking = new MockStakeUpStaking();
         stakeupStaking.setStTBY(stTBY);
 
         layerZeroEndpointA = new MockEndpoint();
@@ -53,7 +53,7 @@ contract StakeupTokenTest is Test {
         // Alice is the only token recipient
         _deployOneAllocation(initialMintPercentage);
 
-        assertEq(stakeupToken.name(), "Stakeup Token");
+        assertEq(stakeupToken.name(), "StakeUp Token");
         assertEq(stakeupToken.symbol(), "SUP");
         assertEq(stakeupToken.token(), address(stakeupToken));
 
@@ -105,20 +105,20 @@ contract StakeupTokenTest is Test {
 
         _deployOneAllocation(initialMintPercentage);
 
-        IStakeupToken.TokenRecipient[]
-            memory lpRecipients = new IStakeupToken.TokenRecipient[](2);
-        lpRecipients[0] = IStakeupToken.TokenRecipient({
+        IStakeUpToken.TokenRecipient[]
+            memory lpRecipients = new IStakeUpToken.TokenRecipient[](2);
+        lpRecipients[0] = IStakeUpToken.TokenRecipient({
             recipient: lp1,
             percentOfAllocation: 5e17 // 50%
         });
-        lpRecipients[1] = IStakeupToken.TokenRecipient({
+        lpRecipients[1] = IStakeUpToken.TokenRecipient({
             recipient: lp2,
             percentOfAllocation: 5e17 // 50%
         });
 
-        IStakeupToken.Allocation[]
-            memory lpAllocation = new IStakeupToken.Allocation[](1);
-        lpAllocation[0] = IStakeupToken.Allocation({
+        IStakeUpToken.Allocation[]
+            memory lpAllocation = new IStakeUpToken.Allocation[](1);
+        lpAllocation[0] = IStakeUpToken.Allocation({
             recipients: lpRecipients,
             percentOfSupply: lpPercentage // .01%
         });
@@ -148,13 +148,13 @@ contract StakeupTokenTest is Test {
 
         _deployOneAllocation(initialMintPercentage);
 
-        IStakeupToken.TokenRecipient[]
-            memory airdropRecipients = new IStakeupToken.TokenRecipient[](2);
-        airdropRecipients[0] = IStakeupToken.TokenRecipient({
+        IStakeUpToken.TokenRecipient[]
+            memory airdropRecipients = new IStakeUpToken.TokenRecipient[](2);
+        airdropRecipients[0] = IStakeUpToken.TokenRecipient({
             recipient: airdrop1,
             percentOfAllocation: 5e17 // 50%
         });
-        airdropRecipients[1] = IStakeupToken.TokenRecipient({
+        airdropRecipients[1] = IStakeUpToken.TokenRecipient({
             recipient: airdrop2,
             percentOfAllocation: 5e17 // 50%
         });
@@ -209,27 +209,27 @@ contract StakeupTokenTest is Test {
     }
 
     function _deployOneAllocation(uint64 initialMintPercent) internal {
-        IStakeupToken.TokenRecipient memory recipient = IStakeupToken
+        IStakeUpToken.TokenRecipient memory recipient = IStakeUpToken
             .TokenRecipient({
                 recipient: alice,
                 percentOfAllocation: 1e18 // 100%
             });
-        IStakeupToken.TokenRecipient[]
-            memory recipients = new IStakeupToken.TokenRecipient[](1);
+        IStakeUpToken.TokenRecipient[]
+            memory recipients = new IStakeUpToken.TokenRecipient[](1);
 
         recipients[0] = recipient;
 
-        IStakeupToken.Allocation memory allocation = IStakeupToken.Allocation({
+        IStakeUpToken.Allocation memory allocation = IStakeUpToken.Allocation({
             recipients: recipients,
             percentOfSupply: initialMintPercent // .1%
         });
 
-        IStakeupToken.Allocation[]
-            memory allocations = new IStakeupToken.Allocation[](1);
+        IStakeUpToken.Allocation[]
+            memory allocations = new IStakeUpToken.Allocation[](1);
 
         allocations[0] = allocation;
 
-        stakeupToken = new StakeupToken(
+        stakeupToken = new StakeUpToken(
             address(stakeupStaking),
             address(0),
             owner,
@@ -270,27 +270,27 @@ contract StakeupTokenTest is Test {
             aliceAllocation -= 1e16;
         }
 
-        IStakeupToken.TokenRecipient[]
-            memory recipientsList1 = new IStakeupToken.TokenRecipient[](2);
-        IStakeupToken.TokenRecipient[]
-            memory recipientsList2 = new IStakeupToken.TokenRecipient[](1);
+        IStakeUpToken.TokenRecipient[]
+            memory recipientsList1 = new IStakeUpToken.TokenRecipient[](2);
+        IStakeUpToken.TokenRecipient[]
+            memory recipientsList2 = new IStakeUpToken.TokenRecipient[](1);
 
-        IStakeupToken.Allocation[]
-            memory allocations = new IStakeupToken.Allocation[](2);
+        IStakeUpToken.Allocation[]
+            memory allocations = new IStakeUpToken.Allocation[](2);
 
         {
             // First allocation
-            IStakeupToken.TokenRecipient memory recipient1 = IStakeupToken
+            IStakeUpToken.TokenRecipient memory recipient1 = IStakeUpToken
                 .TokenRecipient({
                     recipient: alice,
                     percentOfAllocation: aliceAllocation
                 });
             recipientsList1[0] = recipient1;
-            IStakeupToken.TokenRecipient memory recipient2 = IStakeupToken
+            IStakeUpToken.TokenRecipient memory recipient2 = IStakeUpToken
                 .TokenRecipient({recipient: bob, percentOfAllocation: 5e17});
             recipientsList1[1] = recipient2;
 
-            IStakeupToken.Allocation memory allocation1 = IStakeupToken
+            IStakeUpToken.Allocation memory allocation1 = IStakeUpToken
                 .Allocation({
                     recipients: recipientsList1,
                     percentOfSupply: percentPerAllocation
@@ -298,19 +298,19 @@ contract StakeupTokenTest is Test {
 
             allocations[0] = allocation1;
 
-            recipientsList2[0] = IStakeupToken.TokenRecipient({
+            recipientsList2[0] = IStakeUpToken.TokenRecipient({
                 recipient: rando,
                 percentOfAllocation: 1e18 // 100%
             });
 
-            IStakeupToken.Allocation memory allocation2 = IStakeupToken
+            IStakeUpToken.Allocation memory allocation2 = IStakeUpToken
                 .Allocation({
                     recipients: recipientsList2,
                     percentOfSupply: percentPerAllocation
                 });
             allocations[1] = allocation2;
 
-            stakeupToken = new StakeupToken(
+            stakeupToken = new StakeUpToken(
                 address(stakeupStaking),
                 address(stTBY),
                 owner,

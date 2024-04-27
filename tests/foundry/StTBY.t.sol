@@ -11,7 +11,7 @@ import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
-import {StakeupStaking} from "src/staking/StakeupStaking.sol";
+import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
 
 import {IStTBY} from "src/interfaces/IStTBY.sol";
 import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
@@ -395,7 +395,7 @@ contract StTBYTest is StTBYSetup {
             ((aliceAmount * mintBps) / BPS)) * 1e12;
         uint256 bobMintedShares = (bobAmount - ((bobAmount * mintBps) / BPS)) *
             1e12;
-        uint256 mintedStakeupStakingShares = 3e18 -
+        uint256 mintedStakeUpStakingShares = 3e18 -
             (aliceMintedShares + bobMintedShares);
         uint256 aliceRedeemFees = (aliceMintedShares * redeemBps) / BPS;
         uint256 bobRedeemFees = (bobMintedShares * redeemBps) / BPS;
@@ -428,7 +428,7 @@ contract StTBYTest is StTBYSetup {
         // Verify state after deposits
         assertEq(stTBY.balanceOf(alice), aliceMintedShares);
         assertEq(wstTBY.balanceOf(bob), bobMintedShares);
-        assertEq(stTBY.balanceOf(address(staking)), mintedStakeupStakingShares);
+        assertEq(stTBY.balanceOf(address(staking)), mintedStakeUpStakingShares);
         assertEq(stTBY.totalSupply(), 3e18);
         assertEq(stTBY.getTotalShares(), 3e18);
         assertEq(stTBY.getTotalUsd(), 3e18);

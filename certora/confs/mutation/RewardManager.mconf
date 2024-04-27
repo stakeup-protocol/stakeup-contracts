@@ -13,6 +13,6 @@
       "../../../src/rewards/RewardManager.sol" : "../../mutations/RewardManager",
       "../../../src/rewards/RewardBase.sol" : "../../mutations/RewardManager_RewardBase",
       "../../../src/rewards/CurveGaugeDistributor.sol" : "../../mutations/RewardManager_CurveGaugeDistributor",
-      "../../../src/token/StakeupToken.sol" : "../../mutations/RewardManager_StakeupToken"
+      "../../../src/token/StakeUpToken.sol" : "../../mutations/RewardManager_StakeUpToken"
    }
 }

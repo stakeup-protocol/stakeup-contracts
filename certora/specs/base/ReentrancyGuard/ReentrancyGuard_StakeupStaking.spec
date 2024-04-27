@@ -2,12 +2,12 @@ import "./ReentrancyGuard.spec";
 
 //////////////////// USING ////////////////////////
 
-using StakeupStakingHarness as _ReentrancyGuard_StakeupStaking;
+using StakeUpStakingHarness as _ReentrancyGuard_StakeUpStaking;
 
 ////////////////// FUNCTIONS //////////////////////
 
-function reentrancyIsLocked_StakeupStaking() returns bool {
-    return ghostLocked_StakeupStaking == _REENTRANCY_GUARD_ENTERED();
+function reentrancyIsLocked_StakeUpStaking() returns bool {
+    return ghostLocked_StakeUpStaking == _REENTRANCY_GUARD_ENTERED();
 }
 
 ///////////////// GHOSTS & HOOKS //////////////////
@@ -16,15 +16,15 @@ function reentrancyIsLocked_StakeupStaking() returns bool {
 // Ghost copy of `_status`
 //
 
-ghost uint256 ghostLocked_StakeupStaking {
-    init_state axiom ghostLocked_StakeupStaking == _REENTRANCY_GUARD_NOT_ENTERED();
-    axiom ghostLocked_StakeupStaking == _REENTRANCY_GUARD_NOT_ENTERED() || ghostLocked_StakeupStaking == _REENTRANCY_GUARD_ENTERED(); 
+ghost uint256 ghostLocked_StakeUpStaking {
+    init_state axiom ghostLocked_StakeUpStaking == _REENTRANCY_GUARD_NOT_ENTERED();
+    axiom ghostLocked_StakeUpStaking == _REENTRANCY_GUARD_NOT_ENTERED() || ghostLocked_StakeUpStaking == _REENTRANCY_GUARD_ENTERED(); 
 }
 
-hook Sload uint256 val _ReentrancyGuard_StakeupStaking._status STORAGE {
-    require(ghostLocked_StakeupStaking == val);
+hook Sload uint256 val _ReentrancyGuard_StakeUpStaking._status STORAGE {
+    require(ghostLocked_StakeUpStaking == val);
 }
 
-hook Sstore _ReentrancyGuard_StakeupStaking._status uint256 val STORAGE {
-    ghostLocked_StakeupStaking = val;
+hook Sstore _ReentrancyGuard_StakeUpStaking._status uint256 val STORAGE {
+    ghostLocked_StakeUpStaking = val;
 }

@@ -26,8 +26,8 @@ methods {
     function _RewardManager.distributePokeRewards(address rewardReceiver) external;
     function _RewardManager.distributeMintRewards(address rewardReceiver, uint256 stTBYAmount) external;
     function _RewardManager.getStTBY() external returns (address) envfree;
-    function _RewardManager.getStakeupToken() external returns (address) envfree;
-    function _RewardManager.getStakeupStaking() external returns (address) envfree;
+    function _RewardManager.getStakeUpToken() external returns (address) envfree;
+    function _RewardManager.getStakeUpStaking() external returns (address) envfree;
 
     // CurveGaugeDistributor
     function _RewardManager.seedGauges() external;

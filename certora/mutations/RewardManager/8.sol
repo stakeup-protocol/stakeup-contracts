@@ -8,8 +8,8 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {CurveGaugeDistributor} from "./CurveGaugeDistributor.sol";
 
 import {IRewardManager} from "../interfaces/IRewardManager.sol";
-import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
-import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
+import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 
 contract RewardManager is IRewardManager, CurveGaugeDistributor {
     uint256 private _pokeRewardsRemaining;
@@ -103,8 +103,8 @@ index 728715d..576c8b7 100644
         uint256 amount
     ) internal {
         // Mint and stake rewards on behalf of the reward receiver
-        IStakeupStaking(_stakeupStaking).delegateStake(rewardReceiver, amount);
-        IStakeupToken(_stakeupToken).mintRewards(_stakeupStaking, amount);
+        IStakeUpStaking(_stakeupStaking).delegateStake(rewardReceiver, amount);
+        IStakeUpToken(_stakeupToken).mintRewards(_stakeupStaking, amount);
     }
 
     /// @inheritdoc IRewardManager
@@ -113,12 +113,12 @@ index 728715d..576c8b7 100644
     }
 
     /// @inheritdoc IRewardManager
-    function getStakeupToken() external view override returns (address) {
+    function getStakeUpToken() external view override returns (address) {
         return _stakeupToken;
     }
 
     /// @inheritdoc IRewardManager
-    function getStakeupStaking() external view override returns (address) {
+    function getStakeUpStaking() external view override returns (address) {
         return _stakeupStaking;
     }
 }

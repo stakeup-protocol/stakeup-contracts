@@ -11,7 +11,7 @@ import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
-import {StakeupStaking} from "src/staking/StakeupStaking.sol";
+import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
 
 import {IStTBY} from "src/interfaces/IStTBY.sol";
 import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";

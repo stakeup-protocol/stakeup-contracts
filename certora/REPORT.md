@@ -1,7 +1,7 @@
-# Stakeup - Formal Verification Report
+# StakeUp - Formal Verification Report
 
 ## Summary
-This document describes the specification and verification of **Blueberry**'s **Stakeup** smart contracts using the Certora Prover. The work was undertaken from February 23, 2024 to March 19, 2024.
+This document describes the specification and verification of **Blueberry**'s **StakeUp** smart contracts using the Certora Prover. The work was undertaken from February 23, 2024 to March 19, 2024.
 
 The scope of our project was:
 * StTBY token
@@ -9,12 +9,12 @@ The scope of our project was:
 * Rewards
 * Staking
 * Vesting
-* Stakeup token
+* StakeUp token
 * RedemptionNFT
 
 The Certora Prover proved the implementation of the contracts is correct with respect to the formal rules written by us, researchers [@alexzoid_eth](https://twitter.com/alexzoid_eth) and [@neumoXX](https://twitter.com/neumoXX). During the verification process, the Certora Prover discovered bugs in the code listed in the sections below.
 
-The following sections formally define high level specifications of Blueberry's Stakeup smart contracts. All the rules are available in a private github: https://github.com/alexzoid-eth/Blueberryfi-StakeUp-FV/tree/main/certora.
+The following sections formally define high level specifications of Blueberry's StakeUp smart contracts. All the rules are available in a private github: https://github.com/alexzoid-eth/Blueberryfi-StakeUp-FV/tree/main/certora.
 
 ## Disclaimer
 The Certora Prover takes as input a contract and a specification and formally proves that the contract satisfies the specification in all scenarios. More importantly, the guarantees of the Certora Prover are scoped to the provided specification, and the Certora Prover does not check any cases not covered by the specification.
@@ -73,9 +73,9 @@ Properties
 * State Transitions
 * Rule [whenRedeemUnderlyingIfYieldPositiveTotalUsdIncreases](./specs/StTBY.spec#L268-L282)
     * Pass: ✅
-10. Fees are transferred to StakeupStaking
+10. Fees are transferred to StakeUpStaking
 * State Transitions
-* Rule [feesAreTransferredToStakeupStaking](./specs/StTBY.spec#L285-L362)
+* Rule [feesAreTransferredToStakeUpStaking](./specs/StTBY.spec#L285-L362)
     * Pass: ✅
 11. Remaining balance of underlying assets is accurate post poke
 * State Transitions
@@ -167,7 +167,7 @@ Properties
     * Pass: ✅
 3. After calling `distributePokeRewards` or `distributeMintRewards`, the only account that can see its stakeup balance increase is the stakeup staking contract
 * State Transitions
-* Rule [distributeRewardsIncreaseOnlyStakeupStakingBalance](./specs/RewardManager.spec#L68-L82)
+* Rule [distributeRewardsIncreaseOnlyStakeUpStakingBalance](./specs/RewardManager.spec#L68-L82)
     * Pass: ✅
 4. After calling `seedGauges`, the only accounts that can see their stakeup balance increase are the curve gauges
 * State Transitions
@@ -199,7 +199,7 @@ Properties
     * Pass: ✅
 11. After calling `seedGauges`, `distributePokeRewards` or `distributeMintRewards` no account can see their stakeup balance decrease
 * Valid State
-* Rule [noStakeupTokenDecrease](./specs/RewardManager.spec#L212-L224)
+* Rule [noStakeUpTokenDecrease](./specs/RewardManager.spec#L212-L224)
     * Pass: ✅
 12. `_calculateDripAmount` must return a value <= rewards remaining
 * Valid State
@@ -226,51 +226,51 @@ Mutation testing
 Properties
 1. Any stake or unstake action changes token balances
 * State Transitions
-* Invariant [stakeUnstakeMoveTokens](./specs/StakeupStaking.spec#L36-L68)
+* Invariant [stakeUnstakeMoveTokens](./specs/StakeUpStaking.spec#L36-L68)
     * Pass: ✅
 2. Total staked `SUP` cannot exceed the total `SUP` supply
 * Valid State
-* Rule [totalStakeUpStakedLeqTotalSUPsupply](./specs/StakeupStaking.spec#L71-L88)
+* Rule [totalStakeUpStakedLeqTotalSUPsupply](./specs/StakeUpStaking.spec#L71-L88)
     * Pass: ✅
 3. Claimable rewards are calculated based on staked amounts and global reward index
 * Unit test
-* Rule [claimableRewardsIntegrity](./specs/StakeupStaking.spec#L91-L106)
+* Rule [claimableRewardsIntegrity](./specs/StakeUpStaking.spec#L91-L106)
     * Pass: ✅
 4. For all users, `userStakingData.index` is always less than or equal to `_rewardData.index`
 * Valid State
-* Invariant [userStakingDataIndexLeqrewardDataIndex](./specs/base/_StakeupStaking.spec#L309)
+* Invariant [userStakingDataIndexLeqrewardDataIndex](./specs/base/_StakeUpStaking.spec#L309)
     * Pass: ✅
 5. `_lastRewardBlock` alway greater or equal to block number
 * Valid State
-* Invariant [lastRewardBlockGeqBlockNumber](./specs/base/_StakeupStaking.spec#L312-L316)
+* Invariant [lastRewardBlockGeqBlockNumber](./specs/base/_StakeUpStaking.spec#L312-L316)
     * Pass: ✅
 6. For all users, `totalStakeUpStaked` changes the same way as `_stakingData[msg.sender].amountStaked`
 * State Transitions
-* Invariant [totalStakeUpStakedSolvency](./specs/StakeupStaking.spec#L109-L134)
+* Invariant [totalStakeUpStakedSolvency](./specs/StakeUpStaking.spec#L109-L134)
     * Pass: ✅
 7. Staking balance cannot decrease unless by explicit unstake or reward claim actions
 * State Transitions
-* Rule [stakingBalanceCannotDecreaseUnlessUnstake](./specs/StakeupStaking.spec#L136-L147)
+* Rule [stakingBalanceCannotDecreaseUnlessUnstake](./specs/StakeUpStaking.spec#L136-L147)
     * Pass: ✅
 8. For all users, `userStakingData.index` is monotonically increasing
 * State Transitions
-* Invariant [userStakingDataIndexIncreasing](./specs/StakeupStaking.spec#L150-L156)
+* Invariant [userStakingDataIndexIncreasing](./specs/StakeUpStaking.spec#L150-L156)
     * Pass: ✅
 9. `_rewardData.index` is updated with every state modify function
 * State Transitions
-* Rule [rewardDataIndexUpdatePossibility](./specs/StakeupStaking.spec#L159-L168)
+* Rule [rewardDataIndexUpdatePossibility](./specs/StakeUpStaking.spec#L159-L168)
     * Pass: ✅
 10. The last reward distribution block is updated on every reward distribution action
 * Variable Transitions
-* Invariant [rewardDistributionBlockUpdatedOnEveryRewardDistribution](./specs/StakeupStaking.spec#L171-L177)
+* Invariant [rewardDistributionBlockUpdatedOnEveryRewardDistribution](./specs/StakeUpStaking.spec#L171-L177)
     * Pass: ✅
 11. `_rewardData.index` is monotonically increasing
 * Variable Transitions
-* Invariant [rewardDataIndexIncreasing](./specs/StakeupStaking.spec#L180)
+* Invariant [rewardDataIndexIncreasing](./specs/StakeUpStaking.spec#L180)
     * Pass: ✅
 12. No uses's amount staked could be greater than total staked
 * Valid State
-* Invariant [amountStakedLeqTotalStakeUpStaked](./specs/base/_StakeupStaking.spec#L319-L324)
+* Invariant [amountStakedLeqTotalStakeUpStaked](./specs/base/_StakeUpStaking.spec#L319-L324)
     * Pass: ✅
 
 
@@ -282,52 +282,52 @@ Assumptions/Simplifications:
 Properties
 1. Total vested `SUP` cannot exceed the total `SUP` supply
 * Valid State
-* Invariant [totalVestingLeqSUPsupply](./specs/StakeupStaking.spec#L183-L194)
+* Invariant [totalVestingLeqSUPsupply](./specs/StakeUpStaking.spec#L183-L194)
     * Pass: ✅
 2. Sum of `_totalStakeUpStaked` and `_totalStakeUpVesting` is always less than or equal to `IERC20(address(_stakeupToken)).balanceOf(address(VESTING_CONTRACT))`
 * Valid State
-* Invariant [sumOftotalStakedAndVestingLeqSUPBalanceOfCurrent](./specs/StakeupStaking.spec#L197-L211)
+* Invariant [sumOftotalStakedAndVestingLeqSUPBalanceOfCurrent](./specs/StakeUpStaking.spec#L197-L211)
     * Pass: ✅
 3. Vested tokens are locked until the cliff period has passed
 * Valid State
-* Rule [vestedTokensLockedUntilCliffPeriodPassed](./specs/StakeupStaking.spec#L214-L219)
+* Rule [vestedTokensLockedUntilCliffPeriodPassed](./specs/StakeUpStaking.spec#L214-L219)
     * Pass: ✅
 4. For all allocations, `startingBalance` is always greater than or equal to currentBalance
 * Valid State
-* Invariant [startingBalanceAlwaysGeqCurrentBalance](./specs/base/_StakeupStaking.spec#L327)
+* Invariant [startingBalanceAlwaysGeqCurrentBalance](./specs/base/_StakeUpStaking.spec#L327)
     * Pass: ✅
 5. Vested tokens are released linearly after the cliff period until the end of the vesting duration
 * High-Level
-* Rule [vestedReleasedLinearlyAfterCliffPeriod](./specs/StakeupStaking.spec#L222-L239)
+* Rule [vestedReleasedLinearlyAfterCliffPeriod](./specs/StakeUpStaking.spec#L222-L239)
     * Pass: ✅
 6. A user's vested balance decreases as they claim vested tokens
 * Variable Transitions
-* Rule [userBalanceDecreasesWhenClaim](./specs/StakeupStaking.spec#L242-L258)
+* Rule [userBalanceDecreasesWhenClaim](./specs/StakeUpStaking.spec#L242-L258)
     * Pass: ✅
 7. The vesting start time is set upon the first vesting action for a user
 * State Transitions
-* Rule [vestingStartTimeSetUponAction](./specs/StakeupStaking.spec#L261-L274)
+* Rule [vestingStartTimeSetUponAction](./specs/StakeUpStaking.spec#L261-L274)
     * Pass: ✅
 8. For two timestamps after `VESTING_DURATION`, the value returned by `getAvailableTokens` should not change
 * Variable Transitions
-* Rule [getAvailableTokensNotChangesAfterVestingDuration](./specs/StakeupStaking.spec#L277-L288)
+* Rule [getAvailableTokensNotChangesAfterVestingDuration](./specs/StakeUpStaking.spec#L277-L288)
     * Pass: ✅
-9. Only `StakeupToken` can execute `vestTokens()`
+9. Only `StakeUpToken` can execute `vestTokens()`
 * State Transitions
-* Rule [onlyStakeupTokenCanExecuteVestTokens](./specs/StakeupStaking.spec#L291-L297)
+* Rule [onlyStakeUpTokenCanExecuteVestTokens](./specs/StakeUpStaking.spec#L291-L297)
     * Pass: ✅
 10. Vesting timestamp always equal or greater `block.timestamp`
 * Valid State
-* Invariant [vestingTimestampLeqBlockTimestamp](./specs/base/_StakeupStaking.spec#L330-L335)
+* Invariant [vestingTimestampLeqBlockTimestamp](./specs/base/_StakeUpStaking.spec#L330-L335)
     * Pass: ✅
 11. A user's token allocations empty when `block.timestamp` not set
 * Valid State
-* Invariant [tokenAllocationsZeroTimestampSolvency](./specs/base/_StakeupStaking.spec#L338-L344)
+* Invariant [tokenAllocationsZeroTimestampSolvency](./specs/base/_StakeUpStaking.spec#L338-L344)
     * Pass: ✅
 
 
 
-## Verification of StakeupToken
+## Verification of StakeUpToken
 Assumptions/Simplifications:
 * Each token balance is always less than or equal to `totalSupply`.
 
@@ -337,39 +337,39 @@ Mutation testing
 Properties
 1. Supply can never surpass `MAX_SUPPLY`
 * Valid State
-* Invariant [totalSupplyLeqMaxSupply](./specs/base/_StakeupToken.spec#L43-L47)
+* Invariant [totalSupplyLeqMaxSupply](./specs/base/_StakeUpToken.spec#L43-L47)
     * Pass: ✅
 2. Ownership transfer follows the two-step process
 * State Transitions
-* Rule [ownershipTransferFollowsTwoStepProcess](./specs/StakeupToken.spec#L52-L68)
+* Rule [ownershipTransferFollowsTwoStepProcess](./specs/StakeUpToken.spec#L52-L68)
     * Pass: ✅
 3. Only reward manager or owner can mint
 * State Transitions
-* Rule [onlyRewardManagerOrOwnerCanMint](./specs/StakeupToken.spec#L71-L86)
+* Rule [onlyRewardManagerOrOwnerCanMint](./specs/StakeUpToken.spec#L71-L86)
     * Pass: ✅
 4. When minting, the increase in supply is equal to the amount allocated
 * State Transitions
-* Rule [mintLpSupplyIncreaseSupplySolvency](./specs/StakeupToken.spec#L90-L107)
+* Rule [mintLpSupplyIncreaseSupplySolvency](./specs/StakeUpToken.spec#L90-L107)
     * Pass: ✅
-* Rule [airdropTokensIncreaseSupplySolvency](./specs/StakeupToken.spec#L109-L122)
+* Rule [airdropTokensIncreaseSupplySolvency](./specs/StakeUpToken.spec#L109-L122)
     * Pass: ✅
-* Rule [mintRewardsIncreaseSupplySolvency](./specs/StakeupToken.spec#L124-L135)
+* Rule [mintRewardsIncreaseSupplySolvency](./specs/StakeUpToken.spec#L124-L135)
     * Pass: ✅
 5. Airdrops, LP and initial supply minting are owner-restricted operations
 * State Transitions
-* Rule [onlyOwnerIntegrity](./specs/StakeupToken.spec#L138-L145)
+* Rule [onlyOwnerIntegrity](./specs/StakeUpToken.spec#L138-L145)
     * Pass: ✅
 6. The contract initialization triggers the reward manager's initialization
 * State Transitions
-* Invariant [constructorInitialization](./specs/StakeupToken.spec#L148-L154)
+* Invariant [constructorInitialization](./specs/StakeUpToken.spec#L148-L154)
     * Pass: ✅
 7. Airdrop minting respects allocation boundaries
 * High Level
-* Rule [airdropTokensRespectsAllocationBoundaries](./specs/StakeupToken.spec#L157-L192)
+* Rule [airdropTokensRespectsAllocationBoundaries](./specs/StakeUpToken.spec#L157-L192)
     * Pass: ✅
 8. Vesting contracts are correctly called during `mintAndVest` operations
 * State Transitions
-* Rule [mintAndVestCorrectlyVestTokens](./specs/StakeupToken.spec#L195-L239)
+* Rule [mintAndVestCorrectlyVestTokens](./specs/StakeUpToken.spec#L195-L239)
     * Pass: ✅
 
 

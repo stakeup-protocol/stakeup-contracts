@@ -2,16 +2,16 @@
 pragma solidity 0.8.22;
 
 import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
-import {IStakeupToken} from "./IStakeupToken.sol";
+import {IStakeUpToken} from "./IStakeUpToken.sol";
 import {IStTBY} from "./IStTBY.sol";
 
 /**
- * @title IStakeupStakingBase
- * @notice A minimal interface for the Stakeup Staking contract
+ * @title IStakeUpStakingBase
+ * @notice A minimal interface for the StakeUp Staking contract
  * @dev This interface contains only the necessary functions that are
  *      used by stTBY and SUP to interact with the Staking contract
  */
-interface IStakeupStakingBase is ILayerZeroSettings {
+interface IStakeUpStakingBase is ILayerZeroSettings {
     /**
      * @notice Processes stTBY fees and sends them to StakeUp Staking
      * @dev If on a L2 chain, the fees are bridged to the mainnet
@@ -26,8 +26,8 @@ interface IStakeupStakingBase is ILayerZeroSettings {
         LZBridgeSettings memory settings
     ) external payable returns (LzBridgeReceipt memory bridgingReceipt);
 
-    /// @notice Returns the Stakeup Token
-    function getStakupToken() external view returns (IStakeupToken);
+    /// @notice Returns the StakeUp Token
+    function getStakupToken() external view returns (IStakeUpToken);
 
     /// @notice Returns the stTBY token
     function getStTBY() external view returns (IStTBY);

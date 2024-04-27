@@ -8,10 +8,10 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {IStakeupToken} from "../interfaces/IStakeupToken.sol";
-import {IStakeupStaking} from "../interfaces/IStakeupStaking.sol";
+import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
+import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 
-contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
+contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
     // =================== Storage ===================
 
     /// @notice Address of the StakeUp Staking contract
@@ -38,14 +38,14 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         address layerZeroEndpoint,
         address _layerZeroDelegate
     )
-        OFT("Stakeup Token", "SUP", layerZeroEndpoint, _layerZeroDelegate)
+        OFT("StakeUp Token", "SUP", layerZeroEndpoint, _layerZeroDelegate)
         Ownable2Step()
     {
         _stakeupStaking = stakeupStaking;
 
         _authorizedMinters[_stakeupStaking] = true;
         _authorizedMinters[
-            address(IStakeupStaking(stakeupStaking).getStTBY())
+            address(IStakeUpStaking(stakeupStaking).getStTBY())
         ] = true;
 
         if (gaugeDistributor != address(0)) {
@@ -55,7 +55,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         _transferOwnership(owner);
     }
 
-    /// @inheritdoc IStakeupToken
+    /// @inheritdoc IStakeUpToken
     function mintLpSupply(Allocation[] memory allocations) external onlyOwner {
         uint256 length = allocations.length;
         for (uint256 i = 0; i < length; ++i) {
@@ -63,7 +63,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         }
     }
 
-    /// @inheritdoc IStakeupToken
+    /// @inheritdoc IStakeUpToken
     function airdropTokens(
         TokenRecipient[] memory recipients,
         uint256 percentOfTotalSupply
@@ -88,7 +88,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         if (tokensRemaining > 0) revert Errors.SharesNotFullyAllocated();
     }
 
-    /// @inheritdoc IStakeupToken
+    /// @inheritdoc IStakeUpToken
     function mintRewards(
         address recipient,
         uint256 amount
@@ -96,7 +96,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
         _mint(recipient, amount);
     }
 
-    /// @inheritdoc IStakeupToken
+    /// @inheritdoc IStakeUpToken
     function mintInitialSupply(
         Allocation[] memory allocations,
         uint256 initialMintPercentage
@@ -139,7 +139,7 @@ contract StakeupToken is IStakeupToken, OFT, Ownable2Step {
             allocationRemaining -= amount;
 
             // Set the vesting state for this recipient in the vesting contract
-            IStakeupStaking(stakeupStaking).vestTokens(recipient, amount);
+            IStakeUpStaking(stakeupStaking).vestTokens(recipient, amount);
 
             // Mint the tokens to the vesting contract
             _mint(stakeupStaking, amount);

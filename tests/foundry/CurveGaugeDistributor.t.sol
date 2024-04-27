@@ -10,14 +10,14 @@ import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockCurveFactory} from "../mocks/Curve/MockCurveFactory.sol";
 
-import {StakeupStaking} from "src/staking/StakeupStaking.sol";
+import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
 
 contract CurveGaugeDistributorTest is Test {
     CurveGaugeDistributor public curveGaugeDistributor;
     MockERC20 public mockStTBY;
-    MockERC20 public mockStakeupToken;
+    MockERC20 public mockStakeUpToken;
     MockCurveFactory public mockCurveFactory;
-    StakeupStaking public stakeupStaking;
+    StakeUpStaking public stakeupStaking;
     uint256 public intializationTimestamp;
     ICurveGaugeDistributor.CurvePoolData[] public curvePools;
 
@@ -26,7 +26,7 @@ contract CurveGaugeDistributorTest is Test {
 
     function setUp() public {
         mockStTBY = new MockERC20(18);
-        mockStakeupToken = new MockERC20(18);
+        mockStakeUpToken = new MockERC20(18);
         uint256 lpRewardsOne = (MAX_POOL_REWARDS * 2) / 4;
         uint256 lpRewardsTwo = MAX_POOL_REWARDS / 4;
         uint256 lpRewardsThree = MAX_POOL_REWARDS / 4;
@@ -62,8 +62,8 @@ contract CurveGaugeDistributorTest is Test {
             })
         );
 
-        stakeupStaking = new StakeupStaking(
-            address(mockStakeupToken),
+        stakeupStaking = new StakeUpStaking(
+            address(mockStakeUpToken),
             address(mockStTBY),
             address(1111)
         );
@@ -77,7 +77,7 @@ contract CurveGaugeDistributorTest is Test {
         curveGaugeDistributor.seedGauges();
 
         // Successfully initialize and seed the gauges
-        curveGaugeDistributor.initialize(curvePools, address(mockStakeupToken));
+        curveGaugeDistributor.initialize(curvePools, address(mockStakeUpToken));
         intializationTimestamp = block.timestamp;
         curveGaugeDistributor.seedGauges();
 
@@ -96,7 +96,7 @@ contract CurveGaugeDistributorTest is Test {
                 data[i].maxRewards - expectedReward
             );
             assertEq(
-                mockStakeupToken.balanceOf(data[i].curveGauge),
+                mockStakeUpToken.balanceOf(data[i].curveGauge),
                 expectedReward
             );
         }

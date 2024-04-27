@@ -3,11 +3,11 @@ pragma solidity 0.8.22;
 
 import {MessagingFee, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
-import {IStakeupStaking} from "src/interfaces/IStakeupStaking.sol";
-import {IStakeupToken} from "src/interfaces/IStakeupToken.sol";
+import {IStakeUpStaking} from "src/interfaces/IStakeUpStaking.sol";
+import {IStakeUpToken} from "src/interfaces/IStakeUpToken.sol";
 import {IStTBY} from "src/interfaces/IStTBY.sol";
 
-contract MockStakeupStaking is IStakeupStaking {
+contract MockStakeUpStaking is IStakeUpStaking {
     address private _stTBY;
     bool private _feeProcessed;
 
@@ -24,7 +24,7 @@ contract MockStakeupStaking is IStakeupStaking {
         address account
     ) external view override returns (uint256) {}
 
-    function getStakupToken() external view override returns (IStakeupToken) {}
+    function getStakupToken() external view override returns (IStakeUpToken) {}
 
     function getStTBY() external view override returns (IStTBY) {
         return IStTBY(_stTBY);

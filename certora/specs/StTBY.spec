@@ -4,8 +4,8 @@ import "./base/_WstTBY.spec";
 using MockBloomPoolA as asset;
 using MockBloomPoolB as assetB;
 using MockRegistry as _registry;
-using StakeupStakingHarness as _StakeupStaking;
-using StakeupTokenHarness as _StakeupToken;
+using StakeUpStakingHarness as _StakeUpStaking;
+using StakeUpTokenHarness as _StakeUpToken;
 using RewardManagerHarness as _RewardManager;
 using RedemptionNFTHarness as _RedemptionNFT;
 
@@ -52,13 +52,13 @@ rule onlyDepositsPokeAndRedeemUnderlyingCanMakeAmountStakedIncrease(method f)
     env e;
     calldataarg args;
 
-    require(getStakeupStaking() == _StakeupStaking);
+    require(getStakeUpStaking() == _StakeUpStaking);
 
-    uint256 amountStakedPre = _StakeupStaking.getUserStakingData(e, e.msg.sender).amountStaked;
+    uint256 amountStakedPre = _StakeUpStaking.getUserStakingData(e, e.msg.sender).amountStaked;
 
     f(e, args);
 
-    uint256 amountStakedPost = _StakeupStaking.getUserStakingData(e, e.msg.sender).amountStaked;
+    uint256 amountStakedPost = _StakeUpStaking.getUserStakingData(e, e.msg.sender).amountStaked;
 
     assert(amountStakedPost > amountStakedPre => 
         (
@@ -84,7 +84,7 @@ rule supRewardsToDepositorsDontExceedRewardsCutoff(method f)
     uint256 amount;
 
     uint256 mintRewardsRemainingPre = getMintRewardsRemaining();
-    uint256 stakeUpBalancePre = _StakeupToken.balanceOf(e, getStakeupStaking());
+    uint256 stakeUpBalancePre = _StakeUpToken.balanceOf(e, getStakeUpStaking());
     
     if(f.selector == sig:depositTby(address, uint256).selector){
         depositTby@withrevert(e, tby, amount);
@@ -95,7 +95,7 @@ rule supRewardsToDepositorsDontExceedRewardsCutoff(method f)
 
     bool lastRev = lastReverted;
     
-    uint256 stakeUpBalancePost = _StakeupToken.balanceOf(e, getStakeupStaking());
+    uint256 stakeUpBalancePost = _StakeUpToken.balanceOf(e, getStakeUpStaking());
 
     uint256 rewardAmount = require_uint256((_RewardManager.LAUNCH_MINT_REWARDS_HARNESS(e) * mintRewardsRemainingPre) /
             _RewardManager.STTBY_MINT_THREASHOLD_HARNESS(e));
@@ -115,9 +115,9 @@ rule amountStakedIncreaseWithMintRewardDistribution(method f)
     address tby;
     uint256 amount;
 
-    require(getStakeupStaking() == _StakeupStaking);
-    require(_StakeupStaking != currentContract);
-    require(_StakeupStaking != e.msg.sender);
+    require(getStakeUpStaking() == _StakeUpStaking);
+    require(_StakeUpStaking != currentContract);
+    require(_StakeUpStaking != e.msg.sender);
     require(amount >= 2);
     require(getMintBps() == 0);
     require(getMintRewardsRemaining() > 2);
@@ -126,7 +126,7 @@ rule amountStakedIncreaseWithMintRewardDistribution(method f)
     require(tby == asset);
 
     uint256 balancePre = sharesOf(e.msg.sender);
-    uint256 amountStakedPre = _StakeupStaking.getUserStakingData(e, e.msg.sender).amountStaked;
+    uint256 amountStakedPre = _StakeUpStaking.getUserStakingData(e, e.msg.sender).amountStaked;
 
     if(f.selector == sig:depositTby(address, uint256).selector){
         depositTby(e, tby, amount);
@@ -136,7 +136,7 @@ rule amountStakedIncreaseWithMintRewardDistribution(method f)
     }
 
     uint256 balancePost = sharesOf(e.msg.sender);
-    uint256 amountStakedPost = _StakeupStaking.getUserStakingData(e, e.msg.sender).amountStaked;
+    uint256 amountStakedPost = _StakeUpStaking.getUserStakingData(e, e.msg.sender).amountStaked;
 
     assert(getMintRewardsRemaining() > 0 && balancePost > balancePre => amountStakedPost > amountStakedPre);
 }
@@ -276,8 +276,8 @@ rule whenRedeemUnderlyingIfYieldPositiveTotalUsdIncreases() {
     satisfy totalUsdPost > totalUsdPre;
 }
 
-// ST-10 Fees are transferred to StakeupStaking
-rule feesAreTransferredToStakeupStaking(method f) 
+// ST-10 Fees are transferred to StakeUpStaking
+rule feesAreTransferredToStakeUpStaking(method f) 
     filtered { 
         f -> 
             f.selector == sig:depositTby(address, uint256).selector ||
@@ -292,16 +292,16 @@ rule feesAreTransferredToStakeupStaking(method f)
     uint256 amount;
     uint16 BPS = 10000;
 
-    require(getStakeupStaking() != currentContract);
+    require(getStakeUpStaking() != currentContract);
     require(e.msg.sender != currentContract);
-    require(e.msg.sender != getStakeupStaking());
+    require(e.msg.sender != getStakeUpStaking());
     require(tby == asset);
 
     requireScalingFactor(e);
 
     uint256 myScalingFactor = _scalingFactor();
 
-    uint256 sharesStakingPre = sharesOf(e, getStakeupStaking());
+    uint256 sharesStakingPre = sharesOf(e, getStakeUpStaking());
     bool positiveFee = false;
 
     require(getMintBps() <= assert_uint256(BPS));
@@ -351,7 +351,7 @@ rule feesAreTransferredToStakeupStaking(method f)
     }
     bool lastRev = lastReverted;
     
-    uint256 sharesStakingPost = sharesOf(e, getStakeupStaking());
+    uint256 sharesStakingPost = sharesOf(e, getStakeUpStaking());
 
     assert(!lastRev && positiveFee => sharesStakingPost > sharesStakingPre);
 }
@@ -449,7 +449,7 @@ rule gettersOnlyRevertIfPositiveValueSent(method f)
             f.selector == sig:getUnderlyingToken().selector ||
             f.selector == sig:getBloomFactory().selector ||
             f.selector == sig:getExchangeRateRegistry().selector ||
-            f.selector == sig:getStakeupStaking().selector ||
+            f.selector == sig:getStakeUpStaking().selector ||
             f.selector == sig:getRewardManager().selector ||
             f.selector == sig:getRedemptionNFT().selector ||
             f.selector == sig:getMintBps().selector ||
@@ -570,11 +570,11 @@ rule depositConsistencyCheck() {
     uint256 rewardAmount = require_uint256((_RewardManager.LAUNCH_MINT_REWARDS_HARNESS(e) * eligibleAmount) /
             _RewardManager.STTBY_MINT_THREASHOLD_HARNESS(e));
 
-    uint256 stakeUpTokenPre =  _StakeupToken.balanceOf(e, getStakeupStaking());
+    uint256 stakeUpTokenPre =  _StakeUpToken.balanceOf(e, getStakeUpStaking());
 
     _depositExternal(e, token, amount, isTby);
 
-    uint256 stakeUpTokenPost =  _StakeupToken.balanceOf(e, getStakeupStaking());
+    uint256 stakeUpTokenPost =  _StakeUpToken.balanceOf(e, getStakeUpStaking());
 
     assert(mintRewardsRemainingPre > 0 => require_uint256(stakeUpTokenPost - stakeUpTokenPre) == rewardAmount);
 }

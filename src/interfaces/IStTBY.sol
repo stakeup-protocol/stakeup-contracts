@@ -6,7 +6,7 @@ import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {IBloomFactory} from "./bloom/IBloomFactory.sol";
 import {IExchangeRateRegistry} from "./bloom/IExchangeRateRegistry.sol";
-import {IStakeupStaking} from "./IStakeupStaking.sol";
+import {IStakeUpStaking} from "./IStakeUpStaking.sol";
 import {IStTBYBase} from "./IStTBYBase.sol";
 import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {IWstTBY} from "./IWstTBY.sol";
@@ -48,9 +48,9 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
     event RemainingBalanceAdjusted(uint256 amount);
 
     /**
-     * @notice Emitted when a fee is captured and sent to the Stakeup Staking
+     * @notice Emitted when a fee is captured and sent to the StakeUp Staking
      * @param feeType Fee type
-     * @param shares Number of stTBY shares sent to the Stakeup Staking
+     * @param shares Number of stTBY shares sent to the StakeUp Staking
      */
     event FeeCaptured(FeeType feeType, uint256 shares);
 
@@ -204,8 +204,8 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
         view
         returns (IExchangeRateRegistry);
 
-    /// @notice Returns the StakeupStaking contract.
-    function getStakeupStaking() external view returns (IStakeupStaking);
+    /// @notice Returns the StakeUpStaking contract.
+    function getStakeUpStaking() external view returns (IStakeUpStaking);
 
     /// @notice Returns the mintBps.
     function getMintBps() external view returns (uint256);

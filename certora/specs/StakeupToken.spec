@@ -1,5 +1,5 @@
-import "./base/_StakeupToken.spec";
-import "./base/_StakeupStaking.spec";
+import "./base/_StakeUpToken.spec";
+import "./base/_StakeUpStaking.spec";
 import "./base/_RewardManager.spec";
 import "./base/OFT.spec";
 
@@ -21,9 +21,9 @@ function rewardManagerInitializeCVL() {
 ///////////////// DEFINITIONS /////////////////////
 
 definition ONLY_OWNER_FUNCTIONS(method f) returns bool =
-    f.selector == sig:mintLpSupply(IStakeupToken.Allocation[]).selector
-    || f.selector == sig:airdropTokens(IStakeupToken.TokenRecipient[], uint256).selector
-    || f.selector == sig:mintInitialSupply(IStakeupToken.Allocation[], uint256).selector;
+    f.selector == sig:mintLpSupply(IStakeUpToken.Allocation[]).selector
+    || f.selector == sig:airdropTokens(IStakeUpToken.TokenRecipient[], uint256).selector
+    || f.selector == sig:mintInitialSupply(IStakeUpToken.Allocation[], uint256).selector;
 
 definition LZ_FUNCTIONS(method f) returns bool =
     f.selector == sig:sendFrom(address, uint16, bytes, uint, address, address, bytes).selector;
@@ -32,7 +32,7 @@ definition LZ_FUNCTIONS(method f) returns bool =
 
 use builtin rule sanity; 
 
-// StakeupToken valid state
+// StakeUpToken valid state
 use invariant totalSupplyLeqMaxSupply;
 
 // RewardManager valid state
@@ -40,7 +40,7 @@ use invariant startTimestampValue;
 use invariant pokeRewardsRemainingLimitationInv;
 use invariant timeStampsSolvency;
 
-// StakeupStaking valid state
+// StakeUpStaking valid state
 use invariant amountStakedLeqTotalStakeUpStaked;
 use invariant vestingTimestampLeqBlockTimestamp;
 use invariant lastRewardBlockGeqBlockNumber;
@@ -75,28 +75,28 @@ rule onlyRewardManagerOrOwnerCanMint(env e, method f, calldataarg args) filtered
         || e.msg.sender == owner()
         || e.msg.sender == currentContract;
 
-    mathint totalSupplyBefore = ghostErc20TotalSupply_StakeupToken;
+    mathint totalSupplyBefore = ghostErc20TotalSupply_StakeUpToken;
 
     f@withrevert(e, args);
     bool reverted = lastReverted;
 
-    bool minted = ghostErc20TotalSupply_StakeupToken > totalSupplyBefore;
+    bool minted = ghostErc20TotalSupply_StakeUpToken > totalSupplyBefore;
 
     assert(minted && !isOnlyRewardManagerOrOwner => reverted);
 }
 
 // SUP-04 When minting, the increase in supply is equal to the amount allocated
 
-rule mintLpSupplyIncreaseSupplySolvency(env e, IStakeupToken.Allocation[] allocations) {
+rule mintLpSupplyIncreaseSupplySolvency(env e, IStakeUpToken.Allocation[] allocations) {
 
-    init_StakeupToken();
+    init_StakeUpToken();
 
-    mathint totalSupplyBefore = ghostErc20TotalSupply_StakeupToken;
+    mathint totalSupplyBefore = ghostErc20TotalSupply_StakeUpToken;
 
     require(allocations.length <= 2);
     mintLpSupply(e, allocations);
 
-    mathint totalSupplyAfter = ghostErc20TotalSupply_StakeupToken;
+    mathint totalSupplyAfter = ghostErc20TotalSupply_StakeUpToken;
 
     mathint percentOfSupply1 = allocations.length > 0 ? allocations[0].percentOfSupply : 0;
     mathint amount0 = (to_mathint(MAX_SUPPLY_HARNESS()) * percentOfSupply1) / to_mathint(DECIMAL_SCALING_HARNESS());
@@ -106,30 +106,30 @@ rule mintLpSupplyIncreaseSupplySolvency(env e, IStakeupToken.Allocation[] alloca
     assert(totalSupplyAfter > totalSupplyBefore => totalSupplyAfter - totalSupplyBefore == amount0 + amount1);
 }
 
-rule airdropTokensIncreaseSupplySolvency(env e, uint256 percentOfTotalSupply, IStakeupToken.TokenRecipient[] recipients) {
+rule airdropTokensIncreaseSupplySolvency(env e, uint256 percentOfTotalSupply, IStakeUpToken.TokenRecipient[] recipients) {
 
-    init_StakeupToken();
+    init_StakeUpToken();
 
-    mathint totalSupplyBefore = ghostErc20TotalSupply_StakeupToken;
+    mathint totalSupplyBefore = ghostErc20TotalSupply_StakeUpToken;
 
     airdropTokens(e, recipients, percentOfTotalSupply);
 
     mathint amount = (to_mathint(MAX_SUPPLY_HARNESS()) * to_mathint(percentOfTotalSupply)) / to_mathint(DECIMAL_SCALING_HARNESS());
 
-    mathint totalSupplyAfter = ghostErc20TotalSupply_StakeupToken;
+    mathint totalSupplyAfter = ghostErc20TotalSupply_StakeUpToken;
 
     assert(totalSupplyAfter > totalSupplyBefore => totalSupplyAfter - totalSupplyBefore == amount);
 }
 
 rule mintRewardsIncreaseSupplySolvency(env e, address recipient, uint256 amount) {
 
-    init_StakeupToken();
+    init_StakeUpToken();
 
-    mathint totalSupplyBefore = ghostErc20TotalSupply_StakeupToken;
+    mathint totalSupplyBefore = ghostErc20TotalSupply_StakeUpToken;
 
     mintRewards(e, recipient, amount);
 
-    mathint totalSupplyAfter = ghostErc20TotalSupply_StakeupToken;
+    mathint totalSupplyAfter = ghostErc20TotalSupply_StakeUpToken;
 
     assert(totalSupplyAfter > totalSupplyBefore => totalSupplyAfter - totalSupplyBefore == to_mathint(amount));
 }
@@ -154,9 +154,9 @@ invariant constructorInitialization() rewardManagerInitializeCalled
 }
 
 // SUP-07 Airdrop minting respects allocation boundaries
-rule airdropTokensRespectsAllocationBoundaries(env e, uint256 percentOfTotalSupply, IStakeupToken.TokenRecipient[] recipients) {
+rule airdropTokensRespectsAllocationBoundaries(env e, uint256 percentOfTotalSupply, IStakeUpToken.TokenRecipient[] recipients) {
     
-    init_StakeupToken();
+    init_StakeUpToken();
 
     require(recipients.length <= 2);
     
@@ -174,14 +174,14 @@ rule airdropTokensRespectsAllocationBoundaries(env e, uint256 percentOfTotalSupp
         : 0;
 
     // SUP balance before
-    mathint balanceBefore1 = ghostErc20Balances_StakeupToken[recipient1];
-    mathint balanceBefore2 = ghostErc20Balances_StakeupToken[recipient2];
+    mathint balanceBefore1 = ghostErc20Balances_StakeUpToken[recipient1];
+    mathint balanceBefore2 = ghostErc20Balances_StakeUpToken[recipient2];
 
     airdropTokens(e, recipients, percentOfTotalSupply);
 
     // SUP balance after
-    mathint balanceAfter1 = ghostErc20Balances_StakeupToken[recipient1];
-    mathint balanceAfter2 = ghostErc20Balances_StakeupToken[recipient2];
+    mathint balanceAfter1 = ghostErc20Balances_StakeUpToken[recipient1];
+    mathint balanceAfter2 = ghostErc20Balances_StakeUpToken[recipient2];
 
     // Balance increase to allocation amount
     assert(balanceAfter1 - balanceBefore1 == recipient1Tokens);
@@ -192,10 +192,10 @@ rule airdropTokensRespectsAllocationBoundaries(env e, uint256 percentOfTotalSupp
 }
 
 // SUP-08 Vesting contracts are correctly called during mintAndVest operations
-rule mintAndVestCorrectlyVestTokens(env e, IStakeupToken.Allocation[] allocations) {
+rule mintAndVestCorrectlyVestTokens(env e, IStakeUpToken.Allocation[] allocations) {
 
-    init_StakeupToken();
-    init_StakeupStaking(e);
+    init_StakeUpToken();
+    init_StakeUpStaking(e);
 
     // One allocation with two recipients
     require(allocations.length == 1);

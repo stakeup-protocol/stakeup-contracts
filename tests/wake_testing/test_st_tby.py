@@ -11,7 +11,7 @@ from pytypes.tests.mocks.MockBloomFactory import MockBloomFactory
 from pytypes.tests.mocks.MockBloomPool import MockBloomPool
 from pytypes.tests.mocks.MockERC20 import MockERC20
 from pytypes.tests.mocks.MockRegistry import MockRegistry
-from pytypes.tests.mocks.MockStakeupStaking import MockStakeupStaking
+from pytypes.tests.mocks.MockStakeUpStaking import MockStakeUpStaking
 from pytypes.tests.mocks.MockSwapFacility import MockSwapFacility
 
 st_tby: StTBY
@@ -19,7 +19,7 @@ wst_tby: WstTBY
 usdc: MockERC20
 bill: MockERC20
 bloom_pool: MockBloomPool
-stakeup: MockStakeupStaking
+stakeup: MockStakeUpStaking
 registry: MockRegistry
 swap_facility: MockSwapFacility
 deployer: Account

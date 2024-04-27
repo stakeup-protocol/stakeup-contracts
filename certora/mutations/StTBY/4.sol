@@ -14,7 +14,7 @@ import {IBloomPool} from "src/interfaces/bloom/IBloomPool.sol";
 import {IEmergencyHandler} from "src/interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "src/interfaces/bloom/IExchangeRateRegistry.sol";
 import {IRewardManager} from "src/interfaces/IRewardManager.sol";
-import {IStakeupStaking} from "src/interfaces/IStakeupStaking.sol";
+import {IStakeUpStaking} from "src/interfaces/IStakeUpStaking.sol";
 import {IStTBY} from "src/interfaces/IStTBY.sol";
 import {IWstTBY} from "src/interfaces/IWstTBY.sol";
 
@@ -36,7 +36,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
     IExchangeRateRegistry private immutable _registry;
 
-    IStakeupStaking private immutable _stakeupStaking;
+    IStakeUpStaking private immutable _stakeupStaking;
 
     IRewardManager private immutable _rewardManager;
 
@@ -111,7 +111,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         _underlyingDecimals = IERC20Metadata(underlyingToken).decimals();
         _bloomFactory = IBloomFactory(bloomFactory);
         _registry = IExchangeRateRegistry(registry);
-        _stakeupStaking = IStakeupStaking(stakeupStaking);
+        _stakeupStaking = IStakeUpStaking(stakeupStaking);
         _rewardManager = IRewardManager(_stakeupStaking.getRewardManager());
 
         mintBps = mintBps_;
@@ -299,7 +299,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function getStakeupStaking() external view returns (IStakeupStaking) {
+    function getStakeUpStaking() external view returns (IStakeUpStaking) {
         return _stakeupStaking;
     }
 
@@ -443,7 +443,7 @@ index 923c7d3..51af31e 100644
     }
 
     /**
-     * @notice Process the proceeds of TBYs and pay fees to Stakeup
+     * @notice Process the proceeds of TBYs and pay fees to StakeUp
      *   Staking
      * @param proceeds Proceeds in underlying tokens
      * @param yield Yield gained from TBY

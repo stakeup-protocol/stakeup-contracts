@@ -6,7 +6,7 @@ import {LibRLP} from "solady/utils/LibRLP.sol";
 
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
-import {StakeupStaking} from "src/staking/StakeupStaking.sol";
+import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
 import {MessagingHelpers} from "./MessagingHelpers.t.sol";
 import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 
@@ -32,7 +32,7 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
     MockBloomPool internal pool;
     MockBloomFactory internal factory;
     MockRegistry internal registry;
-    StakeupStaking internal staking;
+    StakeUpStaking internal staking;
     MockEmergencyHandler internal emergencyHandler;
 
     MockEndpoint internal layerZeroEndpointA;
@@ -98,7 +98,7 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
             vm.getNonce(owner) + 1
         );
 
-        staking = new StakeupStaking(
+        staking = new StakeUpStaking(
             address(supToken),
             expectedstTBYddress,
             address(0)
