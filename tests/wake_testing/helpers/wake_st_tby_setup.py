@@ -42,7 +42,6 @@ class StTBYTestEnv:
 
         self.stakeup = self.__setup_stakeup()
         self.st_tby = self.__setup_st_tby()
-        print("ST TBY ADDRESS: ", self.st_tby.address)
         self.wst_tby = WstTBY.deploy(self.st_tby.address)
         self.messenger = StakeUpMessenger.deploy(self.st_tby.address, self.endpoint, self.deployer)
 
@@ -76,9 +75,6 @@ class StTBYTestEnv:
             self.stakeup.address,
             self.factory.address,
             self.registry.address,
-            1, # .01%
-            50, # .5%
-            1000, # 10%
             wrapper_address,
             messenger_address,
             True,

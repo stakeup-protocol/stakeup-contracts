@@ -49,7 +49,8 @@ def deploy_env(c):
         ILayerZeroSettings.LZMessageSettings(
             bytearray([0,1,2,3]),
             (0,0)
-        )
+        ),
+        deployer.address,
     )
 
     tokens = [bloom_pool.address]
