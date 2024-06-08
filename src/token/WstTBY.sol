@@ -104,6 +104,31 @@ contract WstTBY is IWstTBY, ERC20 {
     }
 
     /// @inheritdoc IWstTBY
+    function redeemWstTBY(
+        uint256 amount,
+        LzSettings memory settings
+    )
+        external
+        payable
+        override
+        returns (
+            uint256 underlyingRedeemed,
+            LzBridgeReceipt memory bridgingReceipt,
+            MessagingReceipt[] memory msgReceipts
+        )
+    {
+        _burn(msg.sender, amount);
+        uint256 stTBYAmount = _stTBY.getUsdByShares(amount);
+
+        (underlyingRedeemed, bridgingReceipt, msgReceipts) = _stTBY.redeemStTBY(
+            stTBYAmount,
+            settings
+        );
+
+        _stTBYUnderlying.transfer(msg.sender, underlyingRedeemed);
+    }
+
+    /// @inheritdoc IWstTBY
     function getWstTBYByStTBY(
         uint256 stTBYAmount
     ) external view returns (uint256) {
