@@ -21,7 +21,7 @@ import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
-import "forge-std/console2.sol";
+
 /// @title Staked TBY Contract
 contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     using Math for uint256;
