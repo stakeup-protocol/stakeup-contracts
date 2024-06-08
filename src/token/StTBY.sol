@@ -21,7 +21,7 @@ import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
-
+import "forge-std/console2.sol";
 /// @title Staked TBY Contract
 contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     using Math for uint256;
@@ -195,33 +195,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         )
     {
         return _redeemStTBY(stTBYAmount, settings);
-    }
-
-    /// @inheritdoc IStTBY
-    function redeemWstTBY(
-        uint256 wstTBYAmount,
-        LzSettings calldata settings
-    )
-        external
-        payable
-        nonReentrant
-        returns (
-            uint256 underlyingRedeemed,
-            LzBridgeReceipt memory bridgingReceipt,
-            MessagingReceipt[] memory msgReceipts
-        )
-    {
-        IERC20(address(_wstTBY)).safeTransferFrom(
-            msg.sender,
-            address(this),
-            wstTBYAmount
-        );
-        uint256 stTBYAmount = _wstTBY.unwrap(wstTBYAmount);
-        _transferShares(address(this), msg.sender, wstTBYAmount);
-        (underlyingRedeemed, bridgingReceipt, msgReceipts) = _redeemStTBY(
-            stTBYAmount,
-            settings
-        );
     }
 
     /// @inheritdoc IStTBY

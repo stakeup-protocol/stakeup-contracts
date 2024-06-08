@@ -71,6 +71,28 @@ interface IWstTBY is ILayerZeroSettings {
         );
 
     /**
+     * @notice Redeem wstTBY in exchange for underlying tokens. Underlying
+     * tokens can be withdrawn with the `withdraw()` method, once the
+     * redemption is processed.
+     * @dev Emits a {Redeemed} event.
+     * @param wstTBYAmount Amount of wstTBY
+     * @param settings Configuration settings for bridging using LayerZero
+     * @return underlyingRedeemed The Amount of underlying tokens redeemed
+     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
+     */
+    function redeemWstTBY(
+        uint256 wstTBYAmount,
+        LzSettings memory settings
+    )
+        external
+        payable
+        returns (
+            uint256 underlyingRedeemed,
+            LzBridgeReceipt memory bridgingReceipt,
+            MessagingReceipt[] memory msgReceipts
+        );
+
+    /**
      * @notice Get amount of wstTBY for a given amount of stTBY
      * @param stTBYAmount amount of stTBY
      * @return Amount of wstTBY for a given stTBY amount
