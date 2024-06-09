@@ -13,7 +13,7 @@ import {SUPVesting} from "./SUPVesting.sol";
 
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
-import {IStakeUpStaking, IStakeUpStakingBase} from "../interfaces/IStakeUpStaking.sol";
+import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 
 /**
  * @title StakeUpStaking
@@ -24,12 +24,7 @@ import {IStakeUpStaking, IStakeUpStakingBase} from "../interfaces/IStakeUpStakin
  * @dev Rewards will be streamed to the staking contract anytime fees are collected and
  *      are immediately claimable by the user. The rewards are denominated in stTBY shares.
  */
-contract StakeUpStaking is
-    IStakeUpStaking,
-    IOAppComposer,
-    SUPVesting,
-    ReentrancyGuard
-{
+contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using FixedPointMathLib for uint256;
 
@@ -46,9 +41,6 @@ contract StakeUpStaking is
 
     /// @notice The last block number when rewards were distributed
     uint256 private _lastRewardBlock;
-
-    /// @notice The layer zero endpoint associated with the chain
-    address private immutable _layerZeroEndpoint;
 
     /// @dev Mapping of users to their staking data
     mapping(address => StakingData) private _stakingData;
@@ -68,8 +60,8 @@ contract StakeUpStaking is
     }
 
     /// @notice Only the reward token or the contract itself can call this function
-    modifier authorized() {
-        if (msg.sender != address(_stTBY) && msg.sender != address(this)) {
+    modifier onlyStTBY() {
+        if (msg.sender != address(_stTBY)) {
             revert Errors.UnauthorizedCaller();
         }
         _;
@@ -77,14 +69,9 @@ contract StakeUpStaking is
 
     // ================= Constructor =================
 
-    constructor(
-        address stakeupToken,
-        address stTBY,
-        address layerZeroEndpoint
-    ) SUPVesting(stakeupToken) {
+    constructor(address stakeupToken, address stTBY) SUPVesting(stakeupToken) {
         _stTBY = IStTBY(stTBY);
         _lastRewardBlock = block.number;
-        _layerZeroEndpoint = layerZeroEndpoint;
     }
 
     // ================== functions ==================
@@ -132,18 +119,14 @@ contract StakeUpStaking is
         emit RewardsHarvested(msg.sender, rewardAmount);
     }
 
-    /// @inheritdoc IStakeUpStakingBase
-    function processFees(
-        address /*refundRecipient*/,
-        LZBridgeSettings memory /*settings*/
-    )
+    /// @inheritdoc IStakeUpStaking
+    function processFees()
         public
         payable
         override
-        authorized
+        onlyStTBY
         nonReentrant
         updateIndex
-        returns (LzBridgeReceipt memory)
     {
         // solhint-ignore-previous-line no-empty-blocks
     }
@@ -161,12 +144,12 @@ contract StakeUpStaking is
             );
     }
 
-    /// @inheritdoc IStakeUpStakingBase
+    /// @inheritdoc IStakeUpStaking
     function getStakupToken() external view returns (IStakeUpToken) {
         return _stakeupToken;
     }
 
-    /// @inheritdoc IStakeUpStakingBase
+    /// @inheritdoc IStakeUpStaking
     function getStTBY() external view returns (IStTBY) {
         return _stTBY;
     }
@@ -324,26 +307,5 @@ contract StakeUpStaking is
     /// @inheritdoc SUPVesting
     function _updateRewardState(address account) internal override updateIndex {
         _distributeRewards(account);
-    }
-
-    /// @inheritdoc ILayerZeroComposer
-    function lzCompose(
-        address _oApp,
-        bytes32 /*_guid*/,
-        bytes calldata _message,
-        address /*Executor*/,
-        bytes calldata /*Executor Data*/
-    ) external payable override {
-        if (_oApp != address(_stTBY)) revert Errors.InvalidOApp();
-        if (msg.sender != _layerZeroEndpoint)
-            revert Errors.UnauthorizedCaller();
-
-        bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(
-            _message
-        );
-
-        (bool success, ) = address(this).call(_composeMsgContent);
-
-        if (!success) revert Errors.LZComposeFailed();
     }
 }

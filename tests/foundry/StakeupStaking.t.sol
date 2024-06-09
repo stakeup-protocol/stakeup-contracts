@@ -9,7 +9,6 @@ import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
 import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {ISUPVesting} from "src/interfaces/ISUPVesting.sol";
-import {IStakeUpStakingBase} from "src/interfaces/IStakeUpStakingBase.sol";
 
 import {MockERC20} from "../mocks/MockERC20.sol";
 
@@ -39,8 +38,7 @@ contract StakeUpStakingTest is Test {
 
         stakeupStaking = new StakeUpStaking(
             address(mockStakeUpToken),
-            address(mockStTBY),
-            address(1111)
+            address(mockStTBY)
         );
         vm.label(address(stakeupStaking), "stakeupStaking");
     }
@@ -120,8 +118,7 @@ contract StakeUpStakingTest is Test {
         // Reverts if someone other than stTBY calls this function
         vm.startPrank(alice);
         vm.expectRevert(Errors.UnauthorizedCaller.selector);
-        ILayerZeroSettings.LZBridgeSettings memory settings;
-        stakeupStaking.processFees(address(0), settings);
+        stakeupStaking.processFees();
         vm.stopPrank();
 
         /// There must be some staked tokens in the contract to process fees
@@ -424,8 +421,7 @@ contract StakeUpStakingTest is Test {
 
     function _processFees() internal {
         vm.startPrank(address(mockStTBY));
-        ILayerZeroSettings.LZBridgeSettings memory settings;
-        stakeupStaking.processFees(address(0), settings);
+        stakeupStaking.processFees();
         vm.stopPrank();
     }
 }
