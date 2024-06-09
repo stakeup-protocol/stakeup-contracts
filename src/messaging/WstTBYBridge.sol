@@ -95,7 +95,6 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
     }
 
     /// @inheritdoc IWstTBYBridge
-
     function getBrdigeOperator() external view returns (address) {
         return _bridgeOperator;
     }
