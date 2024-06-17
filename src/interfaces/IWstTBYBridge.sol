@@ -40,5 +40,5 @@ interface IWstTBYBridge is ILayerZeroSettings {
     function getBridgeByEid(uint32 eid) external view returns (address);
 
     /// @notice Returns the address of the bridge operator
-    function getBrdigeOperator() external view returns (address);
+    function getBridgeOperator() external view returns (address);
 }
