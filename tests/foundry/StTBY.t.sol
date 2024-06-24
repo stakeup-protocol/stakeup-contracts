@@ -45,8 +45,7 @@ contract StTBYTest is StTBYSetup {
     function test_deposit_fail_with_TBYNotActive() public {
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
         registry.setTokenInfos(false);
         vm.expectRevert(Errors.TBYNotActive.selector);
@@ -59,8 +58,7 @@ contract StTBYTest is StTBYSetup {
         registry.setTokenInfos(true);
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
 
         vm.startPrank(alice);
@@ -75,8 +73,7 @@ contract StTBYTest is StTBYSetup {
         registry.setTokenInfos(true);
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
 
         vm.startPrank(alice);
@@ -100,8 +97,7 @@ contract StTBYTest is StTBYSetup {
         emit Deposit(alice, address(pool), amountTBY, amountStTBY - fee);
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
         stTBY.depositTby(address(pool), amountTBY, settings);
         vm.stopPrank();
@@ -124,8 +120,7 @@ contract StTBYTest is StTBYSetup {
         emit Deposit(alice, address(stableToken), amount, amountStTBY - fee);
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
         stTBY.depositUnderlying(amount, settings);
         vm.stopPrank();
@@ -142,8 +137,7 @@ contract StTBYTest is StTBYSetup {
         emit Deposit(bob, address(stableToken), amount, amountStTBY - fee);
         ILayerZeroSettings.LzSettings memory settings2 = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
         stTBY.depositUnderlying(amount, settings2);
         vm.stopPrank();
@@ -165,8 +159,7 @@ contract StTBYTest is StTBYSetup {
         pool.approve(address(stTBY), amount);
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
         stTBY.depositTby(address(pool), amount, settings);
         vm.stopPrank();
@@ -237,8 +230,7 @@ contract StTBYTest is StTBYSetup {
         stableToken.mint(alice, startingUSDCAliceBalance);
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
         stTBY.depositUnderlying(startingUSDCAliceBalance, settings);
         vm.stopPrank();
@@ -320,8 +312,7 @@ contract StTBYTest is StTBYSetup {
         pool.approve(address(stTBY), amount);
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
         stTBY.depositTby(address(pool), amount, settings);
         vm.stopPrank();
@@ -404,8 +395,7 @@ contract StTBYTest is StTBYSetup {
 
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
 
         /// ########## Deposit Functionality ##########
@@ -457,14 +447,12 @@ contract StTBYTest is StTBYSetup {
         );
         ILayerZeroSettings.LzSettings memory pokeSettings = _generateSettings(
             messenger,
-            Operation.Poke,
-            l2BridgeEmpty
+            Operation.Poke
         );
         stTBY.poke(pokeSettings);
         ILayerZeroSettings.LzSettings memory redeemSettings = _generateSettings(
             messenger,
-            Operation.Redeem,
-            l2BridgeEmpty
+            Operation.Redeem
         );
         stTBY.redeemUnderlying(address(pool), redeemSettings);
 
@@ -500,8 +488,7 @@ contract StTBYTest is StTBYSetup {
         ILayerZeroSettings.LzSettings
             memory withdrawSettings = _generateSettings(
                 messenger,
-                Operation.Withdraw,
-                l2BridgeEmpty
+                Operation.Withdraw
             );
         stTBY.redeemStTBY(stTBY.balanceOf(alice), withdrawSettings);
         vm.stopPrank();
@@ -551,8 +538,7 @@ contract StTBYTest is StTBYSetup {
 
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Poke,
-            l2BridgeEmpty
+            Operation.Poke
         );
 
         vm.startPrank(alice);

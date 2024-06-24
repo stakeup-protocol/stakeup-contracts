@@ -18,14 +18,16 @@ import {MessagingHelpers} from "./MessagingHelpers.t.sol";
 
 import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 import {StakeUpStaking, IStakeUpStaking} from "src/staking/StakeUpStaking.sol";
-import {StakeUpStakingL2} from "src/staking/StakeUpStakingL2.sol";
 import {StTBY} from "src/token/StTBY.sol";
+import {StTBYBase} from "src/token/StTBYBase.sol";
 import {StakeUpToken} from "src/token/StakeUpToken.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
+import {WstTBYBase} from "src/token/WstTBYBase.sol";
 import {WstTBYBridge} from "src/messaging/WstTBYBridge.sol";
 
 import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
 import {IBloomPool} from "src/interfaces/bloom/IBloomPool.sol";
+import "forge-std/console2.sol";
 
 contract CrossChainTest is TestHelper, MessagingHelpers {
     using FixedPointMathLib for uint256;
@@ -35,17 +37,15 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
     MockERC20 internal usdc;
 
     StTBY internal stTBYA;
-    StTBY internal stTBYB;
+    StTBYBase internal stTBYB;
 
     StakeUpToken internal supA;
-    StakeUpToken internal supB;
 
     StakeUpStaking internal stakeupStaking;
-    StakeUpStakingL2 internal stakeupStakingL2;
 
     WstTBY internal wstTBYA;
     WstTBYBridge internal wstTBYBridgeA;
-    WstTBY internal wstTBYB;
+    WstTBYBase internal wstTBYB;
     WstTBYBridge internal wstTBYBridgeB;
 
     StakeUpMessenger internal messengerA;
@@ -99,8 +99,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
 
             stakeupStaking = new StakeUpStaking(
                 address(expectedSupAAddress),
-                address(expectedstTBYAddress),
-                endpoints[aEid]
+                address(expectedstTBYAddress)
             );
 
             supA = new StakeUpToken(
@@ -138,64 +137,31 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         }
 
         {
-            address expectedSupBAddress = LibRLP.computeAddress(
+            address expectedMessengerAddress = LibRLP.computeAddress(
                 address(this),
                 vm.getNonce(address(this)) + 1
             );
-            address expectedstTBYBAddress = LibRLP.computeAddress(
-                address(this),
-                vm.getNonce(address(this)) + 2
-            );
-            address expectedMessengerAddress = LibRLP.computeAddress(
-                address(this),
-                vm.getNonce(address(this)) + 3
-            );
-            address expectedWstTBYBAddress = LibRLP.computeAddress(
-                address(this),
-                vm.getNonce(address(this)) + 4
-            );
 
-            stakeupStakingL2 = new StakeUpStakingL2(
-                address(expectedSupBAddress),
-                address(expectedstTBYBAddress),
-                address(stakeupStaking),
-                aEid,
-                address(endpoints[bEid]),
-                address(this)
-            );
-
-            supB = new StakeUpToken(
-                address(stakeupStakingL2),
-                address(0),
-                address(this),
-                address(endpoints[bEid]),
-                address(this)
-            );
-
-            stTBYB = new StTBY(
-                address(usdc),
-                address(stakeupStakingL2),
-                address(bloomFactory),
-                address(registry),
-                expectedWstTBYBAddress,
+            stTBYB = new StTBYBase(
                 expectedMessengerAddress,
-                false,
                 address(endpoints[bEid]),
                 address(this)
             );
-
+            console2.log("Deployed stTBYB at: ", address(stTBYB));
             messengerB = new StakeUpMessenger(
                 address(stTBYB),
                 endpoints[bEid],
                 address(this)
             );
-
-            wstTBYB = new WstTBY(address(stTBYB));
+            console2.log("Deployed messengerB at: ", address(messengerB));
+            wstTBYB = new WstTBYBase(address(stTBYB));
+            console2.log("Deployed wstTBYB at: ", address(wstTBYB));
             wstTBYBridgeB = new WstTBYBridge(
                 address(wstTBYB),
                 endpoints[bEid],
                 address(this)
             );
+            console2.log("Deployed wstTBYBridgeB at: ", address(wstTBYBridgeB));
         }
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         pool.setState(IBloomPool.State.Commit);
@@ -209,11 +175,6 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             stTBYs[0] = address(stTBYA);
             stTBYs[1] = address(stTBYB);
             this.wireOApps(stTBYs);
-
-            address[] memory sups = new address[](2);
-            sups[0] = address(supA);
-            sups[1] = address(supA);
-            this.wireOApps(sups);
 
             address[] memory messengers = new address[](2);
             messengers[0] = stTBYA.getMessenger();
@@ -237,13 +198,17 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
 
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messengerB,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
 
-        uint256 depositValue = settings.bridgeSettings.fee.nativeFee +
-            settings.messageSettings.fee.nativeFee;
-        stTBYA.depositUnderlying{value: depositValue}(amount, settings);
+        if (settings.fee.nativeFee == 0) {
+            settings.fee.nativeFee = 300000;
+        }
+
+        stTBYA.depositUnderlying{value: settings.fee.nativeFee}(
+            amount,
+            settings
+        );
 
         uint256 initialBalanceA = stTBYA.balanceOf(address(this));
         uint256 tokensToSend = 1 ether;
@@ -284,77 +249,6 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         assertEq(stTBYB.getTotalUsd(), tokensToSend);
     }
 
-    function testProcessFees() public {
-        uint256 amount = 10000e6;
-        usdc.mint(address(this), amount * 2);
-
-        usdc.approve(address(stTBYA), amount);
-        usdc.approve(address(stTBYB), amount);
-
-        uint256 initialRewardBlock = stakeupStaking.getLastRewardBlock();
-        vm.roll(10);
-
-        bytes memory options = OptionsBuilder
-            .newOptions()
-            .addExecutorLzReceiveOption(20000000, 0)
-            .addExecutorLzComposeOption(0, 50000000, 0);
-
-        SendParam memory sendParam = SendParam({
-            dstEid: aEid,
-            to: address(stakeupStaking).addressToBytes32(),
-            amountLD: 1000000000000000000, // Expected Fee amount
-            minAmountLD: 1000000000000000000, // Expected Fee amount
-            extraOptions: options,
-            composeMsg: stakeupStakingL2.PROCESS_FEE_MSG(),
-            oftCmd: ""
-        });
-
-        MessagingFee memory fee = stTBYB.quoteSend(sendParam, false);
-
-        BridgeOptions memory l2Bridge = BridgeOptions({
-            sendParam: sendParam,
-            fee: fee
-        });
-
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messengerB,
-            Operation.Deposit,
-            l2Bridge
-        );
-        uint256 depositValue = settings.bridgeSettings.fee.nativeFee +
-            settings.messageSettings.fee.nativeFee;
-
-        (, ILayerZeroSettings.LzBridgeReceipt memory receipt, ) = stTBYB
-            .depositUnderlying{value: depositValue}(amount, settings);
-        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
-        verifyPackets(aEid, addressToBytes32(address(messengerA)));
-
-        uint32 dstEid_ = aEid;
-        address from_ = address(stTBYA);
-        bytes memory options_ = options;
-        bytes32 guid_ = receipt.msgReceipt.guid;
-        address to_ = address(stakeupStaking);
-        bytes memory composerMsg_ = OFTComposeMsgCodec.encode(
-            receipt.msgReceipt.nonce,
-            bEid,
-            receipt.oftReceipt.amountReceivedLD,
-            abi.encodePacked(
-                addressToBytes32(address(stakeupStakingL2)),
-                stakeupStakingL2.PROCESS_FEE_MSG()
-            )
-        );
-
-        vm.startPrank(endpoints[aEid]);
-        this.lzCompose(dstEid_, from_, options_, guid_, to_, composerMsg_);
-
-        assertGt(stTBYB.balanceOf(address(this)), 0);
-
-        // When fees are processed on chain B they will be bridged to chain A and the reward state should update
-        uint256 balance = stTBYA.balanceOf(address(stakeupStaking));
-        assertGt(balance, 0);
-        assertGt(stakeupStaking.getLastRewardBlock(), initialRewardBlock);
-    }
-
     function testGlobalShares() public {
         uint256 amount = 10000e6;
         usdc.mint(address(this), amount * 2);
@@ -362,12 +256,17 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
 
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messengerB,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
 
-        stTBYA.depositUnderlying{value: 1e18}(amount, settings);
-        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+        if (settings.fee.nativeFee == 0) {
+            settings.fee.nativeFee = 300000;
+        }
+
+        stTBYA.depositUnderlying{value: settings.fee.nativeFee}(
+            amount,
+            settings
+        );
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
 
         assertEq(stTBYA.getGlobalShares(), 10000e18);
@@ -411,12 +310,17 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
 
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messengerB,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
 
-        stTBYA.depositUnderlying{value: 1e18}(amount, settings);
-        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+        if (settings.fee.nativeFee == 0) {
+            settings.fee.nativeFee = 300000;
+        }
+
+        stTBYA.depositUnderlying{value: settings.fee.nativeFee}(
+            amount,
+            settings
+        );
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
 
         skip(3 days);
@@ -435,6 +339,10 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         );
         MessagingFee memory fee = stTBYA.quoteSend(sendParam, false);
 
+        if (settings.fee.nativeFee == 0) {
+            settings.fee.nativeFee = 300000;
+        }
+
         stTBYA.send{value: fee.nativeFee}(
             sendParam,
             fee,
@@ -451,10 +359,14 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         // Value should be accrued evenly throughout the system due to the rate change
         ILayerZeroSettings.LzSettings memory settings2 = _generateSettings(
             messengerB,
-            Operation.Poke,
-            l2BridgeEmpty
+            Operation.Poke
         );
-        stTBYA.poke{value: 1e18}(settings2);
+
+        if (settings2.fee.nativeFee == 0) {
+            settings2.fee.nativeFee = 300000;
+        }
+
+        stTBYA.poke{value: settings2.fee.nativeFee}(settings2);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
 
@@ -472,15 +384,16 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
 
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messengerB,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
 
-        (uint256 stTBYAmount, , ) = stTBYA.depositUnderlying{value: 1e18}(
-            amount,
-            settings
-        );
-        verifyPackets(aEid, addressToBytes32(address(stTBYA)));
+        if (settings.fee.nativeFee == 0) {
+            settings.fee.nativeFee = 300000;
+        }
+
+        (uint256 stTBYAmount, ) = stTBYA.depositUnderlying{
+            value: settings.fee.nativeFee
+        }(amount, settings);
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
 
         stTBYA.approve(address(wstTBYA), stTBYAmount);
@@ -507,17 +420,16 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         );
         MessagingFee memory fee = stTBYA.quoteSend(sendParam, false);
 
-        settings.bridgeSettings.fee.nativeFee = fee.nativeFee;
+        settings.fee.nativeFee = fee.nativeFee;
 
-        BridgeOptions memory l2Bridge = BridgeOptions({
-            sendParam: sendParam,
-            fee: fee
-        });
+        settings = _generateSettings(messengerB, Operation.Deposit);
 
-        settings = _generateSettings(messengerB, Operation.Deposit, l2Bridge);
+        if (settings.fee.nativeFee == 0) {
+            settings.fee.nativeFee = 300000;
+        }
 
         ILayerZeroSettings.LzBridgeReceipt memory receipt = wstTBYBridgeA
-            .bridgeWstTBY{value: settings.bridgeSettings.fee.nativeFee}(
+            .bridgeWstTBY{value: settings.fee.nativeFee}(
             address(this),
             transferAmount,
             bEid,
