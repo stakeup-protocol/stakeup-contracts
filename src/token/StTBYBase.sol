@@ -266,7 +266,7 @@ contract StTBYBase is IStTBYBase, OFT {
             return totalShares;
         }
 
-        return usdAmount.mulWad(totalShares).divWad(_getTotalUsd());
+        return usdAmount.mulWad(totalShares).divWad(totalUsd);
     }
 
     /// @inheritdoc IStTBYBase
