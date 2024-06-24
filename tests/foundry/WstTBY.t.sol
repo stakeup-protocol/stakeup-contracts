@@ -38,9 +38,9 @@ contract WstTBYTest is StTBYSetup {
         /// Mint stTBY
         stableToken.mint(alice, stableAmount);
         stableToken.approve(address(stTBY), stableAmount);
-        (uint256 stTBYAmount, , ) = stTBY.depositUnderlying(
+        (uint256 stTBYAmount, ) = stTBY.depositUnderlying(
             stableAmount,
-            _generateSettings(messenger, Operation.Deposit, l2BridgeEmpty)
+            _generateSettings(messenger, Operation.Deposit)
         );
 
         // Wrap
@@ -68,8 +68,7 @@ contract WstTBYTest is StTBYSetup {
 
         ILayerZeroSettings.LzSettings memory settings = _generateSettings(
             messenger,
-            Operation.Deposit,
-            l2BridgeEmpty
+            Operation.Deposit
         );
 
         // Mint wstTBY using stable token
