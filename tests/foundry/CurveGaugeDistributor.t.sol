@@ -64,8 +64,7 @@ contract CurveGaugeDistributorTest is Test {
 
         stakeupStaking = new StakeUpStaking(
             address(mockStakeUpToken),
-            address(mockStTBY),
-            address(1111)
+            address(mockStTBY)
         );
 
         curveGaugeDistributor = new CurveGaugeDistributor(address(this));

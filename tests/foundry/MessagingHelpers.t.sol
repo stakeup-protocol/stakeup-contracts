@@ -29,8 +29,7 @@ abstract contract MessagingHelpers is Test {
 
     function _generateSettings(
         StakeUpMessenger messenger,
-        Operation operation,
-        BridgeOptions memory l2Bridge
+        Operation operation
     ) internal view returns (ILayerZeroSettings.LzSettings memory) {
         uint32[] memory eids;
         try StTBY(messenger.getStTBY()).peerEids(0) returns (uint32 eid) {
@@ -56,26 +55,14 @@ abstract contract MessagingHelpers is Test {
             msgFee += messenger.quoteSyncYield(eids, msgOptions);
             msgFee += messenger.quoteSyncShares(eids, msgOptions);
         }
-
-        ILayerZeroSettings.LZBridgeSettings memory settings = ILayerZeroSettings
-            .LZBridgeSettings({
-                options: l2Bridge.sendParam.extraOptions,
-                fee: MessagingFee({
-                    nativeFee: l2Bridge.fee.nativeFee,
-                    lzTokenFee: 0
-                })
-            });
-
-        ILayerZeroSettings.LZMessageSettings
-            memory messageSettings = ILayerZeroSettings.LZMessageSettings({
-                options: msgOptions,
-                fee: MessagingFee({nativeFee: msgFee, lzTokenFee: 0})
-            });
-
+        
         return
             ILayerZeroSettings.LzSettings({
-                bridgeSettings: settings,
-                messageSettings: messageSettings,
+                options: msgOptions,
+                fee: MessagingFee({
+                    nativeFee: msgFee,
+                    lzTokenFee: 0
+                }),
                 refundRecipient: msg.sender
             });
     }
