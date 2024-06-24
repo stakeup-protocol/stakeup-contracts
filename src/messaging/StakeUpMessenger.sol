@@ -48,7 +48,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         uint32[] memory peerEids,
         bytes memory options,
         address refundRecipient
-    ) external payable returns (MessagingReceipt[] memory receipts) {
+    ) external payable onlyStTBY returns (MessagingReceipt[] memory receipts) {
         return
             _batchSend(
                 MessageType.SharesAndYield,

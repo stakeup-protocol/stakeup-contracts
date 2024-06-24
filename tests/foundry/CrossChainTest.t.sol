@@ -132,6 +132,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             wstTBYBridgeA = new WstTBYBridge(
                 address(wstTBYA),
                 endpoints[aEid],
+                address(this),
                 address(this)
             );
         }
@@ -159,6 +160,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             wstTBYBridgeB = new WstTBYBridge(
                 address(wstTBYB),
                 endpoints[bEid],
+                address(this),
                 address(this)
             );
             console2.log("Deployed wstTBYBridgeB at: ", address(wstTBYBridgeB));

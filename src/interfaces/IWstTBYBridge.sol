@@ -25,4 +25,20 @@ interface IWstTBYBridge is ILayerZeroSettings {
      * @param bridgeAddress The address of the wstTBY bridge contract
      */
     function setWstTBYBridge(uint32 eid, address bridgeAddress) external;
+
+    /// @notice Returns the address of the stTBY contract
+    function getStTBY() external view returns (address);
+
+    /// @notice Returns the address of the wstTBY contract
+    function getWstTBY() external view returns (address);
+
+    /**
+     * @notice Returns the address of the wstTBY bridge contract for the given endpoint ID
+     * @param eid The LayerZero Endpoint ID
+     * @return The address of the wstTBY bridge contract
+     */
+    function getBridgeByEid(uint32 eid) external view returns (address);
+
+    /// @notice Returns the address of the bridge operator
+    function getBridgeOperator() external view returns (address);
 }
