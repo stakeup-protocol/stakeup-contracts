@@ -189,29 +189,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function redeemWstTBY(
-        uint256 wstTBYAmount,
-        LzSettings calldata settings
-    )
-        external
-        payable
-        nonReentrant
-        returns (
-            uint256 underlyingRedeemed,
-            MessagingReceipt[] memory msgReceipts
-        )
-    {
-        IERC20(address(_wstTBY)).safeTransferFrom(
-            msg.sender,
-            address(this),
-            wstTBYAmount
-        );
-        uint256 stTBYAmount = _wstTBY.unwrap(wstTBYAmount);
-        _transferShares(address(this), msg.sender, wstTBYAmount);
-        (underlyingRedeemed, msgReceipts) = _redeemStTBY(stTBYAmount, settings);
-    }
-
-    /// @inheritdoc IStTBY
     function getRemainingBalance() external view returns (uint256) {
         return _remainingBalance;
     }

@@ -37,4 +37,25 @@ interface IWstTBY is IWstTBYBase {
         external
         payable
         returns (uint256 amountMinted, MessagingReceipt[] memory msgReceipts);
+
+    /**
+     * @notice Redeem wstTBY in exchange for underlying tokens. Underlying
+     * tokens can be withdrawn with the `withdraw()` method, once the
+     * redemption is processed.
+     * @dev Emits a {Redeemed} event.
+     * @param wstTBYAmount Amount of wstTBY
+     * @param settings Configuration settings for bridging using LayerZero
+     * @return underlyingRedeemed The Amount of underlying tokens redeemed
+     * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
+     */
+    function redeemWstTBY(
+        uint256 wstTBYAmount,
+        LzSettings memory settings
+    )
+        external
+        payable
+        returns (
+            uint256 underlyingRedeemed,
+            MessagingReceipt[] memory msgReceipts
+        );
 }
