@@ -53,13 +53,11 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
      * @param shares Amount of shares to subtract from the global shares value
      * @param increase True if shares are being added, false if shares are being removed
      * @param msgSettings Settings for the LayerZero messages
-     * @param refundRecipient The address to refund the fee to
      */
     function _syncShares(
         uint256 shares,
         bool increase,
-        LZMessageSettings calldata msgSettings,
-        address refundRecipient
+        LzSettings calldata msgSettings
     ) internal returns (MessagingReceipt[] memory) {
         uint256 prevGlobalShares = _globalShares;
 
@@ -78,7 +76,7 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
                 increase,
                 peerEids,
                 msgSettings.options,
-                refundRecipient
+                msgSettings.refundRecipient
             );
     }
 
@@ -87,13 +85,11 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
      * @dev This function invokes a batch send message w/ LayerZero
      * @param amount The amount of total USD accrued by the protocol across all chains
      * @param msgSettings Settings for the LayerZero messages
-     * @param refundRecipient The address to refund the fee to
      */
     function _syncYield(
         uint256 amount,
         bool increase,
-        LZMessageSettings calldata msgSettings,
-        address refundRecipient
+        LzSettings calldata msgSettings
     ) internal returns (MessagingReceipt[] memory) {
         if (increase) {
             _accrueYield(amount);
@@ -104,7 +100,13 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
         return
             IStakeUpMessenger(_messenger).syncYield{
                 value: msgSettings.fee.nativeFee
-            }(amount, increase, peerEids, msgSettings.options, refundRecipient);
+            }(
+                amount,
+                increase,
+                peerEids,
+                msgSettings.options,
+                msgSettings.refundRecipient
+            );
     }
 
     /**
@@ -113,14 +115,12 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
      * @param yieldAdjustment Amount of total USD accrued or removed from the protocol across all chains
      * @param yieldAdded True if yield was added, false if yield was removed
      * @param msgSettings Settings for the LayerZero messages
-     * @param refundRecipient The address to refund the fee to
      */
     function _fullSync(
         uint256 sharesAdded,
         uint256 yieldAdjustment,
         bool yieldAdded,
-        LZMessageSettings calldata msgSettings,
-        address refundRecipient
+        LzSettings calldata msgSettings
     ) internal returns (MessagingReceipt[] memory) {
         uint256 prevGlobalShares = _globalShares;
         _setGlobalShares(prevGlobalShares + sharesAdded);
@@ -141,7 +141,7 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
                 yieldAdded,
                 peerEids,
                 msgSettings.options,
-                refundRecipient
+                msgSettings.refundRecipient
             );
     }
 

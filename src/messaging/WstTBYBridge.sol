@@ -9,7 +9,7 @@ import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAp
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {WstTBY} from "../token/WstTBY.sol";
+import {WstTBYBase} from "../token/WstTBYBase.sol";
 import {StTBYBase} from "../token/StTBYBase.sol";
 
 import {IWstTBYBridge} from "../interfaces/IWstTBYBridge.sol";
@@ -27,20 +27,32 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
     address private immutable _stTBY;
 
     /// @notice Address of wstTBY contract
-    WstTBY private immutable _wstTBY;
+    WstTBYBase private immutable _wstTBY;
+
+    /// @notice Account that is allowed to set wstTBY bridge addresses
+    address private immutable _bridgeOperator;
 
     /// @notice mapping of LayerZero Endpoint IDs to WstTBYBridge instances
     mapping(uint32 => address) private _wstTBYBridges;
+
+    // =================== Modifiers ===================
+
+    modifier onlyBridgeOperator() {
+        if (msg.sender != _bridgeOperator) revert Errors.UnauthorizedCaller();
+        _;
+    }
 
     // ================= Constructor =================
 
     constructor(
         address wstTBY,
         address layerZeroEndpoint,
-        address layerZeroDelegate
+        address layerZeroDelegate,
+        address bridgeOperator
     ) OApp(layerZeroEndpoint, layerZeroDelegate) {
-        _wstTBY = WstTBY(wstTBY);
-        _stTBY = address(WstTBY(wstTBY).getStTBY());
+        _wstTBY = WstTBYBase(wstTBY);
+        _stTBY = address(WstTBYBase(wstTBY).getStTBY());
+        _bridgeOperator = bridgeOperator;
     }
 
     // =================== Functions ===================
@@ -62,9 +74,29 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
     function setWstTBYBridge(
         uint32 eid,
         address bridgeAddress
-    ) external override {
+    ) external override onlyBridgeOperator {
         if (bridgeAddress == address(0)) revert Errors.ZeroAddress();
         _wstTBYBridges[eid] = bridgeAddress;
+    }
+
+    /// @inheritdoc IWstTBYBridge
+    function getStTBY() external view returns (address) {
+        return _stTBY;
+    }
+
+    /// @inheritdoc IWstTBYBridge
+    function getWstTBY() external view returns (address) {
+        return address(_wstTBY);
+    }
+
+    /// @inheritdoc IWstTBYBridge
+    function getBridgeByEid(uint32 eid) external view returns (address) {
+        return _wstTBYBridges[eid];
+    }
+
+    /// @inheritdoc IWstTBYBridge
+    function getBridgeOperator() external view returns (address) {
+        return _bridgeOperator;
     }
 
     /**
@@ -81,12 +113,11 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
         uint32 dstEid,
         LzSettings calldata settings
     ) internal returns (LzBridgeReceipt memory bridgingReceipt) {
-        LZBridgeSettings calldata bridgeSettings = settings.bridgeSettings;
         SendParam memory sendParam = _setSendParam(
             destinationAddress,
             stTBYAmount,
             dstEid,
-            bridgeSettings.options
+            settings.options
         );
 
         (
@@ -94,7 +125,7 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
             OFTReceipt memory oftReceipt
         ) = IOFT(_stTBY).send{value: msg.value}(
                 sendParam,
-                bridgeSettings.fee,
+                settings.fee,
                 settings.refundRecipient
             );
 

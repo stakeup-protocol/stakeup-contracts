@@ -15,7 +15,6 @@ import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
  *         between cross-chain instances.
  */
 contract StakeUpMessenger is IStakeUpMessenger, OApp {
-
     // =================== Storage ===================
 
     /// @dev Address of stTBY contract
@@ -49,7 +48,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         uint32[] memory peerEids,
         bytes memory options,
         address refundRecipient
-    ) external payable returns (MessagingReceipt[] memory receipts) {
+    ) external payable onlyStTBY returns (MessagingReceipt[] memory receipts) {
         return
             _batchSend(
                 MessageType.SharesAndYield,
@@ -189,11 +188,16 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
                 message,
                 options,
                 MessagingFee(providedFee, 0),
-                payable(refundRecipient)
+                address(this)
             );
 
             providedFee -= receipt.fee.nativeFee;
             receipts[i] = receipt;
+        }
+
+        // If there is excess fee, refund it to the refundRecipient
+        if (providedFee > 0) {
+            payable(refundRecipient).transfer(providedFee);
         }
     }
 
@@ -262,6 +266,23 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     }
 
     /**
+     * @notice Pays the native fee associated with the message
+     * @dev Overrides the OAppSender._payNative function in order to allow for batch sending of messages
+     * @dev Without the override, the OAppSender._payNative would revert on the second message due to a
+     *      failed conditional checking if msg.value is greater than or equal to the native fee. Instead,
+     *      we should check if the balance of the contract is greater than or equal to the native fee
+     * @param _nativeFee The native fee to pay
+     * @return nativeFee The amount of native fee paid
+     */
+    function _payNative(
+        uint256 _nativeFee
+    ) internal view override returns (uint256 nativeFee) {
+        uint256 balance = address(this).balance;
+        if (balance < _nativeFee) revert NotEnoughNative(balance);
+        return _nativeFee;
+    }
+
+    /**
      * @notice Decodes the encoded data for the yield update message types
      * @param encodedData The encoded data to decode
      */
@@ -283,4 +304,6 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
             (uint256, uint256)
         );
     }
+
+    receive() external payable {}
 }

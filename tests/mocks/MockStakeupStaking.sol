@@ -71,23 +71,7 @@ contract MockStakeUpStaking is IStakeUpStaking {
 
     function getLastRewardBlock() external view override returns (uint256) {}
 
-    function processFees(
-        address /*refundRecipient*/,
-        LZBridgeSettings memory /*settings*/
-    )
-        external
-        payable
-        override
-        returns (LzBridgeReceipt memory bridgingReceipt)
-    {
+    function processFees() external payable override {
         _feeProcessed = true;
-        MessagingReceipt memory msgReceipt = MessagingReceipt(
-            "",
-            0,
-            MessagingFee(0, 0)
-        );
-        OFTReceipt memory oftReceipt = OFTReceipt(0, 0);
-
-        bridgingReceipt = LzBridgeReceipt(msgReceipt, oftReceipt);
     }
 }

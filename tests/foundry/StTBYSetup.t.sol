@@ -98,11 +98,7 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
             vm.getNonce(owner) + 1
         );
 
-        staking = new StakeUpStaking(
-            address(supToken),
-            expectedstTBYddress,
-            address(0)
-        );
+        staking = new StakeUpStaking(address(supToken), expectedstTBYddress);
 
         address expectedWrapperAddress = LibRLP.computeAddress(
             owner,

@@ -74,7 +74,6 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @param amount TBY amount to deposit
      * @param settings Configuration settings for bridging using LayerZero
      * @return amountMinted Amount of stTBY minted
-     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
     function depositTby(
@@ -84,18 +83,13 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
     )
         external
         payable
-        returns (
-            uint256 amountMinted,
-            LzBridgeReceipt memory bridgingReceipt,
-            MessagingReceipt[] memory msgReceipts
-        );
+        returns (uint256 amountMinted, MessagingReceipt[] memory msgReceipts);
 
     /**
      * @notice Deposit underlying tokens and get stTBY minted
      * @param amount Amount of underlying tokens to deposit
      * @param settings Configuration settings for bridging using LayerZero
      * @return amountMinted Amount of stTBY minted
-     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
     function depositUnderlying(
@@ -104,11 +98,7 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
     )
         external
         payable
-        returns (
-            uint256 amountMinted,
-            LzBridgeReceipt memory bridgingReceipt,
-            MessagingReceipt[] memory msgReceipts
-        );
+        returns (uint256 amountMinted, MessagingReceipt[] memory msgReceipts);
 
     /**
      * @notice Redeem stTBY in exchange for underlying tokens. Underlying
@@ -118,7 +108,7 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @param stTBYAmount Amount of stTBY
      * @param settings Configuration settings for bridging using LayerZero
      * @return underlyingRedeemed The Amount of underlying tokens redeemed
-     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
+     * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
     function redeemStTBY(
         uint256 stTBYAmount,
@@ -128,7 +118,6 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
         payable
         returns (
             uint256 underlyingRedeemed,
-            LzBridgeReceipt memory bridgingReceipt,
             MessagingReceipt[] memory msgReceipts
         );
 
@@ -138,18 +127,12 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      *     in its FinalWithdrawal state.
      * @param tby TBY address
      * @param settings Configuration settings for bridging using LayerZero
-     * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
+     * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
     function redeemUnderlying(
         address tby,
         LzSettings memory settings
-    )
-        external
-        payable
-        returns (
-            LzBridgeReceipt memory bridgingReceipt,
-            MessagingReceipt[] memory msgReceipts
-        );
+    ) external payable returns (MessagingReceipt[] memory msgReceipts);
 
     /**
      * @notice Invokes the auto stake feature or adjusts the remaining balance
