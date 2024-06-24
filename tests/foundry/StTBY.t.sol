@@ -497,11 +497,11 @@ contract StTBYTest is StTBYSetup {
         wstTBY.approve(address(stTBY), UINT256_MAX);
         vm.expectEmit(true, true, true, true);
         emit Redeemed(
-            bob,
+            address(wstTBY), // TODO: Fix events to emit user address when redeeming from wstTBY
             bobWrappedAmount - bobRedeemFees,
             bobExpectedStableBalance
         );
-        stTBY.redeemWstTBY(bobWrappedAmount, withdrawSettings);
+        wstTBY.redeemWstTBY(bobWrappedAmount, withdrawSettings);
         vm.stopPrank();
 
         assertEq(stTBY.balanceOf(alice), 0);

@@ -66,6 +66,30 @@ contract WstTBY is IWstTBY, WstTBYBase {
         amountMinted = _mintWstTBY(amountMinted);
     }
 
+    /// @inheritdoc IWstTBY
+    function redeemWstTBY(
+        uint256 amount,
+        LzSettings memory settings
+    )
+        external
+        payable
+        override
+        returns (
+            uint256 underlyingRedeemed,
+            MessagingReceipt[] memory msgReceipts
+        )
+    {
+        _burn(msg.sender, amount);
+        uint256 stTBYAmount = _stTBY.getUsdByShares(amount);
+
+        (underlyingRedeemed, msgReceipts) = _stTBY.redeemStTBY(
+            stTBYAmount,
+            settings
+        );
+
+        _stTBYUnderlying.transfer(msg.sender, underlyingRedeemed);
+    }
+
     /**
      * @notice Transfers the token to the wrapper contracts and sets approvals
      * @param token Address of the token being deposited into stTBY
