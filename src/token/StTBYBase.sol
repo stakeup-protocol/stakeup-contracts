@@ -105,6 +105,22 @@ contract StTBYBase is IStTBYBase, OFT {
         _accrueYield(amount);
     }
 
+    /// @notice Overrides the setPeer function in the OFT contract
+    function setPeer(
+        uint32 eid,
+        bytes32 peer
+    ) public virtual override onlyBridgeOperator {
+        peers[eid] = peer;
+        emit PeerSet(eid, peer);
+    }
+
+    /// @inheritdoc IStTBYBase
+    function forceSetDelegate(
+        address newDelegate
+    ) external override onlyBridgeOperator {
+        endpoint.setDelegate(newDelegate);
+    }
+
     /**
      * @notice Get the total supply of stTBY
      * @dev Always equals to `_getTotalUsd()` since token amount
@@ -123,22 +139,6 @@ contract StTBYBase is IStTBYBase, OFT {
     /// @inheritdoc IStTBYBase
     function getBridgeOperator() external view override returns (address) {
         return _bridgeOperator;
-    }
-
-    /// @notice Overrides the setPeer function in the OFT contract
-    function setPeer(
-        uint32 eid,
-        bytes32 peer
-    ) public override onlyBridgeOperator {
-        peers[eid] = peer;
-        emit PeerSet(eid, peer);
-    }
-
-    /// @notice Overrides the setDelegate function in the OFT contract
-    function setDelegate(
-        address newDelegate
-    ) public override onlyBridgeOperator {
-        endpoint.setDelegate(newDelegate);
     }
 
     /**

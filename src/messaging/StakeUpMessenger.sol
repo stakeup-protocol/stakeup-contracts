@@ -7,7 +7,7 @@ import {MessagingReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
 import {IStTBY} from "../interfaces/IStTBY.sol";
-import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
+import {IStakeUpMessenger, IOperatorOverride} from "../interfaces/IStakeUpMessenger.sol";
 
 /**
  * @title StakeUpMessenger
@@ -21,7 +21,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     address private immutable _stTBY;
 
     /// @notice Account that is allowed to set LayerZero endpoints
-    address private immutable _bridgeOperator;    
+    address private immutable _bridgeOperator;
 
     // =================== Modifiers ===================
 
@@ -114,6 +114,22 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
             );
     }
 
+    /// @notice Overrides the setPeer function in the OFT contract
+    function setPeer(
+        uint32 eid,
+        bytes32 peer
+    ) public override onlyBridgeOperator {
+        peers[eid] = peer;
+        emit PeerSet(eid, peer);
+    }
+
+    /// @inheritdoc IOperatorOverride
+    function forceSetDelegate(
+        address newDelegate
+    ) external override onlyBridgeOperator {
+        endpoint.setDelegate(newDelegate);
+    }
+
     // ========================= Quote Functions =========================
 
     /// @inheritdoc IStakeUpMessenger
@@ -148,22 +164,6 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     /// @inheritdoc IStakeUpMessenger
     function getBridgeOperator() external view override returns (address) {
         return _bridgeOperator;
-    }
-
-    /// @notice Overrides the setPeer function in the OFT contract
-    function setPeer(
-        uint32 eid,
-        bytes32 peer
-    ) public override onlyBridgeOperator {
-        peers[eid] = peer;
-        emit PeerSet(eid, peer);
-    }
-
-    /// @notice Overrides the setDelegate function in the OFT contract
-    function setDelegate(
-        address newDelegate
-    ) public override onlyBridgeOperator {
-        endpoint.setDelegate(newDelegate);
     }
 
     /**
