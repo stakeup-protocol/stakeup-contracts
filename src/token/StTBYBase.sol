@@ -40,6 +40,9 @@ contract StTBYBase is IStTBYBase, OFT {
     /// @dev The address of the messenger contract
     address internal _messenger;
 
+    /// @dev The address of the bridge operator
+    address internal immutable _bridgeOperator;
+
     // =================== Modifiers ===================
 
     modifier onlyMessenger() {
@@ -47,15 +50,21 @@ contract StTBYBase is IStTBYBase, OFT {
         _;
     }
 
+    modifier onlyBridgeOperator() {
+        if (msg.sender != _bridgeOperator) revert Errors.UnauthorizedCaller();
+        _;
+    }
+
     // ================== Constructor ==================
 
     constructor(
         address messenger,
-        address _layerZeroEndpoint,
-        address _layerZeroDelegate
-    ) OFT("Staked TBY", "stTBY", _layerZeroEndpoint, _layerZeroDelegate) {
+        address layerZeroEndpoint,
+        address bridgeOperator
+    ) OFT("Staked TBY", "stTBY", layerZeroEndpoint, bridgeOperator) {
         if (messenger == address(0)) revert Errors.ZeroAddress();
         _messenger = messenger;
+        _bridgeOperator = bridgeOperator;
     }
 
     // =================== Functions ==================
@@ -109,6 +118,27 @@ contract StTBYBase is IStTBYBase, OFT {
     /// @inheritdoc IStTBYBase
     function getTotalUsd() external view override returns (uint256) {
         return _getTotalUsd();
+    }
+
+    /// @inheritdoc IStTBYBase
+    function getBridgeOperator() external view override returns (address) {
+        return _bridgeOperator;
+    }
+
+    /// @notice Overrides the setPeer function in the OFT contract
+    function setPeer(
+        uint32 eid,
+        bytes32 peer
+    ) public override onlyBridgeOperator {
+        peers[eid] = peer;
+        emit PeerSet(eid, peer);
+    }
+
+    /// @notice Overrides the setDelegate function in the OFT contract
+    function setDelegate(
+        address newDelegate
+    ) public override onlyBridgeOperator {
+        endpoint.setDelegate(newDelegate);
     }
 
     /**

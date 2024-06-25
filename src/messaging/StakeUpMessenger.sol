@@ -20,10 +20,18 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     /// @dev Address of stTBY contract
     address private immutable _stTBY;
 
+    /// @notice Account that is allowed to set LayerZero endpoints
+    address private immutable _bridgeOperator;    
+
     // =================== Modifiers ===================
 
     modifier onlyStTBY() {
         if (msg.sender != _stTBY) revert Errors.UnauthorizedCaller();
+        _;
+    }
+
+    modifier onlyBridgeOperator() {
+        if (msg.sender != _bridgeOperator) revert Errors.UnauthorizedCaller();
         _;
     }
 
@@ -32,9 +40,10 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     constructor(
         address stTBY,
         address layerZeroEndpoint,
-        address layerZeroDelegate
-    ) OApp(layerZeroEndpoint, layerZeroDelegate) {
+        address bridgeOperator
+    ) OApp(layerZeroEndpoint, bridgeOperator) {
         _stTBY = stTBY;
+        _bridgeOperator = bridgeOperator;
     }
 
     // =================== Functions ===================
@@ -134,6 +143,27 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     /// @inheritdoc IStakeUpMessenger
     function getStTBY() external view returns (address) {
         return _stTBY;
+    }
+
+    /// @inheritdoc IStakeUpMessenger
+    function getBridgeOperator() external view override returns (address) {
+        return _bridgeOperator;
+    }
+
+    /// @notice Overrides the setPeer function in the OFT contract
+    function setPeer(
+        uint32 eid,
+        bytes32 peer
+    ) public override onlyBridgeOperator {
+        peers[eid] = peer;
+        emit PeerSet(eid, peer);
+    }
+
+    /// @notice Overrides the setDelegate function in the OFT contract
+    function setDelegate(
+        address newDelegate
+    ) public override onlyBridgeOperator {
+        endpoint.setDelegate(newDelegate);
     }
 
     /**

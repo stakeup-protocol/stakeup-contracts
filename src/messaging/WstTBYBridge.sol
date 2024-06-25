@@ -47,9 +47,8 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
     constructor(
         address wstTBY,
         address layerZeroEndpoint,
-        address layerZeroDelegate,
         address bridgeOperator
-    ) OApp(layerZeroEndpoint, layerZeroDelegate) {
+    ) OApp(layerZeroEndpoint, bridgeOperator) {
         _wstTBY = WstTBYBase(wstTBY);
         _stTBY = address(WstTBYBase(wstTBY).getStTBY());
         _bridgeOperator = bridgeOperator;
@@ -97,6 +96,22 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
     /// @inheritdoc IWstTBYBridge
     function getBridgeOperator() external view returns (address) {
         return _bridgeOperator;
+    }
+
+    /// @notice Overrides the setPeer function in the OFT contract
+    function setPeer(
+        uint32 eid,
+        bytes32 peer
+    ) public override onlyBridgeOperator {
+        peers[eid] = peer;
+        emit PeerSet(eid, peer);
+    }
+
+    /// @notice Overrides the setDelegate function in the OFT contract
+    function setDelegate(
+        address newDelegate
+    ) public override onlyBridgeOperator {
+        endpoint.setDelegate(newDelegate);
     }
 
     /**

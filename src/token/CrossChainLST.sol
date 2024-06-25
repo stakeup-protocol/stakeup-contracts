@@ -27,8 +27,8 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
     constructor(
         address messanger,
         address layerZeroEndpoint,
-        address layerZeroDelegate
-    ) StTBYBase(messanger, layerZeroEndpoint, layerZeroDelegate) {
+        address bridgeOperator
+    ) StTBYBase(messanger, layerZeroEndpoint, bridgeOperator) {
         // Solhint-disable-previous-line no-empty-blocks
     }
 

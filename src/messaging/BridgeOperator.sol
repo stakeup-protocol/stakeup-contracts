@@ -2,9 +2,11 @@
 pragma solidity 0.8.22;
 
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-
 import {IOAppCore} from "@LayerZero/oapp/interfaces/IOAppCore.sol";
+
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+
+import {IWstTBYBridge} from "../interfaces/IWstTBYBridge.sol";
 
 /**
  * @title BridgeOperator
@@ -46,16 +48,16 @@ contract BridgeOperator is Ownable2Step {
      * @notice Adds a new endpoint to the StakeUp ecosystem
      * @dev Can only be called by the owner
      * @param eid The endpoint ID
-     * @param endpoint The address of the LayerZero endpoint in bytes32 format
+     * @param peer The address of the LayerZero endpoint in bytes32 format
      */
-    function setPeers(uint32 eid, bytes32 endpoint) external onlyOwner {
+    function setPeers(uint32 eid, bytes32 peer) external onlyOwner {
         if (eid == 0) {
             revert Errors.InvalidPeerID();
         }
-        if (endpoint == bytes32(0)) {
+        if (peer == bytes32(0)) {
             revert Errors.ZeroAddress();
         }
-        _setPeers(eid, endpoint);
+        _setPeers(eid, peer);
     }
 
     /**
@@ -68,6 +70,26 @@ contract BridgeOperator is Ownable2Step {
             revert Errors.ZeroAddress();
         }
         _setDelegates(newDelegate);
+    }
+
+    /**
+     * @notice Sets the wstTBY bridge address for the given endpoint ID
+     * @dev Can only be called by the owner
+     * @param eid The LayerZero Endpoint ID
+     * @param bridgeAddress The address of the wstTBY bridge contract
+     */
+    function setWstTBYBridge(
+        uint32 eid,
+        address bridgeAddress
+    ) external onlyOwner {
+        if (bridgeAddress == address(0)) {
+            revert Errors.ZeroAddress();
+        }
+        (, , address wstTBYBridge, ) = abi.decode(
+            _stakeUpContracts,
+            (address, address, address, address)
+        );
+        IWstTBYBridge(wstTBYBridge).setWstTBYBridge(eid, bridgeAddress);
     }
 
     /**
