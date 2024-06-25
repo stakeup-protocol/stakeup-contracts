@@ -2,9 +2,8 @@
 pragma solidity 0.8.22;
 
 import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
-import {IOperatorOverride} from "./IOperatorOverride.sol";
 
-interface IWstTBYBridge is ILayerZeroSettings, IOperatorOverride {
+interface IWstTBYBridge is ILayerZeroSettings {
     /**
      *
      * @param destinationAddress The address to send the bridged wstTBY to
@@ -26,13 +25,6 @@ interface IWstTBYBridge is ILayerZeroSettings, IOperatorOverride {
      * @param bridgeAddress The address of the wstTBY bridge contract
      */
     function setWstTBYBridge(uint32 eid, address bridgeAddress) external;
-
-    /**
-     * @notice Sets the delegate address for the OApp
-     * @dev Can only be called by the Bridge Operator
-     * @param newDelegate The address of the delegate to be set
-     */
-    function forceSetDelegate(address newDelegate) external;
 
     /// @notice Returns the address of the stTBY contract
     function getStTBY() external view returns (address);

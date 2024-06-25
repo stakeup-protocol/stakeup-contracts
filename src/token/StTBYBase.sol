@@ -2,15 +2,15 @@
 pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
 
 import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
 import {IStTBYBase} from "../interfaces/IStTBYBase.sol";
+import {OFTController} from "src/messaging/controllers/OFTController.sol";
 
 /// @title Staked TBY Base Contract
-contract StTBYBase is IStTBYBase, OFT {
+contract StTBYBase is IStTBYBase, OFTController {
     using FixedPointMathLib for uint256;
 
     // =================== Storage ===================
@@ -40,18 +40,10 @@ contract StTBYBase is IStTBYBase, OFT {
     /// @dev The address of the messenger contract
     address internal _messenger;
 
-    /// @dev The address of the bridge operator
-    address internal immutable _bridgeOperator;
-
     // =================== Modifiers ===================
 
     modifier onlyMessenger() {
         if (msg.sender != _messenger) revert Errors.UnauthorizedCaller();
-        _;
-    }
-
-    modifier onlyBridgeOperator() {
-        if (msg.sender != _bridgeOperator) revert Errors.UnauthorizedCaller();
         _;
     }
 
@@ -61,10 +53,9 @@ contract StTBYBase is IStTBYBase, OFT {
         address messenger,
         address layerZeroEndpoint,
         address bridgeOperator
-    ) OFT("Staked TBY", "stTBY", layerZeroEndpoint, bridgeOperator) {
+    ) OFTController("Staked TBY", "stTBY", layerZeroEndpoint, bridgeOperator) {
         if (messenger == address(0)) revert Errors.ZeroAddress();
         _messenger = messenger;
-        _bridgeOperator = bridgeOperator;
     }
 
     // =================== Functions ==================
@@ -103,22 +94,6 @@ contract StTBYBase is IStTBYBase, OFT {
     /// @inheritdoc IStTBYBase
     function removeYield(uint256 amount) external onlyMessenger {
         _accrueYield(amount);
-    }
-
-    /// @notice Overrides the setPeer function in the OFT contract
-    function setPeer(
-        uint32 eid,
-        bytes32 peer
-    ) public virtual override onlyBridgeOperator {
-        peers[eid] = peer;
-        emit PeerSet(eid, peer);
-    }
-
-    /// @inheritdoc IStTBYBase
-    function forceSetDelegate(
-        address newDelegate
-    ) external override onlyBridgeOperator {
-        endpoint.setDelegate(newDelegate);
     }
 
     /**

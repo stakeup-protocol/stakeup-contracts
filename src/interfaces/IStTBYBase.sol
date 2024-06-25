@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.22;
 
-import {IOperatorOverride} from "./IOperatorOverride.sol";
-
-interface IStTBYBase is IOperatorOverride {
+interface IStTBYBase {
     /**
      * @notice An executed shares transfer from `sender` to `recipient`.
      * @dev emitted in pair with an ERC20-defined `Transfer` event.
@@ -72,13 +70,6 @@ interface IStTBYBase is IOperatorOverride {
      * @param amount The amount of total Usd removed from protocol across all chains
      */
     function removeYield(uint256 amount) external;
-
-    /**
-     * @notice Sets the delegate address for the OApp
-     * @dev Can only be called by the Bridge Operator
-     * @param newDelegate The address of the delegate to be set
-     */
-    function forceSetDelegate(address newDelegate) external;
 
     /**
      * @return the entire amount of Usd controlled by the protocol.

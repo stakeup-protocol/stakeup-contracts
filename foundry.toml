@@ -17,6 +17,7 @@ remappings = [
     '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
     "solady/=lib/solady/src/",
     "@LayerZero/=lib/LayerZero-v2/oapp/contracts/",
+    "@LayerZero-Protocol/=lib/LayerZero-v2/protocol/contracts/",
     "@layerzerolabs/=lib/LayerZero-v2/oapp/node_modules/@layerzerolabs/",
     "@LayerZeroTesting/=lib/LayerZero-v2/oapp/test/",
     "solidity-bytes-utils/=lib/LayerZero-v2/oapp/node_modules/solidity-bytes-utils/",

@@ -7,31 +7,25 @@ import {MessagingReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
 import {IStTBY} from "../interfaces/IStTBY.sol";
-import {IStakeUpMessenger, IOperatorOverride} from "../interfaces/IStakeUpMessenger.sol";
+import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
+
+import {OAppController} from "./controllers/OAppController.sol";
 
 /**
  * @title StakeUpMessenger
  * @notice Contract that managing the yield distribution and global share supply messaging synchronization
  *         between cross-chain instances.
  */
-contract StakeUpMessenger is IStakeUpMessenger, OApp {
+contract StakeUpMessenger is IStakeUpMessenger, OAppController {
     // =================== Storage ===================
 
     /// @dev Address of stTBY contract
     address private immutable _stTBY;
 
-    /// @notice Account that is allowed to set LayerZero endpoints
-    address private immutable _bridgeOperator;
-
     // =================== Modifiers ===================
 
     modifier onlyStTBY() {
         if (msg.sender != _stTBY) revert Errors.UnauthorizedCaller();
-        _;
-    }
-
-    modifier onlyBridgeOperator() {
-        if (msg.sender != _bridgeOperator) revert Errors.UnauthorizedCaller();
         _;
     }
 
@@ -41,7 +35,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
         address stTBY,
         address layerZeroEndpoint,
         address bridgeOperator
-    ) OApp(layerZeroEndpoint, bridgeOperator) {
+    ) OAppController(layerZeroEndpoint, bridgeOperator) {
         _stTBY = stTBY;
         _bridgeOperator = bridgeOperator;
     }
@@ -112,22 +106,6 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
                 options,
                 refundRecipient
             );
-    }
-
-    /// @notice Overrides the setPeer function in the OFT contract
-    function setPeer(
-        uint32 eid,
-        bytes32 peer
-    ) public override onlyBridgeOperator {
-        peers[eid] = peer;
-        emit PeerSet(eid, peer);
-    }
-
-    /// @inheritdoc IOperatorOverride
-    function forceSetDelegate(
-        address newDelegate
-    ) external override onlyBridgeOperator {
-        endpoint.setDelegate(newDelegate);
     }
 
     // ========================= Quote Functions =========================
