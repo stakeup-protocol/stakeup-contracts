@@ -41,7 +41,7 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
     function setPeer(
         uint32 _eid,
         bytes32 _peer
-    ) public virtual override onlyOwner {
+    ) public virtual override onlyBridgeOperator {
         peers[_eid] = _peer;
         peerEids.push(_eid);
         emit PeerSet(_eid, _peer);

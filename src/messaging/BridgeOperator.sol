@@ -7,7 +7,8 @@ import {IOAppCore} from "@LayerZero/oapp/interfaces/IOAppCore.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
 import {IWstTBYBridge} from "../interfaces/IWstTBYBridge.sol";
-import {IOperatorOverride} from "../interfaces/IOperatorOverride.sol";
+
+import {ControllerBase} from "./controllers/ControllerBase.sol";
 
 /**
  * @title BridgeOperator
@@ -34,11 +35,7 @@ contract BridgeOperator is Ownable2Step {
         }
         _transferOwnership(owner);
 
-        _stakeUpContracts = abi.encodePacked(
-            stTBY,
-            wstTBYBridge,
-            stakeUpMessenger
-        );
+        _stakeUpContracts = abi.encode(stTBY, wstTBYBridge, stakeUpMessenger);
     }
 
     // =================== Functions ===================
@@ -83,10 +80,9 @@ contract BridgeOperator is Ownable2Step {
         if (bridgeAddress == address(0)) {
             revert Errors.ZeroAddress();
         }
-        (, address wstTBYBridge, ) = abi.decode(
-            _stakeUpContracts,
-            (address, address, address)
-        );
+
+        (, address wstTBYBridge, ) = _decodeContracts();
+
         IWstTBYBridge(wstTBYBridge).setWstTBYBridge(eid, bridgeAddress);
     }
 
@@ -119,24 +115,17 @@ contract BridgeOperator is Ownable2Step {
             address stakeUpMessenger
         ) = _decodeContracts();
 
-        IOperatorOverride(stTBY).forceSetDelegate(newDelegate);
-        IOperatorOverride(wstTBYBridge).forceSetDelegate(newDelegate);
-        IOperatorOverride(stakeUpMessenger).forceSetDelegate(newDelegate);
+        ControllerBase(stTBY).forceSetDelegate(newDelegate);
+        ControllerBase(wstTBYBridge).forceSetDelegate(newDelegate);
+        ControllerBase(stakeUpMessenger).forceSetDelegate(newDelegate);
     }
 
     /// @notice Decodes the _stakeUpContracts bytes to get the respective addresses
     function _decodeContracts()
         internal
         view
-        returns (
-            address stTBY,
-            address wstTBYBridge,
-            address stakeUpMessenger
-        )
+        returns (address stTBY, address wstTBYBridge, address stakeUpMessenger)
     {
-        (stTBY, wstTBYBridge, stakeUpMessenger) = abi.decode(
-            _stakeUpContracts,
-            (address, address, address)
-        );
+        return abi.decode(_stakeUpContracts, (address, address, address));
     }
 }

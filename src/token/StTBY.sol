@@ -180,6 +180,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     )
         external
         payable
+        nonReentrant
         returns (
             uint256 underlyingRedeemed,
             MessagingReceipt[] memory msgReceipts

@@ -2,5 +2,9 @@
 pragma solidity 0.8.22;
 
 contract MockEndpoint {
-    function setDelegate(address delegate) external {}
+    mapping(address oapp => address delegate) public delegates;
+
+    function setDelegate(address delegate) external {
+        delegates[msg.sender] = delegate;
+    }
 }

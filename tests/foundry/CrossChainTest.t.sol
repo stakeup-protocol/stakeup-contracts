@@ -27,7 +27,6 @@ import {WstTBYBridge} from "src/messaging/WstTBYBridge.sol";
 
 import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
 import {IBloomPool} from "src/interfaces/bloom/IBloomPool.sol";
-import "forge-std/console2.sol";
 
 contract CrossChainTest is TestHelper, MessagingHelpers {
     using FixedPointMathLib for uint256;
@@ -132,7 +131,6 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             wstTBYBridgeA = new WstTBYBridge(
                 address(wstTBYA),
                 endpoints[aEid],
-                address(this),
                 address(this)
             );
         }
@@ -148,22 +146,20 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
                 address(endpoints[bEid]),
                 address(this)
             );
-            console2.log("Deployed stTBYB at: ", address(stTBYB));
+
             messengerB = new StakeUpMessenger(
                 address(stTBYB),
                 endpoints[bEid],
                 address(this)
             );
-            console2.log("Deployed messengerB at: ", address(messengerB));
+
             wstTBYB = new WstTBYBase(address(stTBYB));
-            console2.log("Deployed wstTBYB at: ", address(wstTBYB));
+
             wstTBYBridgeB = new WstTBYBridge(
                 address(wstTBYB),
                 endpoints[bEid],
-                address(this),
                 address(this)
             );
-            console2.log("Deployed wstTBYBridgeB at: ", address(wstTBYBridgeB));
         }
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         pool.setState(IBloomPool.State.Commit);
