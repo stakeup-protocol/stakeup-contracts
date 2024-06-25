@@ -45,6 +45,12 @@ contract BridgeOperatorTest is StTBYSetup {
         assertEq(messenger.owner(), address(0));
     }
 
+    function test_BridgeOperatorSet() public {
+        assertEq(stTBY.getBridgeOperator(), address(bridgeOperator));
+        assertEq(wstTBYBridge.getBridgeOperator(), address(bridgeOperator));
+        assertEq(messenger.getBridgeOperator(), address(bridgeOperator));
+    }
+
     function test_SetWstTBYBridge() public {
         // Fails if not called by owner
         vm.startPrank(alice);

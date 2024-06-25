@@ -50,4 +50,9 @@ abstract contract ControllerBase {
      * @param newDelegate The address of the delegate to be set
      */
     function forceSetDelegate(address newDelegate) external virtual;
+
+    /// @notice Get the Bridge Operator address
+    function getBridgeOperator() external view returns (address) {
+        return _bridgeOperator;
+    }
 }
