@@ -65,6 +65,7 @@ contract WstTBYBridge is IWstTBYBridge, OAppController, IOAppComposer {
         uint32 eid,
         address bridgeAddress
     ) external override onlyBridgeOperator {
+        if (eid == 0) revert Errors.InvalidPeerID();
         if (bridgeAddress == address(0)) revert Errors.ZeroAddress();
         _wstTBYBridges[eid] = bridgeAddress;
     }
