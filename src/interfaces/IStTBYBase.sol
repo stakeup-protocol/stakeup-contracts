@@ -113,4 +113,7 @@ interface IStTBYBase {
 
     /// @notice The address of the messenger contract
     function getMessenger() external view returns (address);
+
+    /// @notice Get the Bridge Operator address
+    function getBridgeOperator() external view returns (address);
 }
