@@ -77,10 +77,6 @@ contract BridgeOperator is Ownable2Step {
         uint32 eid,
         address bridgeAddress
     ) external onlyOwner {
-        if (bridgeAddress == address(0)) {
-            revert Errors.ZeroAddress();
-        }
-
         (, address wstTBYBridge, ) = _decodeContracts();
 
         IWstTBYBridge(wstTBYBridge).setWstTBYBridge(eid, bridgeAddress);
