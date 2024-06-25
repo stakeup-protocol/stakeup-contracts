@@ -37,7 +37,6 @@ contract StakeUpMessenger is IStakeUpMessenger, OAppController {
         address bridgeOperator
     ) OAppController(layerZeroEndpoint, bridgeOperator) {
         _stTBY = stTBY;
-        _bridgeOperator = bridgeOperator;
     }
 
     // =================== Functions ===================
