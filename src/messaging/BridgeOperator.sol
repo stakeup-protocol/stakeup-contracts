@@ -46,12 +46,6 @@ contract BridgeOperator is Ownable2Step {
      * @param peer The address of the LayerZero endpoint in bytes32 format
      */
     function setPeers(uint32 eid, bytes32 peer) external onlyOwner {
-        if (eid == 0) {
-            revert Errors.InvalidPeerID();
-        }
-        if (peer == bytes32(0)) {
-            revert Errors.ZeroAddress();
-        }
         _setPeers(eid, peer);
     }
 
@@ -61,9 +55,6 @@ contract BridgeOperator is Ownable2Step {
      * @param newDelegate Address of the new delegate
      */
     function updateDelegate(address newDelegate) external onlyOwner {
-        if (newDelegate == address(0)) {
-            revert Errors.ZeroAddress();
-        }
         _setDelegates(newDelegate);
     }
 

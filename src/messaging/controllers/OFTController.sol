@@ -34,6 +34,12 @@ abstract contract OFTController is ControllerBase, OFT {
         uint32 eid,
         bytes32 peer
     ) public virtual override(ControllerBase, OAppCore) onlyBridgeOperator {
+        if (eid == 0) {
+            revert Errors.InvalidPeerID();
+        }
+        if (peer == bytes32(0)) {
+            revert Errors.ZeroAddress();
+        }
         peers[eid] = peer;
         emit PeerSet(eid, peer);
     }

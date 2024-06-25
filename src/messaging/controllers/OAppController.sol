@@ -27,6 +27,12 @@ abstract contract OAppController is ControllerBase, OApp {
         uint32 eid,
         bytes32 peer
     ) public virtual override(ControllerBase, OAppCore) onlyBridgeOperator {
+        if (eid == 0) {
+            revert Errors.InvalidPeerID();
+        }
+        if (peer == bytes32(0)) {
+            revert Errors.ZeroAddress();
+        }
         peers[eid] = peer;
         emit PeerSet(eid, peer);
     }
@@ -35,6 +41,9 @@ abstract contract OAppController is ControllerBase, OApp {
     function forceSetDelegate(
         address newDelegate
     ) external override onlyBridgeOperator {
+        if (newDelegate == address(0)) {
+            revert Errors.ZeroAddress();
+        }
         endpoint.setDelegate(newDelegate);
     }
 }
