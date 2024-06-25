@@ -7,6 +7,7 @@ import {IOAppCore} from "@LayerZero/oapp/interfaces/IOAppCore.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
 import {IWstTBYBridge} from "../interfaces/IWstTBYBridge.sol";
+import {IOperatorOverride} from "../interfaces/IOperatorOverride.sol";
 
 /**
  * @title BridgeOperator
@@ -19,14 +20,12 @@ contract BridgeOperator is Ownable2Step {
     // ================== Constructor ================
     constructor(
         address stTBY,
-        address wstTBY,
         address wstTBYBridge,
         address stakeUpMessenger,
         address owner
     ) Ownable2Step() {
         if (
             stTBY == address(0) ||
-            wstTBY == address(0) ||
             wstTBYBridge == address(0) ||
             stakeUpMessenger == address(0) ||
             owner == address(0)
@@ -37,7 +36,6 @@ contract BridgeOperator is Ownable2Step {
 
         _stakeUpContracts = abi.encodePacked(
             stTBY,
-            wstTBY,
             wstTBYBridge,
             stakeUpMessenger
         );
@@ -85,9 +83,9 @@ contract BridgeOperator is Ownable2Step {
         if (bridgeAddress == address(0)) {
             revert Errors.ZeroAddress();
         }
-        (, , address wstTBYBridge, ) = abi.decode(
+        (, address wstTBYBridge, ) = abi.decode(
             _stakeUpContracts,
-            (address, address, address, address)
+            (address, address, address)
         );
         IWstTBYBridge(wstTBYBridge).setWstTBYBridge(eid, bridgeAddress);
     }
@@ -100,13 +98,11 @@ contract BridgeOperator is Ownable2Step {
     function _setPeers(uint32 eid, bytes32 endpoint) internal {
         (
             address stTBY,
-            address wstTBY,
             address wstTBYBridge,
             address stakeUpMessenger
         ) = _decodeContracts();
 
         IOAppCore(stTBY).setPeer(eid, endpoint);
-        IOAppCore(wstTBY).setPeer(eid, endpoint);
         IOAppCore(wstTBYBridge).setPeer(eid, endpoint);
         IOAppCore(stakeUpMessenger).setPeer(eid, endpoint);
     }
@@ -119,15 +115,13 @@ contract BridgeOperator is Ownable2Step {
 
         (
             address stTBY,
-            address wstTBY,
             address wstTBYBridge,
             address stakeUpMessenger
         ) = _decodeContracts();
 
-        IOAppCore(stTBY).setDelegate(newDelegate);
-        IOAppCore(wstTBY).setDelegate(newDelegate);
-        IOAppCore(wstTBYBridge).setDelegate(newDelegate);
-        IOAppCore(stakeUpMessenger).setDelegate(newDelegate);
+        IOperatorOverride(stTBY).forceSetDelegate(newDelegate);
+        IOperatorOverride(wstTBYBridge).forceSetDelegate(newDelegate);
+        IOperatorOverride(stakeUpMessenger).forceSetDelegate(newDelegate);
     }
 
     /// @notice Decodes the _stakeUpContracts bytes to get the respective addresses
@@ -136,14 +130,13 @@ contract BridgeOperator is Ownable2Step {
         view
         returns (
             address stTBY,
-            address wstTBY,
             address wstTBYBridge,
             address stakeUpMessenger
         )
     {
-        (stTBY, wstTBY, wstTBYBridge, stakeUpMessenger) = abi.decode(
+        (stTBY, wstTBYBridge, stakeUpMessenger) = abi.decode(
             _stakeUpContracts,
-            (address, address, address, address)
+            (address, address, address)
         );
     }
 }

@@ -78,6 +78,22 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
         _wstTBYBridges[eid] = bridgeAddress;
     }
 
+    /// @notice Overrides the setPeer function in the OFT contract
+    function setPeer(
+        uint32 eid,
+        bytes32 peer
+    ) public override onlyBridgeOperator {
+        peers[eid] = peer;
+        emit PeerSet(eid, peer);
+    }
+
+    /// @inheritdoc IWstTBYBridge
+    function forceSetDelegate(
+        address newDelegate
+    ) external override onlyBridgeOperator {
+        endpoint.setDelegate(newDelegate);
+    }
+
     /// @inheritdoc IWstTBYBridge
     function getStTBY() external view returns (address) {
         return _stTBY;
@@ -96,22 +112,6 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
     /// @inheritdoc IWstTBYBridge
     function getBridgeOperator() external view returns (address) {
         return _bridgeOperator;
-    }
-
-    /// @notice Overrides the setPeer function in the OFT contract
-    function setPeer(
-        uint32 eid,
-        bytes32 peer
-    ) public override onlyBridgeOperator {
-        peers[eid] = peer;
-        emit PeerSet(eid, peer);
-    }
-
-    /// @notice Overrides the setDelegate function in the OFT contract
-    function setDelegate(
-        address newDelegate
-    ) public override onlyBridgeOperator {
-        endpoint.setDelegate(newDelegate);
     }
 
     /**

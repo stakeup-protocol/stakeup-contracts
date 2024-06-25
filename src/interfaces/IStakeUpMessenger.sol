@@ -2,8 +2,9 @@
 pragma solidity 0.8.22;
 
 import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {IOperatorOverride} from "./IOperatorOverride.sol";
 
-interface IStakeUpMessenger {
+interface IStakeUpMessenger is IOperatorOverride {
     /**
      * @notice Enums for different cross-chain messaging types
      * @param None Message type for no action
