@@ -42,9 +42,8 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
         uint32 _eid,
         bytes32 _peer
     ) public virtual override onlyBridgeOperator {
-        peers[_eid] = _peer;
         peerEids.push(_eid);
-        emit PeerSet(_eid, _peer);
+        super.setPeer(_eid, _peer);
     }
 
     /**
