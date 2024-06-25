@@ -38,7 +38,4 @@ interface IWstTBYBridge is ILayerZeroSettings {
      * @return The address of the wstTBY bridge contract
      */
     function getBridgeByEid(uint32 eid) external view returns (address);
-
-    /// @notice Returns the address of the bridge operator
-    function getBridgeOperator() external view returns (address);
 }

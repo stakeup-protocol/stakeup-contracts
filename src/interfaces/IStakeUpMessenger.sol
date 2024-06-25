@@ -118,7 +118,4 @@ interface IStakeUpMessenger {
 
     /// @notice Get the address of the stTBY contract
     function getStTBY() external view returns (address);
-
-    /// @notice Get the Bridge Operator address
-    function getBridgeOperator() external view returns (address);
 }

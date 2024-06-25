@@ -84,11 +84,6 @@ contract WstTBYBridge is IWstTBYBridge, OAppController, IOAppComposer {
         return _wstTBYBridges[eid];
     }
 
-    /// @inheritdoc IWstTBYBridge
-    function getBridgeOperator() external view returns (address) {
-        return _bridgeOperator;
-    }
-
     /**
      * @notice Bridges stTBY tokens to the destination wstTBY Bridge contract
      * @param destinationAddress The address to send the bridged wstTBY to

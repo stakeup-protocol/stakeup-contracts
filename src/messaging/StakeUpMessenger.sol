@@ -139,11 +139,6 @@ contract StakeUpMessenger is IStakeUpMessenger, OAppController {
         return _stTBY;
     }
 
-    /// @inheritdoc IStakeUpMessenger
-    function getBridgeOperator() external view override returns (address) {
-        return _bridgeOperator;
-    }
-
     /**
      * @notice Quotes the fee for sending a message to instances on other chains
      * @param messageType The type of LayerZero message being sent

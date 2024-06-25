@@ -111,11 +111,6 @@ contract StTBYBase is IStTBYBase, OFTController {
         return _getTotalUsd();
     }
 
-    /// @inheritdoc IStTBYBase
-    function getBridgeOperator() external view override returns (address) {
-        return _bridgeOperator;
-    }
-
     /**
      * @notice Get the balance of an account
      * @dev Balances are dynamic and equal the `_account`'s share in the amount of the
