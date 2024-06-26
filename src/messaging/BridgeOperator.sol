@@ -92,10 +92,6 @@ contract BridgeOperator is Ownable2Step {
 
     /// @notice Logic for updating the delegate for all contracts in the StakeUp ecosystem
     function _setDelegates(address newDelegate) internal {
-        if (newDelegate == address(0)) {
-            revert Errors.ZeroAddress();
-        }
-
         (
             address stTBY,
             address wstTBYBridge,
