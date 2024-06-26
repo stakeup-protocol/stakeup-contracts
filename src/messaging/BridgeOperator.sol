@@ -43,10 +43,10 @@ contract BridgeOperator is Ownable2Step {
      * @notice Adds a new endpoint to the StakeUp ecosystem
      * @dev Can only be called by the owner
      * @param eid The endpoint ID
-     * @param peer The address of the LayerZero endpoint in bytes32 format
+     * @param peers The address of the LayerZero endpoint in bytes32 format
      */
-    function setPeers(uint32 eid, bytes32 peer) external onlyOwner {
-        _setPeers(eid, peer);
+    function setPeers(uint32 eid, bytes32[3] memory peers) external onlyOwner {
+        _setPeers(eid, peers);
     }
 
     /**
@@ -56,6 +56,17 @@ contract BridgeOperator is Ownable2Step {
      */
     function updateDelegate(address newDelegate) external onlyOwner {
         _setDelegates(newDelegate);
+    }
+
+    /**
+     * @notice Migrates the bridge operator to a new address
+     * @dev Can only be called by the owner
+     * @param newBridgeOperator The new bridge operator address
+     */
+    function migrateBridgeOperator(
+        address newBridgeOperator
+    ) external onlyOwner {
+        _setBridgeOperator(newBridgeOperator);
     }
 
     /**
@@ -76,18 +87,18 @@ contract BridgeOperator is Ownable2Step {
     /**
      * @notice Adds a new peer for each contract in StakeUp
      * @param eid The eid of the peer
-     * @param endpoint The address of the LayerZero endpoint
+     * @param peers The address of the LayerZero endpoint
      */
-    function _setPeers(uint32 eid, bytes32 endpoint) internal {
+    function _setPeers(uint32 eid, bytes32[3] memory peers) internal {
         (
             address stTBY,
             address wstTBYBridge,
             address stakeUpMessenger
         ) = _decodeContracts();
 
-        IOAppCore(stTBY).setPeer(eid, endpoint);
-        IOAppCore(wstTBYBridge).setPeer(eid, endpoint);
-        IOAppCore(stakeUpMessenger).setPeer(eid, endpoint);
+        IOAppCore(stTBY).setPeer(eid, peers[0]);
+        IOAppCore(wstTBYBridge).setPeer(eid, peers[1]);
+        IOAppCore(stakeUpMessenger).setPeer(eid, peers[2]);
     }
 
     /// @notice Logic for updating the delegate for all contracts in the StakeUp ecosystem
@@ -101,6 +112,19 @@ contract BridgeOperator is Ownable2Step {
         ControllerBase(stTBY).forceSetDelegate(newDelegate);
         ControllerBase(wstTBYBridge).forceSetDelegate(newDelegate);
         ControllerBase(stakeUpMessenger).forceSetDelegate(newDelegate);
+    }
+
+    /// @notice Logic for updating the Bridge Operator for all contracts in the StakeUp ecosystem
+    function _setBridgeOperator(address newBridgeOperator) internal {
+        (
+            address stTBY,
+            address wstTBYBridge,
+            address stakeUpMessenger
+        ) = _decodeContracts();
+
+        ControllerBase(stTBY).setBridgeOperator(newBridgeOperator);
+        ControllerBase(wstTBYBridge).setBridgeOperator(newBridgeOperator);
+        ControllerBase(stakeUpMessenger).setBridgeOperator(newBridgeOperator);
     }
 
     /// @notice Decodes the _stakeUpContracts bytes to get the respective addresses

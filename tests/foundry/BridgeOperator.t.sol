@@ -70,24 +70,26 @@ contract BridgeOperatorTest is StTBYSetup {
     }
 
     function test_SetPeers() public {
+        bytes32[3] memory peers = [addressToBytes32(address(1)), addressToBytes32(address(2)), addressToBytes32(address(3))];
+        bytes32[3] memory invalidPeers = [addressToBytes32(address(0)), addressToBytes32(address(1)), addressToBytes32(address(1))];
         // Fails if not called by owner
         vm.startPrank(alice);
         vm.expectRevert("Ownable: caller is not the owner");
-        bridgeOperator.setPeers(1, addressToBytes32(address(1)));
+        bridgeOperator.setPeers(1, peers);
 
         vm.startPrank(owner);
         // Fails if 0 address is passed
         vm.expectRevert(Errors.ZeroAddress.selector);
-        bridgeOperator.setPeers(1, bytes32(0));
+        bridgeOperator.setPeers(1, invalidPeers);
 
         // Successfully sets the peer
         vm.startPrank(owner);
-        bridgeOperator.setPeers(1, addressToBytes32(address(1)));
+        bridgeOperator.setPeers(1, peers);
 
         assertEq(stTBY.peers(1), addressToBytes32(address(1)));
         assertEq(stTBY.peerEids(0), 1);
-        assertEq(wstTBYBridge.peers(1), addressToBytes32(address(1)));
-        assertEq(messenger.peers(1), addressToBytes32(address(1)));
+        assertEq(wstTBYBridge.peers(1), addressToBytes32(address(2)));
+        assertEq(messenger.peers(1), addressToBytes32(address(3)));
     }
 
     function test_UpdateDelegate() public {
