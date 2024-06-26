@@ -2,15 +2,15 @@
 pragma solidity 0.8.22;
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
 
 import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
 import {IStTBYBase} from "../interfaces/IStTBYBase.sol";
+import {OFTController} from "src/messaging/controllers/OFTController.sol";
 
 /// @title Staked TBY Base Contract
-contract StTBYBase is IStTBYBase, OFT {
+contract StTBYBase is IStTBYBase, OFTController {
     using FixedPointMathLib for uint256;
 
     // =================== Storage ===================
@@ -51,9 +51,9 @@ contract StTBYBase is IStTBYBase, OFT {
 
     constructor(
         address messenger,
-        address _layerZeroEndpoint,
-        address _layerZeroDelegate
-    ) OFT("Staked TBY", "stTBY", _layerZeroEndpoint, _layerZeroDelegate) {
+        address layerZeroEndpoint,
+        address bridgeOperator
+    ) OFTController("Staked TBY", "stTBY", layerZeroEndpoint, bridgeOperator) {
         if (messenger == address(0)) revert Errors.ZeroAddress();
         _messenger = messenger;
     }

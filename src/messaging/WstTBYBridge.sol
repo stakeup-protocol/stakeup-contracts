@@ -14,11 +14,13 @@ import {StTBYBase} from "../token/StTBYBase.sol";
 
 import {IWstTBYBridge} from "../interfaces/IWstTBYBridge.sol";
 
+import {OAppController} from "./controllers/OAppController.sol";
+
 /**
  * @title WstTBYBridge
  * @notice Contract used for bridging wstTBY between chains
  */
-contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
+contract WstTBYBridge is IWstTBYBridge, OAppController, IOAppComposer {
     using OFTComposeMsgCodec for address;
 
     // =================== Storage ===================
@@ -29,30 +31,18 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
     /// @notice Address of wstTBY contract
     WstTBYBase private immutable _wstTBY;
 
-    /// @notice Account that is allowed to set wstTBY bridge addresses
-    address private immutable _bridgeOperator;
-
     /// @notice mapping of LayerZero Endpoint IDs to WstTBYBridge instances
     mapping(uint32 => address) private _wstTBYBridges;
-
-    // =================== Modifiers ===================
-
-    modifier onlyBridgeOperator() {
-        if (msg.sender != _bridgeOperator) revert Errors.UnauthorizedCaller();
-        _;
-    }
 
     // ================= Constructor =================
 
     constructor(
         address wstTBY,
         address layerZeroEndpoint,
-        address layerZeroDelegate,
         address bridgeOperator
-    ) OApp(layerZeroEndpoint, layerZeroDelegate) {
+    ) OAppController(layerZeroEndpoint, bridgeOperator) {
         _wstTBY = WstTBYBase(wstTBY);
         _stTBY = address(WstTBYBase(wstTBY).getStTBY());
-        _bridgeOperator = bridgeOperator;
     }
 
     // =================== Functions ===================
@@ -75,6 +65,7 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
         uint32 eid,
         address bridgeAddress
     ) external override onlyBridgeOperator {
+        if (eid == 0) revert Errors.InvalidPeerID();
         if (bridgeAddress == address(0)) revert Errors.ZeroAddress();
         _wstTBYBridges[eid] = bridgeAddress;
     }
@@ -92,11 +83,6 @@ contract WstTBYBridge is IWstTBYBridge, OApp, IOAppComposer {
     /// @inheritdoc IWstTBYBridge
     function getBridgeByEid(uint32 eid) external view returns (address) {
         return _wstTBYBridges[eid];
-    }
-
-    /// @inheritdoc IWstTBYBridge
-    function getBridgeOperator() external view returns (address) {
-        return _bridgeOperator;
     }
 
     /**
