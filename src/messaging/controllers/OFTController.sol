@@ -48,6 +48,9 @@ abstract contract OFTController is ControllerBase, OFT {
     function forceSetDelegate(
         address newDelegate
     ) external override onlyBridgeOperator {
+        if (newDelegate == address(0)) {
+            revert Errors.ZeroAddress();
+        }
         endpoint.setDelegate(newDelegate);
     }
 }

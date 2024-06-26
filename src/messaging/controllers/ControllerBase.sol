@@ -40,6 +40,11 @@ abstract contract ControllerBase {
         _bridgeOperator = newBridgeOperator;
     }
 
+    /// @notice Get the Bridge Operator address
+    function getBridgeOperator() external view returns (address) {
+        return _bridgeOperator;
+    }
+
     // =================== Interface ===================
     /// @notice Overrides the setPeer function in the OFT and OApp contracts
     function setPeer(uint32 eid, bytes32 peer) external virtual;
@@ -50,9 +55,4 @@ abstract contract ControllerBase {
      * @param newDelegate The address of the delegate to be set
      */
     function forceSetDelegate(address newDelegate) external virtual;
-
-    /// @notice Get the Bridge Operator address
-    function getBridgeOperator() external view returns (address) {
-        return _bridgeOperator;
-    }
 }
