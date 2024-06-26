@@ -42,8 +42,9 @@ contract BridgeOperator is Ownable2Step {
     /**
      * @notice Adds a new endpoint to the StakeUp ecosystem
      * @dev Can only be called by the owner
+     * @dev The order of the peers is [stTBY, wstTBYBridge, stakeUpMessenger]
      * @param eid The endpoint ID
-     * @param peers The address of the LayerZero endpoint in bytes32 format
+     * @param peers An array of peer addresses converted to bytes32 for other OApps
      */
     function setPeers(uint32 eid, bytes32[3] memory peers) external onlyOwner {
         _setPeers(eid, peers);
@@ -87,7 +88,7 @@ contract BridgeOperator is Ownable2Step {
     /**
      * @notice Adds a new peer for each contract in StakeUp
      * @param eid The eid of the peer
-     * @param peers The address of the LayerZero endpoint
+     * @param peers An array of peer addresses for other OApps
      */
     function _setPeers(uint32 eid, bytes32[3] memory peers) internal {
         (
