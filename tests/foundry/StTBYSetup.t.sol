@@ -9,6 +9,7 @@ import {WstTBY} from "src/token/WstTBY.sol";
 import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
 import {MessagingHelpers} from "./MessagingHelpers.t.sol";
 import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
+import {WstTBYBridge} from "src/messaging/WstTBYBridge.sol";
 
 import {IStTBY} from "src/interfaces/IStTBY.sol";
 import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
@@ -39,6 +40,7 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
     MockEndpoint internal layerZeroEndpointB;
 
     StakeUpMessenger internal messenger;
+    WstTBYBridge internal wstTBYBridge;
 
     address internal owner = makeAddr("owner");
     address internal layerZeroEndpoint = makeAddr("layerZeroEndpoint");
@@ -137,6 +139,12 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
         );
         assertEq(address(wstTBY), expectedWrapperAddress);
         assertEq(address(wstTBY.getStTBY()), address(stTBY));
+
+        wstTBYBridge = new WstTBYBridge(
+            address(wstTBY),
+            address(layerZeroEndpointA),
+            owner
+        );
 
         vm.stopPrank();
     }

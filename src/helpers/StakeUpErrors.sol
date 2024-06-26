@@ -32,6 +32,9 @@ library StakeUpErrors {
     // @notice If the originating OApp of the LZCompose call is invalid
     error InvalidOApp();
 
+    // @notice Invalid Peer ID
+    error InvalidPeerID();
+
     // ========================= SUP Token ===========================
     /// @notice Amount being minted is greater than the available tokens
     error ExceedsAvailableTokens();

@@ -27,8 +27,8 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
     constructor(
         address messanger,
         address layerZeroEndpoint,
-        address layerZeroDelegate
-    ) StTBYBase(messanger, layerZeroEndpoint, layerZeroDelegate) {
+        address bridgeOperator
+    ) StTBYBase(messanger, layerZeroEndpoint, bridgeOperator) {
         // Solhint-disable-previous-line no-empty-blocks
     }
 
@@ -41,10 +41,9 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
     function setPeer(
         uint32 _eid,
         bytes32 _peer
-    ) public virtual override onlyOwner {
-        peers[_eid] = _peer;
+    ) public virtual override onlyBridgeOperator {
         peerEids.push(_eid);
-        emit PeerSet(_eid, _peer);
+        super.setPeer(_eid, _peer);
     }
 
     /**

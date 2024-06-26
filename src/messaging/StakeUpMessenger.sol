@@ -9,12 +9,14 @@ import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeUpMessenger} from "../interfaces/IStakeUpMessenger.sol";
 
+import {OAppController} from "./controllers/OAppController.sol";
+
 /**
  * @title StakeUpMessenger
  * @notice Contract that managing the yield distribution and global share supply messaging synchronization
  *         between cross-chain instances.
  */
-contract StakeUpMessenger is IStakeUpMessenger, OApp {
+contract StakeUpMessenger is IStakeUpMessenger, OAppController {
     // =================== Storage ===================
 
     /// @dev Address of stTBY contract
@@ -32,8 +34,8 @@ contract StakeUpMessenger is IStakeUpMessenger, OApp {
     constructor(
         address stTBY,
         address layerZeroEndpoint,
-        address layerZeroDelegate
-    ) OApp(layerZeroEndpoint, layerZeroDelegate) {
+        address bridgeOperator
+    ) OAppController(layerZeroEndpoint, bridgeOperator) {
         _stTBY = stTBY;
     }
 

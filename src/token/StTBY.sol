@@ -82,8 +82,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         address messanger,
         bool pokeEligible,
         address layerZeroEndpoint,
-        address layerZeroDelegate
-    ) CrossChainLST(messanger, layerZeroEndpoint, layerZeroDelegate) {
+        address bridgeOperator
+    ) CrossChainLST(messanger, layerZeroEndpoint, bridgeOperator) {
         if (
             underlyingToken == address(0) ||
             bloomFactory == address(0) ||
@@ -180,6 +180,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     )
         external
         payable
+        nonReentrant
         returns (
             uint256 underlyingRedeemed,
             MessagingReceipt[] memory msgReceipts
