@@ -22,3 +22,9 @@ remappings = [
     "@LayerZeroTesting/=lib/LayerZero-v2/oapp/test/",
     "solidity-bytes-utils/=lib/LayerZero-v2/oapp/node_modules/solidity-bytes-utils/",
 ]
+
+[rpc_endpoints]
+sepolia = "${SEPOLIA_RPC_URL}"
+
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}"}

@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity 0.8.22;
 
 import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
@@ -36,9 +35,9 @@ contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
         address gaugeDistributor, // Optional parameter for the gauge distributor
         address owner,
         address layerZeroEndpoint,
-        address _layerZeroDelegate
+        address layerZeroDelegate
     )
-        OFT("StakeUp Token", "SUP", layerZeroEndpoint, _layerZeroDelegate)
+        OFT("StakeUp Token", "SUP", layerZeroEndpoint, layerZeroDelegate)
         Ownable2Step()
     {
         _stakeupStaking = stakeupStaking;
