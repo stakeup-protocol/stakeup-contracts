@@ -452,6 +452,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
 
         (underlyingAmount, msgReceipts) = _withdraw(account, shares, settings);
 
+        _stakeupStaking.processFees();
+
         emit Redeemed(msg.sender, shares, underlyingAmount);
     }
 
@@ -482,8 +484,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
 
             // False = Decreasing shares
             msgReceipts = _syncShares(shares, false, settings);
-
-            _stakeupStaking.processFees();
         }
     }
 
