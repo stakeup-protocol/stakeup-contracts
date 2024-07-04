@@ -35,4 +35,18 @@ contract MockERC20 is ERC20 {
     function mintRewards(address to, uint256 amount) external {
         _mint(to, amount);
     }
+
+    /// Used for unit testing the staking rewards
+    function sharesOf(address account) external view returns (uint256) {
+        return balanceOf(account);
+    }
+
+    /// Used for unit testing the staking rewards
+    function transferShares(
+        address to,
+        uint256 amount
+    ) external returns (uint256) {
+        transfer(to, amount);
+        return amount;
+    }
 }
