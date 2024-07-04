@@ -72,6 +72,40 @@ interface IStTBYBase {
     function removeYield(uint256 amount) external;
 
     /**
+     * @notice Transfer shares from caller to recipient
+     * @dev Emits a `TransferShares` event.
+     * @dev Emits a `Transfer` event.
+     * @dev The `sharesAmount` argument is the amount of shares, not tokens.
+     * Requirements:
+     * - `recipient` cannot be the zero address.
+     * - the caller must have at least `sharesAmount` shares.
+     * @param recipient recipient of stTBY tokens
+     * @param sharesAmount Amount of shares being transfered
+     */
+    function transferShares(
+        address recipient,
+        uint256 sharesAmount
+    ) external returns (uint256);
+
+    /**
+     * @notice Transfer shares from one account to another
+     * @dev Emits a `TransferShares` event.
+     * @dev Emits a `Transfer` event.
+     * Requirements:
+     * - `sender` and `recipient` cannot be the zero addresses.
+     * - `sender` must have at least `sharesAmount` shares.
+     * - the caller must have allowance for `sender`'s tokens of at least `getUsdByShares(sharesAmount)`.
+     * @param sender Sender of stTBY tokens
+     * @param recipient Destination of stTBY tokens
+     * @param sharesAmount Amount of shares being transfered
+     */
+    function transferSharesFrom(
+        address sender,
+        address recipient,
+        uint256 sharesAmount
+    ) external returns (uint256);
+
+    /**
      * @return the entire amount of Usd controlled by the protocol.
      * @dev The sum of all USD balances in the protocol, equals to the total supply of stTBY.
      */

@@ -112,7 +112,7 @@ contract StakeUpStakingTest is Test {
 
         // Initial state of the contract
         assertEq(stakeupStaking.getLastRewardBlock(), block.number);
-        assertEq(stakeupStaking.getRewardData().lastBalance, 0);
+        assertEq(stakeupStaking.getRewardData().lastShares, 0);
         assertEq(stakeupStaking.getRewardData().index, 0);
 
         // Reverts if someone other than stTBY calls this function
@@ -130,7 +130,7 @@ contract StakeUpStakingTest is Test {
         vm.roll(100);
         _processFees();
         assertEq(stakeupStaking.getLastRewardBlock(), block.number);
-        assertEq(stakeupStaking.getRewardData().lastBalance, rewardAmount);
+        assertEq(stakeupStaking.getRewardData().lastShares, rewardAmount);
         assertEq(
             stakeupStaking.getRewardData().index,
             rewardAmount.divWad(aliceStake) + 1
@@ -338,7 +338,7 @@ contract StakeUpStakingTest is Test {
 
         assertEq(aliceRewards, bobRewards);
 
-        assertEq(stakeupStaking.getRewardData().lastBalance, rewardSupply);
+        assertEq(stakeupStaking.getRewardData().lastShares, rewardSupply);
 
         // Alice claims her rewards
         vm.startPrank(alice);
@@ -386,7 +386,7 @@ contract StakeUpStakingTest is Test {
         // Assert that 200 worth of rewards are available
         IStakeUpStaking.RewardData memory rewards = stakeupStaking
             .getRewardData();
-        assertEq(rewards.lastBalance, 200 ether);
+        assertEq(rewards.lastShares, 200 ether);
 
         // Alice and Bob harvest equal rewards and that their combined rewards are equal to the available rewards
         uint256 aliceRewards = stakeupStaking.claimableRewards(alice);

@@ -14,6 +14,7 @@ import {SUPVesting} from "./SUPVesting.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
+import "forge-std/Console2.sol";
 
 /**
  * @title StakeUpStaking
@@ -208,8 +209,8 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
                 _totalStakeUpVesting;
             RewardData storage rewards = _rewardData;
 
-            uint256 accrued = IERC20(address(_stTBY)).balanceOf(address(this)) -
-                rewards.lastBalance;
+            uint256 accrued = _stTBY.sharesOf(address(this)) -
+                rewards.lastShares;
 
             if (rewards.index == 0) {
                 rewards.index = uint128(Constants.INITIAL_REWARD_INDEX);
@@ -219,7 +220,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
                 rewards.index += uint128(accrued.divWad(totalStakeUpLocked));
             }
 
-            rewards.lastBalance = uint128(rewards.lastBalance + accrued);
+            rewards.lastShares = uint128(rewards.lastShares + accrued);
 
             return rewards.index;
         } else {
@@ -299,9 +300,10 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         uint128 rewardsEarned = userStakingData.rewardsAccrued;
         if (rewardsEarned > 0) {
             userStakingData.rewardsAccrued = 0;
-            rewards.lastBalance -= rewardsEarned;
-            IERC20(address(_stTBY)).safeTransfer(user, rewardsEarned);
+            rewards.lastShares -= rewardsEarned;
+            _stTBY.transferShares(user, rewardsEarned);
         }
+        console2.log("Rewards transferred to", user);
     }
 
     /// @inheritdoc SUPVesting
