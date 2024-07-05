@@ -299,17 +299,7 @@ contract StTBYBase is IStTBYBase, OFTController {
         return _messenger;
     }
 
-    /**
-     * @notice Transfer shares from caller to recipient
-     * @dev Emits a `TransferShares` event.
-     * @dev Emits a `Transfer` event.
-     * @dev The `sharesAmount` argument is the amount of shares, not tokens.
-     * Requirements:
-     * - `recipient` cannot be the zero address.
-     * - the caller must have at least `sharesAmount` shares.
-     * @param recipient recipient of stTBY tokens
-     * @param sharesAmount Amount of shares being transfered
-     */
+    /// @inheritdoc IStTBYBase
     function transferShares(
         address recipient,
         uint256 sharesAmount
@@ -320,18 +310,7 @@ contract StTBYBase is IStTBYBase, OFTController {
         return tokensAmount;
     }
 
-    /**
-     * @notice Transfer shares from one account to another
-     * @dev Emits a `TransferShares` event.
-     * @dev Emits a `Transfer` event.
-     * Requirements:
-     * - `sender` and `recipient` cannot be the zero addresses.
-     * - `sender` must have at least `sharesAmount` shares.
-     * - the caller must have allowance for `sender`'s tokens of at least `getUsdByShares(sharesAmount)`.
-     * @param sender Sender of stTBY tokens
-     * @param recipient Destination of stTBY tokens
-     * @param sharesAmount Amount of shares being transfered
-     */
+    /// @inheritdoc IStTBYBase
     function transferSharesFrom(
         address sender,
         address recipient,
