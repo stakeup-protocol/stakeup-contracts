@@ -14,7 +14,6 @@ import {SUPVesting} from "./SUPVesting.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
-import "forge-std/Console2.sol";
 
 /**
  * @title StakeUpStaking
@@ -303,7 +302,6 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
             rewards.lastShares -= rewardsEarned;
             _stTBY.transferShares(user, rewardsEarned);
         }
-        console2.log("Rewards transferred to", user);
     }
 
     /// @inheritdoc SUPVesting
