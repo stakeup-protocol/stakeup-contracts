@@ -31,7 +31,7 @@ contract WstTBY is IWstTBY, WstTBYBase {
     // =================== Functions ===================
 
     /// @inheritdoc IWstTBY
-    function mintWstTBY(
+    function depositUnderlying(
         uint256 amount,
         LzSettings memory settings
     )
@@ -50,7 +50,7 @@ contract WstTBY is IWstTBY, WstTBYBase {
     }
 
     /// @inheritdoc IWstTBY
-    function mintWstTBY(
+    function depositTby(
         address tby,
         uint256 amount,
         LzSettings memory settings
