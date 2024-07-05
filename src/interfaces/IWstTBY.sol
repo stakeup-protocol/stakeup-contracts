@@ -6,6 +6,7 @@ import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 import {IWstTBYBase} from "./IWstTBYBase.sol";
 
 interface IWstTBY is IWstTBYBase {
+    // =================== Functions ===================
     /**
      * @notice Mints wstTBY directly to the user using stTBY underlying token
      * @param amount Underlying amount to deposit
@@ -13,7 +14,7 @@ interface IWstTBY is IWstTBYBase {
      * @return amountMinted Amount of wstTBY minted
      * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
-    function mintWstTBY(
+    function depositUnderlying(
         uint256 amount,
         LzSettings memory settings
     )
@@ -29,7 +30,7 @@ interface IWstTBY is IWstTBYBase {
      * @return amountMinted Amount of wstTBY minted
      * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
-    function mintWstTBY(
+    function depositTby(
         address tby,
         uint256 amount,
         LzSettings memory settings
