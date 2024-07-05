@@ -57,7 +57,14 @@ contract WstTBYBridge is IWstTBYBridge, OAppController, IOAppComposer {
         _wstTBY.transferFrom(msg.sender, address(this), wstTBYAmount);
         uint256 stTBYAmount = _wstTBY.unwrap(wstTBYAmount);
 
-        return _bridgeStTBY(destinationAddress, stTBYAmount, dstEid, settings);
+        bridgingReceipt = _bridgeStTBY(
+            destinationAddress,
+            stTBYAmount,
+            dstEid,
+            settings
+        );
+
+        emit WstTBYBridged(endpoint.eid(), dstEid, wstTBYAmount);
     }
 
     /// @inheritdoc IWstTBYBridge
