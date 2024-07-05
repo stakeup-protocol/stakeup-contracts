@@ -7,6 +7,24 @@ import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {IStTBY} from "./IStTBY.sol";
 
 interface IWstTBYBase is ILayerZeroSettings {
+    // =================== Events ===================
+
+    /// @notice Emitted when stTBY is wrapped to wstTBY
+    event StTBYWrapped(
+        address indexed user,
+        uint256 stTBYAmount,
+        uint256 wstTBYAmount
+    );
+
+    /// @notice Emitted when wstTBY is unwrapped to stTBY
+    event WtTBYUnwrapped(
+        address indexed user,
+        uint256 wstTBYAmount,
+        uint256 stTBYAmount
+    );
+
+    // =================== Functions ===================
+
     /**
      * @notice Exchanges stTBY to wstTBY
      * @dev Requirements:
@@ -16,9 +34,9 @@ interface IWstTBYBase is ILayerZeroSettings {
      *  - msg.sender must have at least `_stTBYAmount` of stTBY.
      *  User should first approve _stTBYAmount to the WstTBY contract
      * @param stTBYAmount amount of stTBY to wrap in exchange for wstTBY
-     * @return Amount of wstTBY user receives after wrap
+     * @return wstTBYAmount Amount of wstTBY user receives after wrap
      */
-    function wrap(uint256 stTBYAmount) external returns (uint256);
+    function wrap(uint256 stTBYAmount) external returns (uint256 wstTBYAmount);
 
     /**
      * @notice Exchanges wstTBY to stTBY
@@ -26,9 +44,11 @@ interface IWstTBYBase is ILayerZeroSettings {
      *  - `_wstTBYAmount` must be non-zero
      *  - msg.sender must have at least `_wstTBYAmount` wstTBY.
      * @param wstTBYAmount amount of wstTBY to uwrap in exchange for stTBY
-     * @return Amount of stTBY user receives after unwrap
+     * @return stTBYAmount Amount of stTBY user receives after unwrap
      */
-    function unwrap(uint256 wstTBYAmount) external returns (uint256);
+    function unwrap(
+        uint256 wstTBYAmount
+    ) external returns (uint256 stTBYAmount);
 
     /**
      * @notice Get amount of wstTBY for a given amount of stTBY

@@ -74,7 +74,7 @@ contract WstTBYTest is StTBYSetup {
         // Mint wstTBY using stable token
         vm.startPrank(alice);
         stableToken.approve(address(wstTBY), depositAmount);
-        wstTBY.mintWstTBY(depositAmount, settings);
+        wstTBY.depositUnderlying(depositAmount, settings);
 
         assertEq(stTBY.balanceOf(alice), 0);
         assertEq(
@@ -87,7 +87,7 @@ contract WstTBYTest is StTBYSetup {
         // Mint wstTBY using pool token
         vm.startPrank(bob);
         pool.approve(address(wstTBY), depositAmount);
-        wstTBY.mintWstTBY(address(pool), depositAmount, settings);
+        wstTBY.depositTby(address(pool), depositAmount, settings);
 
         assertEq(stTBY.balanceOf(bob), 0);
         assertEq(

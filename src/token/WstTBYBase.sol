@@ -40,17 +40,21 @@ contract WstTBYBase is IWstTBYBase, ERC20 {
             address(this),
             stTBYAmount
         );
-        return wstTBYAmount;
+
+        emit StTBYWrapped(msg.sender, stTBYAmount, wstTBYAmount);
     }
 
     /// @inheritdoc IWstTBYBase
-    function unwrap(uint256 wstTBYAmount) external returns (uint256) {
-        uint256 stTBYAmount = _stTBY.getUsdByShares(wstTBYAmount);
+    function unwrap(
+        uint256 wstTBYAmount
+    ) external returns (uint256 stTBYAmount) {
+        stTBYAmount = _stTBY.getUsdByShares(wstTBYAmount);
         if (stTBYAmount == 0) revert Errors.ZeroAmount();
 
         _burn(msg.sender, wstTBYAmount);
         StTBYBase(address(_stTBY)).transferShares(msg.sender, wstTBYAmount);
-        return stTBYAmount;
+
+        emit WtTBYUnwrapped(msg.sender, wstTBYAmount, stTBYAmount);
     }
 
     /// @inheritdoc IWstTBYBase

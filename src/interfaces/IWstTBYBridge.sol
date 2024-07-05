@@ -4,6 +4,13 @@ pragma solidity 0.8.22;
 import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 
 interface IWstTBYBridge is ILayerZeroSettings {
+    // =================== Events ===================
+
+    /// @notice Emitted when wstTBY is bridged sent to another chain
+    event WstTBYBridged(uint32 srcEid, uint32 dstEid, uint256 wstTBYAmount);
+
+    // =================== Functions ===================
+
     /**
      *
      * @param destinationAddress The address to send the bridged wstTBY to
