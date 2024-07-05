@@ -24,11 +24,11 @@ interface IStakeUpStaking is ISUPVesting {
      * @notice Data structure containing information pertaining to a reward period
      * @dev All rewards are denominated in stTBY shares due to the token's rebasing nature
      * @param index The last index that the rewards were updated
-     * @param lastBalance The last balance of rewards available in the contract
+     * @param lastShares The last shares balance of rewards available in the contract
      */
     struct RewardData {
         uint128 index;
-        uint128 lastBalance;
+        uint128 lastShares;
     }
 
     // =================== Events ====================

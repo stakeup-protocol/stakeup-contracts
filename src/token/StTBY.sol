@@ -379,7 +379,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
 
         _mintShares(msg.sender, sharesAmount);
         _mintShares(address(_stakeupStaking), sharesFeeAmount);
-        _stakeupStaking.processFees();
 
         msgReceipts = _syncShares(
             sharesAmount + sharesFeeAmount,
@@ -400,6 +399,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         }
 
         _setTotalUsd(_getTotalUsd() + amountScaled);
+        _stakeupStaking.processFees();
 
         emit Deposit(msg.sender, token, amount, sharesAmount);
     }
@@ -446,12 +446,13 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         if (redeemFee > 0) {
             shares -= redeemFee;
             _transferShares(account, address(_stakeupStaking), redeemFee);
-            _stakeupStaking.processFees();
 
             emit FeeCaptured(FeeType.Redeem, redeemFee);
         }
 
         (underlyingAmount, msgReceipts) = _withdraw(account, shares, settings);
+
+        _stakeupStaking.processFees();
 
         emit Redeemed(msg.sender, shares, underlyingAmount);
     }
@@ -510,7 +511,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         if (performanceFee > 0) {
             sharesFeeAmount = getSharesByUsd(performanceFee);
             _mintShares(address(_stakeupStaking), sharesFeeAmount);
-            _stakeupStaking.processFees();
 
             emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
         }
@@ -542,6 +542,8 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
                 settings
             );
         }
+
+        _stakeupStaking.processFees();
     }
 
     /**
