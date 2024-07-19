@@ -59,11 +59,11 @@ def deposit(c: Chain, u: Account, a: int, tby: bool):
     if tby:
         bloom_pool.mint(u.address, a)
         bloom_pool.approve(st_tby.address, a, from_=u)
-        st_tby.depositTby(bloom_pool.address, a, settings, from_=u, value=0)
+        st_tby.depositTby(bloom_pool.address, a, from_=u, value=0)
     else:
         usdc.mint(u.address, a)
         usdc.approve(st_tby.address, a, from_=u)
-        st_tby.depositUnderlying(a, settings, from_=u, value=0)
+        st_tby.depositUnderlying(a, from_=u, value=0)
 
 @default_chain.connect()
 def test_deployment():
@@ -73,60 +73,6 @@ def test_deployment():
     assert wst_tby.address != Address(0)
     assert st_tby.owner() == deployer.address
     assert st_tby.getWstTBY().address == wst_tby.address
-
-@default_chain.connect()
-def test_mint_fee():
-    deploy_env(default_chain)
-    mint_fee = 0.0001 # 0.01%
-    bps_scale = 10000
-    mint_fee_scaled = int(mint_fee * bps_scale)
-
-    tby_deposit_amount = 1000;
-    parsed_deposit_amount = EvmMath.parse_decimals(tby_deposit_amount, 6)
-    mint_fee = tby_deposit_amount * mint_fee
-    scaled_mint_fee = EvmMath.parse_eth(mint_fee)
-
-    user = default_chain.accounts[1]
-
-    registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1))
-
-    deposit(default_chain, user, parsed_deposit_amount, True)
-    ## Mint fee with 1:1 TBY:USD exchange rate
-
-    assert st_tby.getMintBps() == mint_fee_scaled
-    assert st_tby.balanceOf(user.address) == int(EvmMath.parse_eth(tby_deposit_amount) - scaled_mint_fee)
-    assert st_tby.balanceOf(stakeup.address) == scaled_mint_fee
-
-    ## TODO: Mint fee with 1:1.02 TBY:USD exchange rate
-
-@default_chain.connect()
-def test_redeem_fee():
-    deploy_env(default_chain)
-    redeem_fee = 0.005 # .5%
-    bps_scale = 10000
-
-    usdc_deposit_amount = 1000;
-    parsed_deposit_amount = EvmMath.parse_decimals(usdc_deposit_amount, 6)
-
-    expected_redeem_fee = (usdc_deposit_amount * (1 - 0.0001)) * redeem_fee
-
-    user = default_chain.accounts[1]
-
-    registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1))
-
-    deposit(default_chain, user, parsed_deposit_amount, False)
-
-    usdc.mint(st_tby.address, parsed_deposit_amount)
-
-    bal_before = st_tby.balanceOf(stakeup.address)
-
-    amount = st_tby.balanceOf(user.address)
-    st_tby.redeemStTBY(amount, settings, from_=user, value=0)
-    fees_collected = st_tby.balanceOf(stakeup.address) - bal_before
-
-    assert st_tby.getRedeemBps() == int(redeem_fee * bps_scale)
-    assert fees_collected == EvmMath.parse_eth(expected_redeem_fee)
-
 
 @default_chain.connect()
 def test_performance_fee():
@@ -183,7 +129,7 @@ def test_exchange_rate():
     
     registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1))
 
-    st_tby.depositTby(bloom_pool.address, EvmMath.parse_decimals(tby_deposit_amount, 6), settings, from_=user)
+    st_tby.depositTby(bloom_pool.address, EvmMath.parse_decimals(tby_deposit_amount, 6), from_=user)
     
     default_chain.mine(lambda x: x + Constants.ONE_WEEK)
 
@@ -224,7 +170,7 @@ def test_auto_minting():
     user_bal_before = st_tby.balanceOf(user.address)
     user_shares_before = st_tby.sharesOf(user.address)
     bloom_pool.mint(st_tby.address, EvmMath.parse_decimals(usdc_deposit_amount, 6))
-    st_tby.redeemUnderlying(bloom_pool.address, settings, from_=user, value=0)
+    st_tby.harvestTBY(bloom_pool.address, settings, from_=user, value=0)
     user_bal_after = st_tby.balanceOf(user.address)
     user_shares_after = st_tby.sharesOf(user.address)
 
@@ -273,22 +219,18 @@ def test_deposit_existing_tby():
     mint_amount = 1000
     exchange_rate = 1.04
 
-    mint_fee = EvmMath.parse_eth(mint_amount * st_tby.getMintBps() / 10000)
-    print(f'Mint Fee {mint_fee}')
     registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(exchange_rate))
     print(f'Expected Tokens {EvmMath.parse_eth(mint_amount * exchange_rate)}')
-    expected_user_balance = EvmMath.parse_eth(mint_amount * exchange_rate) - mint_fee
+    expected_user_balance = EvmMath.parse_eth(mint_amount * exchange_rate)
 
     bloom_pool.mint(user.address, EvmMath.parse_decimals(mint_amount, 6))
     bloom_pool.approve(st_tby.address, EvmMath.parse_decimals(mint_amount, 6), from_=user)
 
-    st_tby.depositTby(bloom_pool.address, EvmMath.parse_decimals(mint_amount, 6), settings, from_=user, value=0)
+    st_tby.depositTby(bloom_pool.address, EvmMath.parse_decimals(mint_amount, 6), from_=user, value=0)
 
     assert st_tby.balanceOf(user.address) == expected_user_balance
     assert st_tby.getTotalUsd() == EvmMath.parse_eth(mint_amount * exchange_rate)
 
-@default_chain.connect()
-def test_deposit_fee():
     deploy_env(default_chain)
 
     user = default_chain.accounts[1]
