@@ -12,17 +12,6 @@ import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {IWstTBY} from "./IWstTBY.sol";
 
 interface IStTBY is IStTBYBase, ILayerZeroSettings {
-    // =================== Struct ====================
-
-    /**
-     * @notice Fee type
-     */
-    enum FeeType {
-        Mint,
-        Redeem,
-        Performance
-    }
-
     // =================== Events ===================
 
     /**
@@ -49,10 +38,9 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
 
     /**
      * @notice Emitted when a fee is captured and sent to the StakeUp Staking
-     * @param feeType Fee type
      * @param shares Number of stTBY shares sent to the StakeUp Staking
      */
-    event FeeCaptured(FeeType feeType, uint256 shares);
+    event FeeCaptured(uint256 shares);
 
     /**
      * @notice Emitted when user deposits
@@ -146,12 +134,6 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
 
     /// @notice Returns the StakeUpStaking contract.
     function getStakeUpStaking() external view returns (IStakeUpStaking);
-
-    /// @notice Returns the mintBps.
-    function getMintBps() external view returns (uint256);
-
-    /// @notice Returns the redeemBps.
-    function getRedeemBps() external view returns (uint256);
 
     /// @notice Returns the performanceBps.
     function getPerformanceBps() external view returns (uint256);
