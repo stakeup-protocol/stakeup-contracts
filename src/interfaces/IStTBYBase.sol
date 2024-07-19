@@ -33,26 +33,10 @@ interface IStTBYBase {
     );
 
     /**
-     * @notice increases the total amount of shares in existence using
-     *         inbound messages from stTBY instances on other chains
-     * @param prevGlobalShares The total amount of shares in existence before the increase
-     * @param shares Amount of shares to increase the global shares by
+     * @notice Set the total global shares for the protocol
+     * @param newGlobalShares The updated total amount of shares in existence
      */
-    function increaseGlobalShares(
-        uint256 prevGlobalShares,
-        uint256 shares
-    ) external;
-
-    /**
-     * @notice decreases the total amount of shares in existence using
-     *         inbound messages from stTBY instances on other chains
-     * @param prevGlobalShares The total amount of shares in existence before the decrease
-     * @param shares Amount of shares to decrease the global shares by
-     */
-    function decreaseGlobalShares(
-        uint256 prevGlobalShares,
-        uint256 shares
-    ) external;
+    function setGlobalShares(uint256 newGlobalShares) external;
 
     /**
      * @notice Distribute yield according to the consentration of shares relative to

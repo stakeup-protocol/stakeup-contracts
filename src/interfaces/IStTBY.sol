@@ -72,54 +72,33 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @notice Deposit TBY and get stTBY minted
      * @param tby TBY address
      * @param amount TBY amount to deposit
-     * @param settings Configuration settings for bridging using LayerZero
      * @return amountMinted Amount of stTBY minted
-     * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
     function depositTby(
         address tby,
-        uint256 amount,
-        LzSettings memory settings
-    )
-        external
-        payable
-        returns (uint256 amountMinted, MessagingReceipt[] memory msgReceipts);
+        uint256 amount
+    ) external payable returns (uint256 amountMinted);
 
     /**
      * @notice Deposit underlying tokens and get stTBY minted
      * @param amount Amount of underlying tokens to deposit
-     * @param settings Configuration settings for bridging using LayerZero
      * @return amountMinted Amount of stTBY minted
-     * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
     function depositUnderlying(
-        uint256 amount,
-        LzSettings memory settings
-    )
-        external
-        payable
-        returns (uint256 amountMinted, MessagingReceipt[] memory msgReceipts);
+        uint256 amount
+    ) external payable returns (uint256 amountMinted);
 
     /**
      * @notice Redeem stTBY in exchange for underlying tokens. Underlying
      * tokens can be withdrawn with the `withdraw()` method, once the
      * redemption is processed.
      * @dev Emits a {Redeemed} event.
-     * @param stTBYAmount Amount of stTBY
-     * @param settings Configuration settings for bridging using LayerZero
-     * @return underlyingRedeemed The Amount of underlying tokens redeemed
-     * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
+     * @param amount Amount of stTBY to redeem
+     * @return underlyingAmount The Amount of underlying tokens redeemed
      */
     function redeemStTBY(
-        uint256 stTBYAmount,
-        LzSettings memory settings
-    )
-        external
-        payable
-        returns (
-            uint256 underlyingRedeemed,
-            MessagingReceipt[] memory msgReceipts
-        );
+        uint256 amount
+    ) external returns (uint256 underlyingAmount);
 
     /**
      * @notice Redeems the underlying token from a Bloom Pool in exchange for TBYs
@@ -129,7 +108,7 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @param settings Configuration settings for bridging using LayerZero
      * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
-    function redeemUnderlying(
+    function harvestTBY(
         address tby,
         LzSettings memory settings
     ) external payable returns (MessagingReceipt[] memory msgReceipts);
