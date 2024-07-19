@@ -25,10 +25,10 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
     // ================= Constructor =================
 
     constructor(
-        address messanger,
+        address messenger,
         address layerZeroEndpoint,
         address bridgeOperator
-    ) StTBYBase(messanger, layerZeroEndpoint, bridgeOperator) {
+    ) StTBYBase(messenger, layerZeroEndpoint, bridgeOperator) {
         // Solhint-disable-previous-line no-empty-blocks
     }
 
@@ -47,83 +47,17 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
     }
 
     /**
-     * @notice Decreases the total amount of shares in existence across all chains
-     * @dev This function invokes a batch send message w/ LayerZero
-     * @param shares Amount of shares to subtract from the global shares value
-     * @param increase True if shares are being added, false if shares are being removed
-     * @param msgSettings Settings for the LayerZero messages
-     */
-    function _syncShares(
-        uint256 shares,
-        bool increase,
-        LzSettings calldata msgSettings
-    ) internal returns (MessagingReceipt[] memory) {
-        uint256 prevGlobalShares = _globalShares;
-
-        if (increase) {
-            _setGlobalShares(prevGlobalShares + shares);
-        } else {
-            _setGlobalShares(prevGlobalShares - shares);
-        }
-
-        return
-            IStakeUpMessenger(_messenger).syncShares{
-                value: msgSettings.fee.nativeFee
-            }(
-                prevGlobalShares,
-                shares,
-                increase,
-                peerEids,
-                msgSettings.options,
-                msgSettings.refundRecipient
-            );
-    }
-
-    /**
-     * @notice Distributes yield to all stTBY holders on all chains
-     * @dev This function invokes a batch send message w/ LayerZero
-     * @param amount The amount of total USD accrued by the protocol across all chains
-     * @param msgSettings Settings for the LayerZero messages
-     */
-    function _syncYield(
-        uint256 amount,
-        bool increase,
-        LzSettings calldata msgSettings
-    ) internal returns (MessagingReceipt[] memory) {
-        if (increase) {
-            _accrueYield(amount);
-        } else {
-            _removeYield(amount);
-        }
-
-        return
-            IStakeUpMessenger(_messenger).syncYield{
-                value: msgSettings.fee.nativeFee
-            }(
-                amount,
-                increase,
-                peerEids,
-                msgSettings.options,
-                msgSettings.refundRecipient
-            );
-    }
-
-    /**
-     *
-     * @param sharesAdded Amount of shares to add to global shares value
+     * @notice Syncs both global shares and yield across all chains
+     * @dev Uses the current global shares value.
      * @param yieldAdjustment Amount of total USD accrued or removed from the protocol across all chains
      * @param yieldAdded True if yield was added, false if yield was removed
      * @param msgSettings Settings for the LayerZero messages
      */
     function _fullSync(
-        uint256 sharesAdded,
         uint256 yieldAdjustment,
         bool yieldAdded,
         LzSettings calldata msgSettings
     ) internal returns (MessagingReceipt[] memory) {
-        uint256 prevGlobalShares = _globalShares;
-        _setGlobalShares(prevGlobalShares + sharesAdded);
-
         if (yieldAdded) {
             _accrueYield(yieldAdjustment);
         } else {
@@ -134,14 +68,31 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
             IStakeUpMessenger(_messenger).fullSync{
                 value: msgSettings.fee.nativeFee
             }(
-                prevGlobalShares,
-                sharesAdded,
+                getGlobalShares(),
                 yieldAdjustment,
                 yieldAdded,
                 peerEids,
                 msgSettings.options,
                 msgSettings.refundRecipient
             );
+    }
+
+    /// @notice overrides the _mintShares function to increase global shares after minting
+    function _mintShares(
+        address recipient,
+        uint256 sharesAmount
+    ) internal override returns (uint256 newTotalShares) {
+        newTotalShares = super._mintShares(recipient, sharesAmount);
+        _globalShares += sharesAmount;
+    }
+
+    /// @notice overrides the _burnShares function to decrease global shares after burning
+    function _burnShares(
+        address account,
+        uint256 sharesAmount
+    ) internal override returns (uint256 newTotalShares) {
+        newTotalShares = super._burnShares(account, sharesAmount);
+        _globalShares -= sharesAmount;
     }
 
     function _getTbyYield() internal virtual returns (uint256);

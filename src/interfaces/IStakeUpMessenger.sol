@@ -9,16 +9,12 @@ interface IStakeUpMessenger {
      * @param None Message type for no action
      * @param IncreaseYield Message type for increasing yield
      * @param DecreaseYield Message type for decreasing yield
-     * @param IncreaseShares Message type for increasing shares
-     * @param DecreaseShares Message type for decreasing shares
      * @param SharesAndYield  Message type for increasing shares and yield through fullSync
      */
     enum MessageType {
         None,
         IncreaseYield,
         DecreaseYield,
-        IncreaseShares,
-        DecreaseShares,
         SharesAndYield
     }
 
@@ -34,8 +30,7 @@ interface IStakeUpMessenger {
 
     /**
      * @notice Sends a message to update yield and global shares on other chains
-     * @param originalShares Number of shares the protocol had in existence before the update
-     * @param sharesAdded Number of shares added to the global shares value
+     * @param newGlobalShares New value of global shares within the protocol
      * @param totalUsd Amount of total USD accrued or removed from the protocol across all chains
      * @param yieldIncreased True if yield was added, false if yield was removed
      * @param peerEids An array of peer endpoint ids
@@ -43,8 +38,7 @@ interface IStakeUpMessenger {
      * @param refundRecipient Address to refund excess LayerZero messaging fees taken in the form of native tokens
      */
     function fullSync(
-        uint256 originalShares,
-        uint256 sharesAdded,
+        uint256 newGlobalShares,
         uint256 totalUsd,
         bool yieldIncreased,
         uint32[] memory peerEids,
@@ -69,39 +63,11 @@ interface IStakeUpMessenger {
     ) external payable returns (MessagingReceipt[] memory receipts);
 
     /**
-     * @notice Sends a message to update global shares on other chains
-     * @param originalShares Number of shares the protocol had in existence before the update
-     * @param shares Number of shares added or removed from the global shares value
-     * @param increase True if shares were added, false if shares were removed
-     * @param peerEids An array of peer endpoint ids
-     * @param options LayerZero messaging options
-     * @param refundRecipient Address to refund excess LayerZero messaging fees taken in the form of native tokens
-     */
-    function syncShares(
-        uint256 originalShares,
-        uint256 shares,
-        bool increase,
-        uint32[] memory peerEids,
-        bytes memory options,
-        address refundRecipient
-    ) external payable returns (MessagingReceipt[] memory receipts);
-
-    /**
      * @notice Quotes the fee for sending a message that updates yield on other chains
      * @param peerEids An array of peer endpoint ids
      * @param options LayerZero messaging options
      */
     function quoteSyncYield(
-        uint32[] memory peerEids,
-        bytes memory options
-    ) external view returns (uint256 nativeFee);
-
-    /**
-     * @notice Quotes the fee for sending a message that updates global shares on other chains
-     * @param peerEids An array of peer endpoint ids
-     * @param options LayerZero messaging options
-     */
-    function quoteSyncShares(
         uint32[] memory peerEids,
         bytes memory options
     ) external view returns (uint256 nativeFee);

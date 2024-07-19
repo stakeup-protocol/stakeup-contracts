@@ -43,8 +43,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OAppController {
 
     /// @inheritdoc IStakeUpMessenger
     function fullSync(
-        uint256 originalShares,
-        uint256 sharesAdded,
+        uint256 newGlobalShares,
         uint256 totalUsd,
         bool yieldIncrease,
         uint32[] memory peerEids,
@@ -54,12 +53,7 @@ contract StakeUpMessenger is IStakeUpMessenger, OAppController {
         return
             _batchSend(
                 MessageType.SharesAndYield,
-                abi.encode(
-                    originalShares,
-                    sharesAdded,
-                    totalUsd,
-                    yieldIncrease
-                ),
+                abi.encode(newGlobalShares, totalUsd, yieldIncrease),
                 peerEids,
                 options,
                 refundRecipient
@@ -86,27 +80,6 @@ contract StakeUpMessenger is IStakeUpMessenger, OAppController {
             );
     }
 
-    /// @inheritdoc IStakeUpMessenger
-    function syncShares(
-        uint256 originalShares,
-        uint256 shares,
-        bool increase,
-        uint32[] memory peerEids,
-        bytes memory options,
-        address refundRecipient
-    ) external payable onlyStTBY returns (MessagingReceipt[] memory receipts) {
-        return
-            _batchSend(
-                increase
-                    ? MessageType.IncreaseShares
-                    : MessageType.DecreaseShares,
-                abi.encode(originalShares, shares),
-                peerEids,
-                options,
-                refundRecipient
-            );
-    }
-
     // ========================= Quote Functions =========================
 
     /// @inheritdoc IStakeUpMessenger
@@ -115,14 +88,6 @@ contract StakeUpMessenger is IStakeUpMessenger, OAppController {
         bytes memory options
     ) external view returns (uint256 nativeFee) {
         return _quoteMessage(MessageType.IncreaseYield, peerEids, options);
-    }
-
-    /// @inheritdoc IStakeUpMessenger
-    function quoteSyncShares(
-        uint32[] memory peerEids,
-        bytes memory options
-    ) external view returns (uint256 nativeFee) {
-        return _quoteMessage(MessageType.IncreaseShares, peerEids, options);
     }
 
     /// @inheritdoc IStakeUpMessenger
@@ -231,31 +196,14 @@ contract StakeUpMessenger is IStakeUpMessenger, OAppController {
             return;
         }
 
-        if (messageType == MessageType.IncreaseShares) {
-            (uint256 originalShares, uint256 sharesAdded) = _decodeShareData(
-                encodedData
-            );
-            IStTBY(_stTBY).increaseGlobalShares(originalShares, sharesAdded);
-            return;
-        }
-
-        if (messageType == MessageType.DecreaseShares) {
-            (uint256 originalShares, uint256 sharesAdded) = _decodeShareData(
-                encodedData
-            );
-            IStTBY(_stTBY).decreaseGlobalShares(originalShares, sharesAdded);
-            return;
-        }
-
         if (messageType == MessageType.SharesAndYield) {
             (
-                uint256 originalShares,
-                uint256 sharesAdded,
+                uint256 newGlobalShares,
                 uint256 totalUsd,
                 bool yieldIncreased
-            ) = abi.decode(encodedData, (uint256, uint256, uint256, bool));
+            ) = abi.decode(encodedData, (uint256, uint256, bool));
 
-            IStTBY(_stTBY).increaseGlobalShares(originalShares, sharesAdded);
+            IStTBY(_stTBY).setGlobalShares(newGlobalShares);
 
             yieldIncreased
                 ? IStTBY(_stTBY).accrueYield(totalUsd)

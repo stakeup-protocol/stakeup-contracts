@@ -32,60 +32,33 @@ contract WstTBY is IWstTBY, WstTBYBase {
 
     /// @inheritdoc IWstTBY
     function depositUnderlying(
-        uint256 amount,
-        LzSettings memory settings
-    )
-        external
-        payable
-        override
-        returns (uint256 amountMinted, MessagingReceipt[] memory msgReceipts)
-    {
+        uint256 amount
+    ) external override returns (uint256 amountMinted) {
         _stageDeposit(address(_stTBYUnderlying), amount);
 
-        (amountMinted, msgReceipts) = _stTBY.depositUnderlying(
-            amount,
-            settings
-        );
+        amountMinted = _stTBY.depositUnderlying(amount);
         amountMinted = _mintWstTBY(amountMinted);
     }
 
     /// @inheritdoc IWstTBY
     function depositTby(
         address tby,
-        uint256 amount,
-        LzSettings memory settings
-    )
-        external
-        payable
-        override
-        returns (uint256 amountMinted, MessagingReceipt[] memory msgReceipts)
-    {
+        uint256 amount
+    ) external override returns (uint256 amountMinted) {
         _stageDeposit(tby, amount);
 
-        (amountMinted, msgReceipts) = _stTBY.depositTby(tby, amount, settings);
+        amountMinted = _stTBY.depositTby(tby, amount);
         amountMinted = _mintWstTBY(amountMinted);
     }
 
     /// @inheritdoc IWstTBY
     function redeemWstTBY(
-        uint256 amount,
-        LzSettings memory settings
-    )
-        external
-        payable
-        override
-        returns (
-            uint256 underlyingRedeemed,
-            MessagingReceipt[] memory msgReceipts
-        )
-    {
+        uint256 amount
+    ) external override returns (uint256 underlyingRedeemed) {
         _burn(msg.sender, amount);
         uint256 stTBYAmount = _stTBY.getUsdByShares(amount);
 
-        (underlyingRedeemed, msgReceipts) = _stTBY.redeemStTBY(
-            stTBYAmount,
-            settings
-        );
+        underlyingRedeemed = _stTBY.redeemStTBY(stTBYAmount);
 
         _stTBYUnderlying.transfer(msg.sender, underlyingRedeemed);
     }

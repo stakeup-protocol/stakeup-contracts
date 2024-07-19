@@ -61,29 +61,8 @@ contract StTBYBase is IStTBYBase, OFTController {
     // =================== Functions ==================
 
     /// @inheritdoc IStTBYBase
-    function increaseGlobalShares(
-        uint256 prevGlobalShares,
-        uint256 shares
-    ) external onlyMessenger {
-        // If globalShares hasn't been set yet, set it to the previous value of the inbound message
-        if (_globalShares == 0 && prevGlobalShares != 0) {
-            _setGlobalShares(prevGlobalShares + shares);
-        } else {
-            _setGlobalShares(getGlobalShares() + shares);
-        }
-    }
-
-    /// @inheritdoc IStTBYBase
-    function decreaseGlobalShares(
-        uint256 prevGlobalShares,
-        uint256 shares
-    ) external onlyMessenger {
-        // If globalShares hasn't been set yet, set it to the previous value of the inbound message
-        if (_globalShares == 0 && prevGlobalShares != 0) {
-            _setGlobalShares(prevGlobalShares - shares);
-        } else {
-            _setGlobalShares(getGlobalShares() - shares);
-        }
+    function setGlobalShares(uint256 newGlobalShares) external onlyMessenger {
+        _setGlobalShares(newGlobalShares);
     }
 
     /// @inheritdoc IStTBYBase
@@ -439,7 +418,7 @@ contract StTBYBase is IStTBYBase, OFTController {
     function _mintShares(
         address recipient,
         uint256 sharesAmount
-    ) internal returns (uint256 newTotalShares) {
+    ) internal virtual returns (uint256 newTotalShares) {
         require(recipient != address(0), "MINT_TO_ZERO_ADDR");
 
         newTotalShares = _getTotalShares() + sharesAmount;
