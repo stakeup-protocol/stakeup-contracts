@@ -76,7 +76,6 @@ class StTBYTestEnv:
             self.registry.address,
             wrapper_address,
             messenger_address,
-            True,
             self.endpoint,
             self.deployer
         )
