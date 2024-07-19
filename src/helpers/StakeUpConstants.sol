@@ -3,11 +3,6 @@ pragma solidity 0.8.22;
 
 library StakeUpConstants {
     // =================== STTBY ===================
-    /// @notice Mint fee bps (0.01%)
-    uint16 constant MINT_BPS = 1;
-
-    /// @notice Redeem fee bps (0.5%)
-    uint16 constant REDEEM_BPS = 50;
 
     /// @notice Performance fee bps (10%)
     uint16 constant PERFORMANCE_BPS = 1000;

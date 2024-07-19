@@ -80,7 +80,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         address registry,
         address wstTBY,
         address messenger,
-        bool pokeEligible,
         address layerZeroEndpoint,
         address bridgeOperator
     ) CrossChainLST(messenger, layerZeroEndpoint, bridgeOperator) {
@@ -106,9 +105,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         _lastRateUpdate = block.timestamp;
         _startTimestamp = block.timestamp;
 
-        if (pokeEligible) {
-            _pokeRewardsRemaining = Constants.POKE_REWARDS;
-        }
+        _pokeRewardsRemaining = Constants.POKE_REWARDS;
 
         _mintRewardsRemaining = StakeUpMintRewardLib._getMintRewardAllocation();
 
