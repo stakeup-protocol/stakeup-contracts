@@ -308,16 +308,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function getMintBps() external pure returns (uint256) {
-        return Constants.MINT_BPS;
-    }
-
-    /// @inheritdoc IStTBY
-    function getRedeemBps() external pure returns (uint256) {
-        return Constants.REDEEM_BPS;
-    }
-
-    /// @inheritdoc IStTBY
     function getPerformanceBps() external pure returns (uint256) {
         return Constants.PERFORMANCE_BPS;
     }
@@ -398,7 +388,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
             sharesFeeAmount = getSharesByUsd(performanceFee);
             _mintShares(address(_stakeupStaking), sharesFeeAmount);
 
-            emit FeeCaptured(FeeType.Performance, sharesFeeAmount);
+            emit FeeCaptured(sharesFeeAmount);
         }
 
         if (proceeds > 0) {
