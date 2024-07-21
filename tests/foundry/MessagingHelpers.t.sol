@@ -44,16 +44,11 @@ abstract contract MessagingHelpers is Test {
             .addExecutorLzReceiveOption(200000, 0);
 
         uint256 msgFee;
-        if (operation == Operation.Deposit) {
-            msgFee = messenger.quoteSyncShares(eids, msgOptions);
-        } else if (operation == Operation.Withdraw) {
-            msgFee = messenger.quoteSyncShares(eids, msgOptions);
-        } else if (operation == Operation.Poke) {
-            msgFee += messenger.quoteSyncYield(eids, msgOptions);
-            msgFee += messenger.quoteSyncShares(eids, msgOptions);
+        
+        if (operation == Operation.Poke) {
+            msgFee += messenger.quoteFullSync(eids, msgOptions);
         } else if (operation == Operation.Redeem) {
-            msgFee += messenger.quoteSyncYield(eids, msgOptions);
-            msgFee += messenger.quoteSyncShares(eids, msgOptions);
+            msgFee += messenger.quoteFullSync(eids, msgOptions);
         }
         
         return

@@ -24,7 +24,6 @@ import {MockBloomPool, IBloomPool} from "../mocks/MockBloomPool.sol";
 import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
 import {MockEmergencyHandler} from "../mocks/MockEmergencyHandler.sol";
 import {MockRegistry} from "../mocks/MockRegistry.sol";
-import "forge-std/console2.sol";
 
 contract WstTBYTest is StTBYSetup {
     function setUp() public override {
@@ -38,10 +37,7 @@ contract WstTBYTest is StTBYSetup {
         /// Mint stTBY
         stableToken.mint(alice, stableAmount);
         stableToken.approve(address(stTBY), stableAmount);
-        (uint256 stTBYAmount, ) = stTBY.depositUnderlying(
-            stableAmount,
-            _generateSettings(messenger, Operation.Deposit)
-        );
+        uint256 stTBYAmount = stTBY.depositUnderlying(stableAmount);
 
         // Wrap
         stTBY.approve(address(wstTBY), stTBYAmount);
@@ -56,9 +52,8 @@ contract WstTBYTest is StTBYSetup {
 
     function test_mintWstTBY() public {
         uint256 depositAmount = 50e6;
-        uint256 expectedMintAmount = (depositAmount -
-            ((depositAmount * mintBps) / BPS)) * 1e12;
-        console2.log("expectedMintAmount", expectedMintAmount);
+        uint256 expectedMintAmount = depositAmount * 1e12;
+
         /// Mint Stable and pool tokens
         stableToken.mint(alice, depositAmount);
         pool.mint(bob, depositAmount);
@@ -74,7 +69,7 @@ contract WstTBYTest is StTBYSetup {
         // Mint wstTBY using stable token
         vm.startPrank(alice);
         stableToken.approve(address(wstTBY), depositAmount);
-        wstTBY.depositUnderlying(depositAmount, settings);
+        wstTBY.depositUnderlying(depositAmount);
 
         assertEq(stTBY.balanceOf(alice), 0);
         assertEq(
@@ -87,7 +82,7 @@ contract WstTBYTest is StTBYSetup {
         // Mint wstTBY using pool token
         vm.startPrank(bob);
         pool.approve(address(wstTBY), depositAmount);
-        wstTBY.depositTby(address(pool), depositAmount, settings);
+        wstTBY.depositTby(address(pool), depositAmount);
 
         assertEq(stTBY.balanceOf(bob), 0);
         assertEq(

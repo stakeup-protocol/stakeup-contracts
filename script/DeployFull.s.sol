@@ -77,7 +77,6 @@ contract DeployFullScript is Script {
             address(registry),
             expectedWrapperAddress,
             expectedMessengerAddress,
-            true,
             address(LAYER_ZERO_ENDPOINT_ARB_SEP),
             expectedBridgeOperatorAddress
         );
@@ -138,11 +137,6 @@ contract DeployFullScript is Script {
         require(
             address(stTBY.getUnderlyingToken()) == address(USDC_ARB_SEP),
             "Incorrect underlying token"
-        );
-        require(stTBY.getMintBps() == mintBps, "Incorrect mint basis points");
-        require(
-            stTBY.getRedeemBps() == redeemBps,
-            "Incorrect redeem basis points"
         );
         require(
             stTBY.getPerformanceBps() == performanceFeeBps,

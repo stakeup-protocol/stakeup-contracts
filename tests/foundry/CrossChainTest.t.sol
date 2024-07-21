@@ -116,7 +116,6 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
                 address(registry),
                 expectedWstTBYAAddress,
                 expectedMessengerAAddress,
-                false,
                 address(endpoints[aEid]),
                 address(this)
             );
@@ -194,19 +193,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);
 
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messengerB,
-            Operation.Deposit
-        );
-
-        if (settings.fee.nativeFee == 0) {
-            settings.fee.nativeFee = 300000;
-        }
-
-        stTBYA.depositUnderlying{value: settings.fee.nativeFee}(
-            amount,
-            settings
-        );
+        stTBYA.depositUnderlying(amount);
 
         uint256 initialBalanceA = stTBYA.balanceOf(address(this));
         uint256 tokensToSend = 1 ether;
@@ -252,23 +239,10 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);
 
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messengerB,
-            Operation.Deposit
-        );
-
-        if (settings.fee.nativeFee == 0) {
-            settings.fee.nativeFee = 300000;
-        }
-
-        stTBYA.depositUnderlying{value: settings.fee.nativeFee}(
-            amount,
-            settings
-        );
+        stTBYA.depositUnderlying(amount);
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
 
         assertEq(stTBYA.getGlobalShares(), 10000e18);
-        assertEq(stTBYA.getGlobalShares(), stTBYB.getGlobalShares());
         assertEq(stTBYA.getSupplyIndex(), 1e18);
         assertEq(stTBYB.getSupplyIndex(), 0);
         {
@@ -295,6 +269,19 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             verifyPackets(bEid, addressToBytes32(address(stTBYB)));
         }
 
+        skip(1 days);
+        ILayerZeroSettings.LzSettings memory pokeSettings = _generateSettings(
+            messengerA,
+            Operation.Poke
+        );
+
+        if (pokeSettings.fee.nativeFee < 300000) {
+            pokeSettings.fee.nativeFee = 300000;
+        }
+
+        stTBYA.poke{value: pokeSettings.fee.nativeFee}(pokeSettings);
+        verifyPackets(bEid, addressToBytes32(address(messengerB)));
+
         assertEq(stTBYA.getGlobalShares(), 10000e18);
         assertEq(stTBYB.getGlobalShares(), 10000e18);
         assertEq(stTBYA.getSupplyIndex(), 75e16);
@@ -306,19 +293,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);
 
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messengerB,
-            Operation.Deposit
-        );
-
-        if (settings.fee.nativeFee == 0) {
-            settings.fee.nativeFee = 300000;
-        }
-
-        stTBYA.depositUnderlying{value: settings.fee.nativeFee}(
-            amount,
-            settings
-        );
+        stTBYA.depositUnderlying(amount);
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
 
         skip(3 days);
@@ -336,10 +311,6 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             ""
         );
         MessagingFee memory fee = stTBYA.quoteSend(sendParam, false);
-
-        if (settings.fee.nativeFee == 0) {
-            settings.fee.nativeFee = 300000;
-        }
 
         stTBYA.send{value: fee.nativeFee}(
             sendParam,
@@ -364,6 +335,8 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
             settings2.fee.nativeFee = 300000;
         }
 
+        skip(1 days);
+
         stTBYA.poke{value: settings2.fee.nativeFee}(settings2);
         verifyPackets(aEid, addressToBytes32(address(stTBYA)));
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
@@ -380,18 +353,7 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         usdc.mint(address(this), amount * 2);
         usdc.approve(address(stTBYA), amount);
 
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messengerB,
-            Operation.Deposit
-        );
-
-        if (settings.fee.nativeFee == 0) {
-            settings.fee.nativeFee = 300000;
-        }
-
-        (uint256 stTBYAmount, ) = stTBYA.depositUnderlying{
-            value: settings.fee.nativeFee
-        }(amount, settings);
+        uint256 stTBYAmount = stTBYA.depositUnderlying(amount);
         verifyPackets(bEid, addressToBytes32(address(messengerB)));
 
         stTBYA.approve(address(wstTBYA), stTBYAmount);
@@ -418,9 +380,10 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
         );
         MessagingFee memory fee = stTBYA.quoteSend(sendParam, false);
 
-        settings.fee.nativeFee = fee.nativeFee;
-
-        settings = _generateSettings(messengerB, Operation.Deposit);
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
+            messengerB,
+            Operation.Deposit
+        );
 
         if (settings.fee.nativeFee == 0) {
             settings.fee.nativeFee = 300000;
@@ -456,6 +419,14 @@ contract CrossChainTest is TestHelper, MessagingHelpers {
 
         assertEq(wstTBYA.balanceOf(address(this)), transferAmount);
         assertEq(wstTBYB.balanceOf(address(this)), transferAmount);
+
+        skip(1 days);
+        ILayerZeroSettings.LzSettings memory pokeSettings = _generateSettings(
+            messengerA,
+            Operation.Poke
+        );
+        stTBYA.poke{value: pokeSettings.fee.nativeFee}(pokeSettings);
+        verifyPackets(bEid, addressToBytes32(address(messengerB)));
 
         /// Approx equal due to fees
         assertApproxEqRel(stTBYA.getSupplyIndex(), 5e17, 1e15);
