@@ -176,6 +176,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
 
         _burnShares(msg.sender, shares);
         _setTotalUsd(_getTotalUsd() - amount);
+        _globalShares -= shares;
 
         _underlyingToken.safeTransfer(msg.sender, underlyingAmount);
 
@@ -333,8 +334,6 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
 
         // If the token is a TBY, we need to get the current exchange rate of the token
         //     to accurately calculate the amount of stTBY to mint.
-        // We calculate the mint fee prior to getting the exchange rate to avoid punishing
-        //     users for depositing TBYs once they have accrued interest.
         if (isTby) {
             amountMinted = _registry.getExchangeRate(token).mulWad(
                 amountMinted
@@ -345,6 +344,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         if (sharesAmount == 0) revert Errors.ZeroAmount();
 
         _mintShares(msg.sender, sharesAmount);
+        _globalShares += sharesAmount;
 
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
 
@@ -387,6 +387,7 @@ contract StTBY is IStTBY, CrossChainLST, ReentrancyGuard {
         if (performanceFee > 0) {
             sharesFeeAmount = getSharesByUsd(performanceFee);
             _mintShares(address(_stakeupStaking), sharesFeeAmount);
+            _globalShares += sharesFeeAmount;
 
             emit FeeCaptured(sharesFeeAmount);
         }

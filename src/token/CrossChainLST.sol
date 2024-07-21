@@ -46,6 +46,8 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
         super.setPeer(_eid, _peer);
     }
 
+    
+
     /**
      * @notice Syncs both global shares and yield across all chains
      * @dev Uses the current global shares value.
@@ -75,24 +77,6 @@ abstract contract CrossChainLST is StTBYBase, ILayerZeroSettings {
                 msgSettings.options,
                 msgSettings.refundRecipient
             );
-    }
-
-    /// @notice overrides the _mintShares function to increase global shares after minting
-    function _mintShares(
-        address recipient,
-        uint256 sharesAmount
-    ) internal override returns (uint256 newTotalShares) {
-        newTotalShares = super._mintShares(recipient, sharesAmount);
-        _globalShares += sharesAmount;
-    }
-
-    /// @notice overrides the _burnShares function to decrease global shares after burning
-    function _burnShares(
-        address account,
-        uint256 sharesAmount
-    ) internal override returns (uint256 newTotalShares) {
-        newTotalShares = super._burnShares(account, sharesAmount);
-        _globalShares -= sharesAmount;
     }
 
     function _getTbyYield() internal virtual returns (uint256);

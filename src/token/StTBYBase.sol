@@ -446,7 +446,7 @@ contract StTBYBase is IStTBYBase, OFTController {
     function _burnShares(
         address account,
         uint256 sharesAmount
-    ) internal returns (uint256 newTotalShares) {
+    ) internal virtual returns (uint256 newTotalShares) {
         require(account != address(0), "BURN_FROM_ZERO_ADDR");
 
         uint256 accountShares = _shares[account];

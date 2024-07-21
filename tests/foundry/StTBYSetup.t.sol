@@ -117,7 +117,6 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
             address(registry),
             expectedWrapperAddress,
             expectedMessengerAddress,
-            true,
             address(layerZeroEndpointA),
             owner
         );
@@ -125,8 +124,6 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
 
         assertEq(stTBY.owner(), owner);
         assertEq(address(stTBY.getUnderlyingToken()), address(stableToken));
-        assertEq(stTBY.getMintBps(), mintBps);
-        assertEq(stTBY.getRedeemBps(), redeemBps);
         assertEq(stTBY.getPerformanceBps(), performanceFeeBps);
 
         wstTBY = new WstTBY(address(stTBY));

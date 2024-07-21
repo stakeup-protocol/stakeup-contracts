@@ -50,7 +50,7 @@ contract StTBYTest is StTBYSetup {
         registry.setTokenInfos(false);
         vm.expectRevert(Errors.TBYNotActive.selector);
         vm.prank(alice);
-        stTBY.depositTby(address(pool), 1 ether, settings);
+        stTBY.depositTby(address(pool), 1 ether);
     }
 
     function test_deposit_fail_with_InsufficientBalance() public {
@@ -64,7 +64,7 @@ contract StTBYTest is StTBYSetup {
         vm.startPrank(alice);
         pool.approve(address(stTBY), 1 ether);
         vm.expectRevert(bytes("ERC20: transfer amount exceeds balance"));
-        stTBY.depositTby(address(pool), 1 ether, settings);
+        stTBY.depositTby(address(pool), 1 ether);
         vm.stopPrank();
     }
 
@@ -79,53 +79,46 @@ contract StTBYTest is StTBYSetup {
         vm.startPrank(alice);
         pool.approve(address(stTBY), 0.5 ether);
         vm.expectRevert(bytes("ERC20: insufficient allowance"));
-        stTBY.depositTby(address(pool), 1 ether, settings);
+        stTBY.depositTby(address(pool), 1 ether);
         vm.stopPrank();
     }
 
     function test_depositTBY_success() public {
         uint256 amountTBY = 1.1e6;
         uint256 amountStTBY = 1.1e18;
-        uint256 fee = (amountStTBY * mintBps) / BPS;
+
         pool.mint(alice, amountTBY);
         registry.setTokenInfos(true);
         registry.setExchangeRate(address(pool), 1e18);
 
         vm.startPrank(alice);
         pool.approve(address(stTBY), amountTBY);
+
         vm.expectEmit(true, true, true, true);
-        emit Deposit(alice, address(pool), amountTBY, amountStTBY - fee);
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
-        stTBY.depositTby(address(pool), amountTBY, settings);
+        emit Deposit(alice, address(pool), amountTBY, amountStTBY);
+        stTBY.depositTby(address(pool), amountTBY);
         vm.stopPrank();
 
-        assertEq(stTBY.balanceOf(alice), amountStTBY - fee);
-        assertEq(stTBY.balanceOf(address(staking)), fee);
+        assertEq(stTBY.balanceOf(alice), amountStTBY);
     }
 
     function test_depositUnderlying_success() public {
         uint256 amount = 1.1e6;
         uint256 amountStTBY = 1.1e18;
-        uint256 fee = (amountStTBY * mintBps) / BPS;
+
         stableToken.mint(address(alice), amount);
         registry.setTokenInfos(true);
 
         // Deposit when a BloomPool is not in the commit stage
         vm.startPrank(alice);
         stableToken.approve(address(stTBY), amount);
+
         vm.expectEmit(true, true, true, true);
-        emit Deposit(alice, address(stableToken), amount, amountStTBY - fee);
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
-        stTBY.depositUnderlying(amount, settings);
+        emit Deposit(alice, address(stableToken), amount, amountStTBY);
+        stTBY.depositUnderlying(amount);
         vm.stopPrank();
 
-        assertEq(stTBY.balanceOf(alice), amountStTBY - fee);
+        assertEq(stTBY.balanceOf(alice), amountStTBY);
 
         // Deposit when a BloomPool is in the commit stage
         stableToken.mint(bob, amount);
@@ -133,35 +126,28 @@ contract StTBYTest is StTBYSetup {
 
         vm.startPrank(bob);
         stableToken.approve(address(stTBY), amount);
+
         vm.expectEmit(true, true, true, true);
-        emit Deposit(bob, address(stableToken), amount, amountStTBY - fee);
-        ILayerZeroSettings.LzSettings memory settings2 = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
-        stTBY.depositUnderlying(amount, settings2);
+        emit Deposit(bob, address(stableToken), amount, amountStTBY);
+        stTBY.depositUnderlying(amount);
         vm.stopPrank();
 
-        assertEq(stTBY.balanceOf(bob), amountStTBY - fee);
-
-        assertEq(stTBY.balanceOf(address(staking)), fee * 2);
+        assertEq(stTBY.balanceOf(bob), amountStTBY);
     }
 
     function testMintRewards() public {
         // Properly mint rewards for the first 200M stTBY
         uint256 amount = 200_000_000e6;
         uint256 amount_scaled = amount * 1e12;
+
         pool.mint(alice, amount);
         registry.setTokenInfos(true);
         registry.setExchangeRate(address(pool), 1e18);
 
         vm.startPrank(alice);
         pool.approve(address(stTBY), amount);
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
-        stTBY.depositTby(address(pool), amount, settings);
+
+        stTBY.depositTby(address(pool), amount);
         vm.stopPrank();
 
         // Verify that the alice received the rewards
@@ -172,7 +158,7 @@ contract StTBYTest is StTBYSetup {
         vm.startPrank(bob);
         pool.approve(address(stTBY), 100e6);
 
-        stTBY.depositTby(address(pool), 100e6, settings);
+        stTBY.depositTby(address(pool), 100e6);
         vm.stopPrank();
 
         // Verify that bob did not receive any rewards
@@ -183,9 +169,10 @@ contract StTBYTest is StTBYSetup {
         // Burn some stTBY to decrease the total supply below 200M and try to mint rewards again
         uint256 burnAmount = 100_000_000e18;
         stableToken.mint(address(stTBY), 100_000_000e6);
+
         vm.startPrank(alice);
         stTBY.approve(address(stTBY), UINT256_MAX);
-        stTBY.redeemStTBY(burnAmount, settings);
+        stTBY.redeemStTBY(burnAmount);
         vm.stopPrank();
 
         // Verify that the total TBY in stTBY is now below 200M
@@ -196,7 +183,7 @@ contract StTBYTest is StTBYSetup {
         pool.mint(alice, 100e6);
         vm.startPrank(alice);
         pool.approve(address(stTBY), 100e6);
-        stTBY.depositTby(address(pool), 100e6, settings);
+        stTBY.depositTby(address(pool), 100e6);
         vm.stopPrank();
 
         // Verify alice did not receive any additional rewards
@@ -209,8 +196,7 @@ contract StTBYTest is StTBYSetup {
         uint256 donationAmount = 100e6;
         uint256 startingUSDCAliceBalance = 1e6;
         uint256 stTBYMintAmount = 1e18;
-        uint256 aliceDepositFee = (stTBYMintAmount * stTBY.getMintBps()) / BPS;
-        uint256 expectedEndSharesAlice = stTBYMintAmount - aliceDepositFee;
+
         uint256 exchangeRate = 1.04e18;
 
         address[] memory activeTokens = new address[](1);
@@ -228,15 +214,17 @@ contract StTBYTest is StTBYSetup {
         vm.startPrank(alice);
         stableToken.approve(address(stTBY), donationAmount);
         stableToken.mint(alice, startingUSDCAliceBalance);
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
-        stTBY.depositUnderlying(startingUSDCAliceBalance, settings);
+
+        stTBY.depositUnderlying(startingUSDCAliceBalance);
         vm.stopPrank();
 
         // Donate to stTBY
         stableToken.mint(address(stTBY), donationAmount);
+
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
+            messenger,
+            Operation.Deposit
+        );
 
         // Expect nothing to happen if the pool is not in the last 24 hours
         stTBY.poke(settings);
@@ -255,7 +243,7 @@ contract StTBYTest is StTBYSetup {
             stableToken.balanceOf(address(pool)),
             donationAmount + startingUSDCAliceBalance
         );
-        assertEq(stTBY.sharesOf(alice), expectedEndSharesAlice);
+        assertEq(stTBY.sharesOf(alice), stTBYMintAmount);
 
         // fast forward to 1 day after the end of the commit phase
         // if some of the deposit does not get matched, remaining balance
@@ -296,7 +284,7 @@ contract StTBYTest is StTBYSetup {
             stableToken.balanceOf(address(stTBY)),
             expectedRemainingBalanceEnd
         );
-        assertEq(stTBY.sharesOf(alice), expectedEndSharesAlice);
+        assertEq(stTBY.sharesOf(alice), stTBYMintAmount);
     }
 
     function testEmergencyHandlerWithdraw() public {
@@ -310,11 +298,8 @@ contract StTBYTest is StTBYSetup {
         pool.mint(alice, amount);
         vm.startPrank(alice);
         pool.approve(address(stTBY), amount);
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
-        stTBY.depositTby(address(pool), amount, settings);
+
+        stTBY.depositTby(address(pool), amount);
         vm.stopPrank();
 
         registry.setExchangeRate(address(pool), 1.04e18);
@@ -334,7 +319,7 @@ contract StTBYTest is StTBYSetup {
         newPool.mint(alice, amount);
         vm.startPrank(alice);
         newPool.approve(address(stTBY), amount);
-        stTBY.depositTby(address(newPool), amount, settings);
+        stTBY.depositTby(address(newPool), amount);
         newPool.setEmergencyHandler(address(emergencyHandler));
 
         newPool.setCommitPhaseEnd(1 days);
@@ -359,6 +344,11 @@ contract StTBYTest is StTBYSetup {
             amount *
             1e12;
 
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
+            messenger,
+            Operation.Poke
+        );
+
         stTBY.poke(settings);
         assertEq(stTBY.getTotalUsd(), expectedUSDPreEmergency);
 
@@ -366,7 +356,7 @@ contract StTBYTest is StTBYSetup {
 
         vm.startPrank(alice);
         emergencyHandler.setNumTokensToRedeem(amount);
-        stTBY.redeemUnderlying(address(newPool), settings);
+        stTBY.harvestTBY(address(newPool), settings);
 
         assertEq(stableToken.balanceOf(address(emergencyHandler)), 0);
         assertEq(stableToken.balanceOf(address(stTBY)), amount);
@@ -382,35 +372,24 @@ contract StTBYTest is StTBYSetup {
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         registry.setExchangeRate(address(pool), 1e18);
         /// ########## High Level Initial Share Math ##########
-        uint256 aliceMintedShares = (aliceAmount -
-            ((aliceAmount * mintBps) / BPS)) * 1e12;
-        uint256 bobMintedShares = (bobAmount - ((bobAmount * mintBps) / BPS)) *
-            1e12;
-        uint256 mintedStakeUpStakingShares = 3e18 -
-            (aliceMintedShares + bobMintedShares);
-        uint256 aliceRedeemFees = (aliceMintedShares * redeemBps) / BPS;
-        uint256 bobRedeemFees = (bobMintedShares * redeemBps) / BPS;
+        uint256 aliceMintedShares = aliceAmount * 1e12;
+        uint256 bobMintedShares = bobAmount * 1e12;
         uint256 expectedPerformanceFee = 3e16; // 10% of yield
         // ###########################################
-
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
 
         /// ########## Deposit Functionality ##########
         vm.startPrank(alice);
         pool.approve(address(stTBY), aliceAmount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(alice, address(pool), aliceAmount, aliceMintedShares);
-        stTBY.depositTby(address(pool), aliceAmount, settings);
+        stTBY.depositTby(address(pool), aliceAmount);
         vm.stopPrank();
 
         vm.startPrank(bob);
         pool.approve(address(stTBY), bobAmount);
         vm.expectEmit(true, true, true, true);
         emit Deposit(bob, address(pool), bobAmount, bobMintedShares);
-        stTBY.depositTby(address(pool), bobAmount, settings);
+        stTBY.depositTby(address(pool), bobAmount);
         stTBY.approve(address(wstTBY), bobMintedShares);
         wstTBY.wrap(bobMintedShares);
         vm.stopPrank();
@@ -418,7 +397,6 @@ contract StTBYTest is StTBYSetup {
         // Verify state after deposits
         assertEq(stTBY.balanceOf(alice), aliceMintedShares);
         assertEq(wstTBY.balanceOf(bob), bobMintedShares);
-        assertEq(stTBY.balanceOf(address(staking)), mintedStakeUpStakingShares);
         assertEq(stTBY.totalSupply(), 3e18);
         assertEq(stTBY.getTotalShares(), 3e18);
         assertEq(stTBY.getTotalUsd(), 3e18);
@@ -450,11 +428,12 @@ contract StTBYTest is StTBYSetup {
             Operation.Poke
         );
         stTBY.poke(pokeSettings);
-        ILayerZeroSettings.LzSettings memory redeemSettings = _generateSettings(
-            messenger,
-            Operation.Redeem
-        );
-        stTBY.redeemUnderlying(address(pool), redeemSettings);
+        ILayerZeroSettings.LzSettings
+            memory harvestSettings = _generateSettings(
+                messenger,
+                Operation.Redeem
+            );
+        stTBY.harvestTBY(address(pool), harvestSettings);
 
         uint256 sharesPerUsd = (stTBY.getTotalShares() * 1e18) /
             stTBY.getTotalUsd();
@@ -471,37 +450,29 @@ contract StTBYTest is StTBYSetup {
         uint256 aliceBalance1 = stTBY.balanceOf(alice);
         uint256 bobWrappedAmount = wstTBY.balanceOf(bob);
 
-        uint256 scaler = 10 ** (18 + (18 - stableToken.decimals()));
-        uint256 aliceExpectedStableBalance = (aliceBalance1 * .995e18) / scaler;
-        uint256 bobExpectedStableBalance = (stTBY.getUsdByShares(
+        uint256 scaler = 10 ** (18 - stableToken.decimals());
+        uint256 aliceExpectedStableBalance = aliceBalance1 / scaler;
+
+        uint256 bobExpectedStableBalance = stTBY.getUsdByShares(
             bobWrappedAmount
-        ) * .995e18) / scaler;
+        ) / scaler;
 
         vm.startPrank(alice);
         stTBY.approve(address(stTBY), UINT256_MAX);
         vm.expectEmit(true, true, true, true);
-        emit Redeemed(
-            alice,
-            aliceShares - aliceRedeemFees,
-            aliceExpectedStableBalance
-        );
-        ILayerZeroSettings.LzSettings
-            memory withdrawSettings = _generateSettings(
-                messenger,
-                Operation.Withdraw
-            );
-        stTBY.redeemStTBY(stTBY.balanceOf(alice), withdrawSettings);
+        emit Redeemed(alice, aliceShares, aliceExpectedStableBalance);
+        stTBY.redeemStTBY(stTBY.balanceOf(alice));
         vm.stopPrank();
 
         vm.startPrank(bob);
         wstTBY.approve(address(stTBY), UINT256_MAX);
         vm.expectEmit(true, true, true, true);
         emit Redeemed(
-            address(wstTBY), // TODO: Fix events to emit user address when redeeming from wstTBY
-            bobWrappedAmount - bobRedeemFees,
+            address(wstTBY),
+            bobWrappedAmount,
             bobExpectedStableBalance
         );
-        wstTBY.redeemWstTBY(bobWrappedAmount, withdrawSettings);
+        wstTBY.redeemWstTBY(bobWrappedAmount);
         vm.stopPrank();
 
         assertEq(stTBY.balanceOf(alice), 0);
@@ -512,10 +483,7 @@ contract StTBYTest is StTBYSetup {
 
         assertEq(
             stTBY.sharesOf(address(staking)),
-            stakeupStakingShares +
-                performanceFeeInShares +
-                aliceRedeemFees +
-                bobRedeemFees
+            stakeupStakingShares + performanceFeeInShares
         );
         // ###############################################
     }
