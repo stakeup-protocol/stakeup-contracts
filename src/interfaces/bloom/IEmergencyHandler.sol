@@ -9,5 +9,5 @@ interface IEmergencyHandler {
      * @param _pool BloomPool that the funds in the emergency handler contract orginated from
      * @return amount of underlying assets redeemed
      */
-    function redeem(IBloomPool _pool) external returns (uint256);
+    function redeemLender(IBloomPool _pool) external returns (uint256);
 }

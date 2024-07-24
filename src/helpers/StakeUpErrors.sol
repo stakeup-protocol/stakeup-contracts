@@ -70,6 +70,9 @@ library StakeUpErrors {
     /// @notice TBY not active
     error TBYNotActive();
 
+    /// @notice Too long between rate updates
+    error RateUpdateNeeded();
+
     // ========================= General ===========================
     /// @notice Zero amount
     error ZeroAmount();

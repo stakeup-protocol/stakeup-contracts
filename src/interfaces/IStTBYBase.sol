@@ -33,27 +33,11 @@ interface IStTBYBase {
     );
 
     /**
-     * @notice Set the total global shares for the protocol
-     * @param newGlobalShares The updated total amount of shares in existence
-     */
-    function setGlobalShares(uint256 newGlobalShares) external;
-
-    /**
      * @notice Distribute yield according to the consentration of shares relative to
      *         implementations on other chains.
-     * @param amount The amount of total Usd accrued by the protocol across all chains
+     * @param yieldPerShares The additional yield per share to be distributed.
      */
-    function accrueYield(uint256 amount) external;
-
-    /**
-     * @notice Remove yield according to the consentration of shares relative to
-     *         implementations on other chains.
-     * @dev This function will only be executed in the event that yield is overestimated
-     *      and the protocol receives less yield than expected at redemption.
-     * @dev This would only occur in the event of a partial redemption during emergency withdrawal.
-     * @param amount The amount of total Usd removed from protocol across all chains
-     */
-    function removeYield(uint256 amount) external;
+    function accrueYield(uint256 yieldPerShares) external;
 
     /**
      * @notice Transfer shares from caller to recipient
@@ -122,13 +106,4 @@ interface IStTBYBase {
     function getUsdByShares(
         uint256 sharesAmount
     ) external view returns (uint256);
-
-    /// @notice The total shares of stTBY tokens in circulation on all chains
-    function getGlobalShares() external view returns (uint256);
-
-    /// @notice The percentage of the global supply that exists on this chain
-    function getSupplyIndex() external view returns (uint256);
-
-    /// @notice The address of the messenger contract
-    function getMessenger() external view returns (address);
 }

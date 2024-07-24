@@ -34,45 +34,40 @@ contract StTBYBase is IStTBYBase, OFTController {
     /// @dev Total amount of Usd
     uint256 internal _totalUsd;
 
-    /// @dev The total amount of stTBY shares in circulation on all chains
-    uint256 internal _globalShares;
-
-    /// @dev The address of the messenger contract
-    address internal _messenger;
+    /// @dev Last rate update timestamp
+    uint256 internal _lastRateUpdate;
 
     // =================== Modifiers ===================
 
-    modifier onlyMessenger() {
-        if (msg.sender != _messenger) revert Errors.UnauthorizedCaller();
+    modifier onlyRelayer() {
+        if (msg.sender != address(_yieldRelayer))
+            revert Errors.UnauthorizedCaller();
         _;
     }
 
     // ================== Constructor ==================
 
     constructor(
-        address messenger,
         address layerZeroEndpoint,
-        address bridgeOperator
-    ) OFTController("Staked TBY", "stTBY", layerZeroEndpoint, bridgeOperator) {
-        if (messenger == address(0)) revert Errors.ZeroAddress();
-        _messenger = messenger;
+        address bridgeOperator,
+        address yieldRelayer
+    )
+        OFTController(
+            "Staked TBY",
+            "stTBY",
+            layerZeroEndpoint,
+            bridgeOperator,
+            yieldRelayer
+        )
+    {
+        _lastRateUpdate = block.timestamp;
     }
 
     // =================== Functions ==================
 
     /// @inheritdoc IStTBYBase
-    function setGlobalShares(uint256 newGlobalShares) external onlyMessenger {
-        _setGlobalShares(newGlobalShares);
-    }
-
-    /// @inheritdoc IStTBYBase
-    function accrueYield(uint256 amount) external onlyMessenger {
-        _accrueYield(amount);
-    }
-
-    /// @inheritdoc IStTBYBase
-    function removeYield(uint256 amount) external onlyMessenger {
-        _accrueYield(amount);
+    function accrueYield(uint256 yieldPerShares) external onlyRelayer {
+        _accrueYield(yieldPerShares);
     }
 
     /**
@@ -257,25 +252,6 @@ contract StTBYBase is IStTBYBase, OFTController {
             return sharesAmount;
         }
         return sharesAmount.mulWadUp(_getTotalUsd()).divWadUp(totalShares);
-    }
-
-    /// @inheritdoc IStTBYBase
-    function getGlobalShares() public view override returns (uint256) {
-        return _globalShares;
-    }
-
-    /// @inheritdoc IStTBYBase
-    function getSupplyIndex() public view override returns (uint256) {
-        uint256 globalShares = getGlobalShares();
-        if (globalShares == 0) {
-            return 0;
-        }
-        return _getTotalShares().divWadUp(globalShares);
-    }
-
-    /// @inheritdoc IStTBYBase
-    function getMessenger() external view override returns (address) {
-        return _messenger;
     }
 
     /// @inheritdoc IStTBYBase
@@ -488,24 +464,10 @@ contract StTBYBase is IStTBYBase, OFTController {
         emit TransferShares(from, to, sharesAmount);
     }
 
-    /**
-     * @notice Sets the total amount of shares in existence across all chains
-     * @param shares Total amount of shares in existence across all chains
-     */
-    function _setGlobalShares(uint256 shares) internal {
-        _globalShares = shares;
-    }
-
     /// @dev This is called on the base chain before distributing yield to other chains
-    function _accrueYield(uint256 amount) internal {
-        uint256 yieldAccrued = getSupplyIndex().mulWad(amount);
+    function _accrueYield(uint256 yieldPerShares) internal {
+        uint256 yieldAccrued = _getTotalShares().mulWad(yieldPerShares);
         _setTotalUsd(_getTotalUsd() + yieldAccrued);
-    }
-
-    /// @dev This is called on the base chain before before removing yield from other chains
-    function _removeYield(uint256 amount) internal {
-        uint256 yieldRemoved = getSupplyIndex().mulWad(amount);
-        _setTotalUsd(_getTotalUsd() - yieldRemoved);
     }
 
     function _debit(
