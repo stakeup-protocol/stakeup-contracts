@@ -7,6 +7,7 @@ import {OAppCore} from "@LayerZero/oapp/OApp.sol";
 import {StakeUpErrors as Errors} from "../../helpers/StakeUpErrors.sol";
 
 import {ControllerBase} from "./ControllerBase.sol";
+import {IYieldRelayer} from "../../interfaces/IYieldRelayer.sol";
 
 /**
  * @title OFTController
@@ -14,20 +15,37 @@ import {ControllerBase} from "./ControllerBase.sol";
  *        OFTs within the StakeUp ecosystem
  */
 abstract contract OFTController is ControllerBase, OFT {
+    IYieldRelayer internal _yieldRelayer;
+
     // ================= Constructor =================
     constructor(
         string memory tokenName,
         string memory tokenSymbol,
         address layerZeroEndpoint,
-        address bridgeOperator
+        address bridgeOperator,
+        address yieldRelayer
     )
         OFT(tokenName, tokenSymbol, layerZeroEndpoint, bridgeOperator)
         ControllerBase(bridgeOperator)
     {
         // Solhint-disable-previous-line no-empty-blocks
+        if (yieldRelayer == address(0)) {
+            revert Errors.ZeroAddress();
+        }
+        _yieldRelayer = IYieldRelayer(yieldRelayer);
     }
 
     // =================== Functions ===================
+
+    /// @inheritdoc ControllerBase
+    function setYieldRelayer(
+        address newYieldRelayer
+    ) external override onlyBridgeOperator {
+        if (newYieldRelayer == address(0)) {
+            revert Errors.ZeroAddress();
+        }
+        _yieldRelayer = IYieldRelayer(newYieldRelayer);
+    }
 
     /// @inheritdoc ControllerBase
     function setPeer(

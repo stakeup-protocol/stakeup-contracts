@@ -2,16 +2,14 @@
 pragma solidity 0.8.22;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {IBloomFactory} from "./bloom/IBloomFactory.sol";
 import {IExchangeRateRegistry} from "./bloom/IExchangeRateRegistry.sol";
 import {IStakeUpStaking} from "./IStakeUpStaking.sol";
 import {IStTBYBase} from "./IStTBYBase.sol";
-import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {IWstTBY} from "./IWstTBY.sol";
 
-interface IStTBY is IStTBYBase, ILayerZeroSettings {
+interface IStTBY is IStTBYBase {
     // =================== Events ===================
 
     /**
@@ -65,7 +63,7 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
     function depositTby(
         address tby,
         uint256 amount
-    ) external payable returns (uint256 amountMinted);
+    ) external returns (uint256 amountMinted);
 
     /**
      * @notice Deposit underlying tokens and get stTBY minted
@@ -74,7 +72,7 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      */
     function depositUnderlying(
         uint256 amount
-    ) external payable returns (uint256 amountMinted);
+    ) external returns (uint256 amountMinted);
 
     /**
      * @notice Redeem stTBY in exchange for underlying tokens. Underlying
@@ -93,13 +91,8 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @dev Underlying tokens can only be redeemed if stTBY contains a TBY which is
      *     in its FinalWithdrawal state.
      * @param tby TBY address
-     * @param settings Configuration settings for bridging using LayerZero
-     * @return msgReceipts MessagingReceipt Receipts for bridging using LayerZero
      */
-    function harvestTBY(
-        address tby,
-        LzSettings memory settings
-    ) external payable returns (MessagingReceipt[] memory msgReceipts);
+    function harvestTBY(address tby) external;
 
     /**
      * @notice Invokes the auto stake feature or adjusts the remaining balance
@@ -109,10 +102,9 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
      * @dev remainingBalance adjustment is invoked if the last created pool is
      * in any other state than commit and deposits dont get fully staked
      * @dev anyone can call this function for now
+     * @return rewardEligible Returns true if the caller is eligible for poke rewards
      */
-    function poke(
-        LzSettings memory settings
-    ) external payable returns (MessagingReceipt[] memory msgReceipts);
+    function poke() external returns (bool rewardEligible);
 
     /// @notice Get the total amount of underlying tokens in the pool
     function getRemainingBalance() external view returns (uint256);
@@ -140,4 +132,7 @@ interface IStTBY is IStTBYBase, ILayerZeroSettings {
 
     /// @notice Returns if underlying tokens have been redeemed.
     function isTbyRedeemed(address tby) external view returns (bool);
+
+    /// @notice The total shares of stTBY tokens in circulation on all chains
+    function getGlobalShares() external view returns (uint256);
 }

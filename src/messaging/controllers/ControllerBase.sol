@@ -46,6 +46,12 @@ abstract contract ControllerBase {
     }
 
     // =================== Interface ===================
+    /**
+     * @notice Sets the address for the yield oracle
+     * @param newYieldRelayer The address of the new yield oracle
+     */
+    function setYieldRelayer(address newYieldRelayer) external virtual;
+
     /// @notice Overrides the setPeer function in the OFT and OApp contracts
     function setPeer(uint32 eid, bytes32 peer) external virtual;
 

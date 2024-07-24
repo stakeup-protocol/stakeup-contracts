@@ -39,6 +39,17 @@ contract BridgeOperator is Ownable2Step {
     }
 
     // =================== Functions ===================
+
+    /**
+     * @notice Sets the yield oracle the network
+     * @dev Can only be called by the owner
+     * @param newYieldRelayer The address of the new yield relayer
+     */
+    function setYieldRelayer(address newYieldRelayer) external onlyOwner {
+        (address stTBY, , ) = _decodeContracts();
+        ControllerBase(stTBY).setYieldRelayer(newYieldRelayer);
+    }
+
     /**
      * @notice Adds a new endpoint to the StakeUp ecosystem
      * @dev Can only be called by the owner
@@ -81,7 +92,6 @@ contract BridgeOperator is Ownable2Step {
         address bridgeAddress
     ) external onlyOwner {
         (, address wstTBYBridge, ) = _decodeContracts();
-
         IWstTBYBridge(wstTBYBridge).setWstTBYBridge(eid, bridgeAddress);
     }
 

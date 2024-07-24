@@ -2,7 +2,6 @@
 pragma solidity 0.8.22;
 
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 

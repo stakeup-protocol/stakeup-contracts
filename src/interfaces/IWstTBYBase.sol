@@ -3,10 +3,9 @@ pragma solidity 0.8.22;
 
 import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
-import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {IStTBY} from "./IStTBY.sol";
 
-interface IWstTBYBase is ILayerZeroSettings {
+interface IWstTBYBase {
     // =================== Events ===================
 
     /// @notice Emitted when stTBY is wrapped to wstTBY
