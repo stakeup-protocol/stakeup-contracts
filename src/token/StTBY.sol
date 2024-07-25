@@ -441,7 +441,9 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         address[] memory tbys = _registry.getActiveTokens();
         uint256 currentRate = _scaleBpsRate(_bpsFeed.currentRate());
         uint256 timeElapsed = blockTimestamp - lastRateUpdate;
-        for (uint256 i = 0; i < tbys.length; i++) {
+
+        uint256 length = tbys.length;
+        for (uint256 i = 0; i < length; i++) {
             uint256 balance = IBloomPool(tbys[i]).balanceOf(address(this));
 
             if (balance != 0) {

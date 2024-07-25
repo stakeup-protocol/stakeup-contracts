@@ -41,6 +41,16 @@ contract YieldRelayer is IYieldRelayer {
     }
 
     /// @inheritdoc IYieldRelayer
+    function setKeeper(address keeper) external override onlyKeeper {
+        _keeper = keeper;
+    }
+
+    /// @inheritdoc IYieldRelayer
+    function getKeeper() external view override returns (address) {
+        return _keeper;
+    }
+
+    /// @inheritdoc IYieldRelayer
     function getStTBY() external view returns (address) {
         return _stTBY;
     }
