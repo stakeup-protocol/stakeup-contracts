@@ -35,8 +35,9 @@ contract YieldRelayer is IYieldRelayer {
     // =================== Functions ===================
 
     /// @inheritdoc IYieldRelayer
-    function accrueYield(uint256 yieldPerShare) external override onlyKeeper {
+    function updateYield(uint256 yieldPerShare) external override onlyKeeper {
         IStTBY(_stTBY).accrueYield(yieldPerShare);
+        emit YieldUpdated(yieldPerShare);
     }
 
     /// @inheritdoc IYieldRelayer
