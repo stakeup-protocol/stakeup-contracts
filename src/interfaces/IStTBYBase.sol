@@ -32,6 +32,9 @@ interface IStTBYBase {
         uint256 sharesAmount
     );
 
+    /// @notice Emitted when yieldPerShares is updated
+    event UpdatedYieldPerShare(uint256 yieldPerShares);
+
     /**
      * @notice Distribute yield according to the consentration of shares relative to
      *         implementations on other chains.

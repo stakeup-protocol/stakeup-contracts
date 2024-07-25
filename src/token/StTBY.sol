@@ -14,6 +14,7 @@ import {StakeUpMintRewardLib} from "../rewards/lib/StakeUpMintRewardLib.sol";
 
 import {IBloomFactory} from "../interfaces/bloom/IBloomFactory.sol";
 import {IBloomPool} from "../interfaces/bloom/IBloomPool.sol";
+import {IBPSFeed} from "../interfaces/bloom/IBPSFeed.sol";
 import {IEmergencyHandler} from "../interfaces/bloom/IEmergencyHandler.sol";
 import {IExchangeRateRegistry} from "../interfaces/bloom/IExchangeRateRegistry.sol";
 import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
@@ -21,6 +22,8 @@ import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
 
+/// TODO: Create a tby deposit that prevents front running
+///       - Switch to a index variable that increments based on yield added to the system
 /// @title Staked TBY Contract
 contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     using Math for uint256;
@@ -40,18 +43,14 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
     IExchangeRateRegistry private immutable _registry;
 
+    IBPSFeed private immutable _bpsFeed;
+
     IStakeUpStaking private immutable _stakeupStaking;
 
     IStakeUpToken private immutable _stakeupToken;
 
     /// @dev The total amount of stTBY shares in circulation on all chains
     uint256 internal _globalShares;
-
-    /// @dev Last deposit amount
-    uint256 internal _lastDepositAmount;
-
-    /// @dev Remaining underlying token balance
-    uint256 internal _remainingBalance;
 
     /// @dev Mint rewards remaining
     uint256 internal _mintRewardsRemaining;
@@ -78,6 +77,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         address stakeupStaking,
         address bloomFactory,
         address registry,
+        address bpsFeed,
         address wstTBY,
         address layerZeroEndpoint,
         address bridgeOperator,
@@ -97,6 +97,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         _underlyingDecimals = IERC20Metadata(underlyingToken).decimals();
         _bloomFactory = IBloomFactory(bloomFactory);
         _registry = IExchangeRateRegistry(registry);
+        _bpsFeed = IBPSFeed(bpsFeed);
         _stakeupStaking = IStakeUpStaking(stakeupStaking);
         _stakeupToken = IStakeUpStaking(stakeupStaking).getStakupToken();
         _wstTBY = IWstTBY(wstTBY);
@@ -115,19 +116,18 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         address tby,
         uint256 amount
     ) external nonReentrant returns (uint256 amountMinted) {
-        if (!_registry.tokenInfos(tby).active) revert Errors.TBYNotActive();
+        if (
+            IBloomPool(tby).state() != IBloomPool.State.Holding ||
+            !_registry.tokenInfos(tby).active
+        ) {
+            revert Errors.TBYNotActive();
+        }
 
         if (IBloomPool(tby).UNDERLYING_TOKEN() != address(_underlyingToken)) {
             revert Errors.InvalidUnderlyingToken();
         }
 
-        IBloomPool latestPool = _getLatestPool();
-
         IERC20(tby).safeTransferFrom(msg.sender, address(this), amount);
-
-        if (tby == address(latestPool)) {
-            _lastDepositAmount += amount;
-        }
 
         return _deposit(tby, amount, true);
     }
@@ -144,11 +144,8 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         }
 
         if (latestPool.state() == IBloomPool.State.Commit) {
-            _lastDepositAmount += amount;
             _underlyingToken.safeApprove(address(latestPool), amount);
             latestPool.depositLender(amount);
-        } else {
-            _remainingBalance += amount;
         }
 
         return _deposit(address(_underlyingToken), amount, false);
@@ -177,11 +174,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         _underlyingToken.safeTransfer(msg.sender, underlyingAmount);
 
         emit Redeemed(msg.sender, shares, underlyingAmount);
-    }
-
-    /// @inheritdoc IStTBY
-    function getRemainingBalance() external view returns (uint256) {
-        return _remainingBalance;
     }
 
     /// @inheritdoc IStTBY
@@ -229,23 +221,22 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function poke() external nonReentrant returns (bool rewardEligible) {
+    function poke() external nonReentrant {
         IBloomPool lastCreatedPool = _getLatestPool();
         IBloomPool.State currentState = lastCreatedPool.state();
 
         if (_within24HoursOfCommitPhaseEnd(lastCreatedPool, currentState)) {
-            _autoMintTBY(lastCreatedPool) > 0
-                ? rewardEligible = true
-                : rewardEligible = false;
+            _autoMintTBY(lastCreatedPool);
         }
 
-        if (_isEligibleForAdjustment(currentState)) {
-            _adjustRemainingBalance(lastCreatedPool) > 0
-                ? rewardEligible = true
-                : rewardEligible = false;
-        }
-
-        if (rewardEligible) {
+        uint256 currentBlock = block.timestamp;
+        uint256 lastUpdate = _lastRateUpdate;
+        if (currentBlock - lastUpdate >= 24 hours) {
+            _accrueYield(
+                _calcYieldAccrued(currentBlock, lastUpdate).divWadUp(
+                    _globalShares
+                )
+            );
             _distributePokeRewards();
         }
     }
@@ -310,10 +301,17 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         // If the token is a TBY, we need to get the current exchange rate of the token
         //     to accurately calculate the amount of stTBY to mint.
+        // We then adjust the amount minted based on the time since the last rate update
+        //     in order to prevent front running of rate updates which would result in
+        //     overvaluing TBY yield.
         if (isTby) {
-            amountMinted = _registry.getExchangeRate(token).mulWad(
-                amountMinted
-            );
+            uint256 timeSinceUpdate = _lastRateUpdate - block.timestamp;
+            uint256 rateAdjustment = _scaleBpsRate(_bpsFeed.currentRate()) *
+                timeSinceUpdate;
+
+            amountMinted =
+                _registry.getExchangeRate(token).mulWad(amountMinted) -
+                rateAdjustment;
         }
 
         uint256 sharesAmount = getSharesByUsd(amountMinted);
@@ -363,10 +361,6 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             emit FeeCaptured(sharesFeeAmount);
         }
 
-        if (proceeds > 0) {
-            _remainingBalance += proceeds;
-        }
-
         _stakeupStaking.processFees();
     }
 
@@ -380,17 +374,13 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     function _autoMintTBY(
         IBloomPool pool
     ) internal returns (uint256 depositAmount) {
-        uint256 underlyingBalance = _underlyingToken.balanceOf(address(this));
+        depositAmount = _underlyingToken.balanceOf(address(this));
 
-        if (underlyingBalance > 0) {
-            delete _remainingBalance;
+        if (depositAmount > 0) {
+            _underlyingToken.safeApprove(address(pool), depositAmount);
+            pool.depositLender(depositAmount);
 
-            _underlyingToken.safeApprove(address(pool), underlyingBalance);
-            pool.depositLender(underlyingBalance);
-
-            _lastDepositAmount += underlyingBalance;
-
-            emit TBYAutoMinted(address(pool), underlyingBalance);
+            emit TBYAutoMinted(address(pool), depositAmount);
         }
     }
 
@@ -409,54 +399,12 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         if (currentState == IBloomPool.State.Commit) {
             uint256 currentTime = block.timestamp;
-            if (
+            return
                 currentTime >= last24hoursOfCommitPhase &&
-                currentTime < commitPhaseEnd
-            ) {
-                return true;
-            }
+                currentTime < commitPhaseEnd;
         }
 
         return false;
-    }
-
-    /**
-     * @notice Check if the pool is eligible for adjustment
-     * @param state Pool state
-     * @return bool True if the pool is in a state that allows for adjustment
-     */
-    function _isEligibleForAdjustment(
-        IBloomPool.State state
-    ) internal pure returns (bool) {
-        return
-            state != IBloomPool.State.Commit &&
-            state != IBloomPool.State.PendingPreHoldSwap &&
-            state != IBloomPool.State.FinalWithdraw &&
-            state != IBloomPool.State.EmergencyExit;
-    }
-
-    /**
-     * @notice Adjust the remaining balance to account for the difference between
-     * the last deposit amount and the current balance of the latest TBYs
-     * @param pool The latest Bloom pool
-     * @return uint256 The difference between deposit amount and current balance
-     */
-    function _adjustRemainingBalance(
-        IBloomPool pool
-    ) internal returns (uint256) {
-        uint256 depositDifference;
-        uint256 latestTbyBalance = IERC20(address(pool)).balanceOf(
-            address(this)
-        );
-
-        if (_lastDepositAmount > latestTbyBalance) {
-            depositDifference = _lastDepositAmount - latestTbyBalance;
-            _remainingBalance += depositDifference;
-            emit RemainingBalanceAdjusted(_remainingBalance);
-        }
-        _lastDepositAmount = 0;
-
-        return depositDifference;
     }
 
     /**
@@ -483,5 +431,45 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
                 IStakeUpToken(_stakeupToken).mintRewards(msg.sender, amount);
             }
         }
+    }
+
+    /// @notice Calculates the yield accrued by the stTBY contract since the last update
+    function _calcYieldAccrued(
+        uint256 blockTimestamp,
+        uint256 lastRateUpdate
+    ) internal view returns (uint256 yieldAccrued) {
+        address[] memory tbys = _registry.getActiveTokens();
+        uint256 currentRate = _scaleBpsRate(_bpsFeed.currentRate());
+        uint256 timeElapsed = blockTimestamp - lastRateUpdate;
+        for (uint256 i = 0; i < tbys.length; i++) {
+            uint256 balance = IBloomPool(tbys[i]).balanceOf(address(this));
+
+            if (balance != 0) {
+                if (IBloomPool(tbys[i]).state() == IBloomPool.State.Holding) {
+                    yieldAccrued +=
+                        (currentRate * timeElapsed * balance) /
+                        Math.WAD;
+                } else {
+                    uint256 poolPhaseEnd = IBloomPool(tbys[i]).POOL_PHASE_END();
+                    if (poolPhaseEnd - timeElapsed > lastRateUpdate) {
+                        uint256 poolTimeElapsed = poolPhaseEnd - lastRateUpdate;
+                        yieldAccrued +=
+                            (currentRate * poolTimeElapsed * balance) /
+                            Math.WAD;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @notice Scales the BPS rate to a fixed point number
+     * @dev 1e4: the initial rate of the BPSFeed
+     * @dev 1e14: the scaling factor to convert the rate to a fixed point number
+     * @param rate The rate to scale
+     * @return The scaled rate
+     */
+    function _scaleBpsRate(uint256 rate) internal pure returns (uint256) {
+        return (rate - 1e4) * 1e14;
     }
 }

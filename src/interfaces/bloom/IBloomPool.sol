@@ -24,6 +24,8 @@ interface IBloomPool is IERC20 {
 
     function COMMIT_PHASE_END() external view returns (uint256);
 
+    function POOL_PHASE_END() external view returns (uint256);
+
     function EMERGENCY_HANDLER() external view returns (address);
 
     function UNDERLYING_TOKEN() external view returns (address);

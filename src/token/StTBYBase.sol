@@ -465,9 +465,11 @@ contract StTBYBase is IStTBYBase, OFTController {
     }
 
     /// @dev This is called on the base chain before distributing yield to other chains
-    function _accrueYield(uint256 yieldPerShares) internal {
-        uint256 yieldAccrued = _getTotalShares().mulWad(yieldPerShares);
+    function _accrueYield(uint256 yieldPerShare) internal {
+        uint256 yieldAccrued = _getTotalShares().mulWad(yieldPerShare);
+        _lastRateUpdate = block.timestamp;
         _setTotalUsd(_getTotalUsd() + yieldAccrued);
+        emit UpdatedYieldPerShare(yieldPerShare);
     }
 
     function _debit(
