@@ -22,29 +22,25 @@ abstract contract OFTController is ControllerBase, OFT {
         string memory tokenName,
         string memory tokenSymbol,
         address layerZeroEndpoint,
-        address bridgeOperator,
-        address yieldRelayer
+        address bridgeOperator
     )
         OFT(tokenName, tokenSymbol, layerZeroEndpoint, bridgeOperator)
         ControllerBase(bridgeOperator)
     {
         // Solhint-disable-previous-line no-empty-blocks
-        if (yieldRelayer == address(0)) {
-            revert Errors.ZeroAddress();
-        }
-        _yieldRelayer = IYieldRelayer(yieldRelayer);
     }
 
     // =================== Functions ===================
 
-    /// @inheritdoc ControllerBase
-    function setYieldRelayer(
-        address newYieldRelayer
-    ) external override onlyBridgeOperator {
-        if (newYieldRelayer == address(0)) {
+    /**
+     * @notice Sets the yield relayer the network
+     * @param yieldRelayer The address of the new yield relayer
+     */
+    function setYieldRelayer(address yieldRelayer) external onlyBridgeOperator {
+        if (yieldRelayer == address(0)) {
             revert Errors.ZeroAddress();
         }
-        _yieldRelayer = IYieldRelayer(newYieldRelayer);
+        _yieldRelayer = IYieldRelayer(yieldRelayer);
     }
 
     /// @inheritdoc ControllerBase

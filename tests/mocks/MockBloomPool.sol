@@ -28,7 +28,7 @@ contract MockBloomPool is IBloomPool, MockERC20 {
 
     State private _state;
     uint256 private _commitPhaseEnd;
-
+    uint256 private _poolPhaseEnd;
     address private _emergencyHandler;
 
     constructor(
@@ -108,5 +108,13 @@ contract MockBloomPool is IBloomPool, MockERC20 {
 
     function UNDERLYING_TOKEN() external view override returns (address) {
         return address(underlyingToken);
+    }
+
+    function POOL_PHASE_END() external view override returns (uint256) {
+        return _poolPhaseEnd;
+    }
+
+    function setPoolPhaseEnd(uint256 _newPoolPhaseEnd) external {
+        _poolPhaseEnd = _newPoolPhaseEnd;
     }
 }

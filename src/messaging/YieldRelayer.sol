@@ -16,10 +16,19 @@ contract YieldRelayer is IYieldRelayer {
     /// @dev Address of stTBY contract
     address private immutable _stTBY;
 
+    /// @dev Address of the bridge operator
+    address private _bridgeOperator;
+
     /// @dev Address of the keeper
     address private _keeper;
 
     // =================== Modifiers ===================
+
+    modifier onlyBridgeOperator() {
+        if (msg.sender != _bridgeOperator) revert Errors.UnauthorizedCaller();
+        _;
+    }
+
     modifier onlyKeeper() {
         if (msg.sender != _keeper) revert Errors.UnauthorizedCaller();
         _;
@@ -27,8 +36,9 @@ contract YieldRelayer is IYieldRelayer {
 
     // ================= Constructor =================
 
-    constructor(address stTBY, address keeper) {
+    constructor(address stTBY, address bridgeOperator, address keeper) {
         _stTBY = stTBY;
+        _bridgeOperator = bridgeOperator;
         _keeper = keeper;
     }
 
@@ -40,9 +50,26 @@ contract YieldRelayer is IYieldRelayer {
         emit YieldUpdated(yieldPerShare);
     }
 
+    /**
+     * @notice Sets the bridge operator address
+     * @param bridgeOperator The new bridge operator address
+     */
+    function setBridgeOperator(
+        address bridgeOperator
+    ) external onlyBridgeOperator {
+        if (bridgeOperator == address(0)) revert Errors.ZeroAddress();
+        _bridgeOperator = bridgeOperator;
+    }
+
     /// @inheritdoc IYieldRelayer
-    function setKeeper(address keeper) external override onlyKeeper {
+    function setKeeper(address keeper) external override onlyBridgeOperator {
+        if (keeper == address(0)) revert Errors.ZeroAddress();
         _keeper = keeper;
+    }
+
+    /// @inheritdoc IYieldRelayer
+    function getBridgeOperator() external view override returns (address) {
+        return _bridgeOperator;
     }
 
     /// @inheritdoc IYieldRelayer

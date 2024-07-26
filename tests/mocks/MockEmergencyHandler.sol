@@ -19,7 +19,7 @@ import {MockBloomPool} from "./MockBloomPool.sol";
 contract MockEmergencyHandler is IEmergencyHandler {
     uint256 private _tokensToRedeem;
 
-    function redeem(IBloomPool _pool) external override returns (uint256) {
+    function redeemLender(IBloomPool _pool) external override returns (uint256) {
         MockBloomPool(address(_pool)).transferFrom(
             msg.sender,
             address(this),

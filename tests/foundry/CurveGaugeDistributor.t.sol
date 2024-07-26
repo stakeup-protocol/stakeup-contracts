@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.22;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
 
 import {CurveGaugeDistributor, ICurveGaugeDistributor} from "src/rewards/CurveGaugeDistributor.sol";

@@ -5,8 +5,6 @@ import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
-import {MessagingHelpers} from "./MessagingHelpers.t.sol";
-import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {StTBY} from "src/token/StTBY.sol";
@@ -60,11 +58,6 @@ contract WstTBYTest is StTBYSetup {
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         registry.setTokenInfos(true);
         registry.setExchangeRate(address(pool), 1e18);
-
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
 
         // Mint wstTBY using stable token
         vm.startPrank(alice);

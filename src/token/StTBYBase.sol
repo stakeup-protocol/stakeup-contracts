@@ -49,17 +49,8 @@ contract StTBYBase is IStTBYBase, OFTController {
 
     constructor(
         address layerZeroEndpoint,
-        address bridgeOperator,
-        address yieldRelayer
-    )
-        OFTController(
-            "Staked TBY",
-            "stTBY",
-            layerZeroEndpoint,
-            bridgeOperator,
-            yieldRelayer
-        )
-    {
+        address bridgeOperator
+    ) OFTController("Staked TBY", "stTBY", layerZeroEndpoint, bridgeOperator) {
         _lastRateUpdate = block.timestamp;
     }
 

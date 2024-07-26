@@ -16,7 +16,6 @@ contract BridgeOperatorTest is StTBYSetup {
         bridgeOperator = new BridgeOperator(
             address(stTBY),
             address(wstTBYBridge),
-            address(messenger),
             owner
         );
 
@@ -24,17 +23,14 @@ contract BridgeOperatorTest is StTBYSetup {
         // Set the delegate to the bridge operator
         stTBY.setDelegate(address(bridgeOperator));
         wstTBYBridge.setDelegate(address(bridgeOperator));
-        messenger.setDelegate(address(bridgeOperator));
 
         // Set the bridge operator as the owner of all contracts
         stTBY.setBridgeOperator(address(bridgeOperator));
         wstTBYBridge.setBridgeOperator(address(bridgeOperator));
-        messenger.setBridgeOperator(address(bridgeOperator));
 
         // Renounce ownership of all contracts
         stTBY.renounceOwnership();
         wstTBYBridge.renounceOwnership();
-        messenger.renounceOwnership();
 
         vm.stopPrank();
     }
@@ -42,13 +38,11 @@ contract BridgeOperatorTest is StTBYSetup {
     function test_ContractsOwnedByNoone() public {
         assertEq(stTBY.owner(), address(0));
         assertEq(wstTBYBridge.owner(), address(0));
-        assertEq(messenger.owner(), address(0));
     }
 
     function test_BridgeOperatorSet() public {
         assertEq(stTBY.getBridgeOperator(), address(bridgeOperator));
         assertEq(wstTBYBridge.getBridgeOperator(), address(bridgeOperator));
-        assertEq(messenger.getBridgeOperator(), address(bridgeOperator));
     }
 
     function test_SetWstTBYBridge() public {
@@ -70,8 +64,16 @@ contract BridgeOperatorTest is StTBYSetup {
     }
 
     function test_SetPeers() public {
-        bytes32[3] memory peers = [addressToBytes32(address(1)), addressToBytes32(address(2)), addressToBytes32(address(3))];
-        bytes32[3] memory invalidPeers = [addressToBytes32(address(0)), addressToBytes32(address(1)), addressToBytes32(address(1))];
+        bytes32[3] memory peers = [
+            addressToBytes32(address(1)),
+            addressToBytes32(address(2)),
+            addressToBytes32(address(3))
+        ];
+        bytes32[3] memory invalidPeers = [
+            addressToBytes32(address(0)),
+            addressToBytes32(address(1)),
+            addressToBytes32(address(1))
+        ];
         // Fails if not called by owner
         vm.startPrank(alice);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -87,9 +89,7 @@ contract BridgeOperatorTest is StTBYSetup {
         bridgeOperator.setPeers(1, peers);
 
         assertEq(stTBY.peers(1), addressToBytes32(address(1)));
-        assertEq(stTBY.peerEids(0), 1);
         assertEq(wstTBYBridge.peers(1), addressToBytes32(address(2)));
-        assertEq(messenger.peers(1), addressToBytes32(address(3)));
     }
 
     function test_UpdateDelegate() public {
@@ -114,12 +114,6 @@ contract BridgeOperatorTest is StTBYSetup {
         assertEq(
             EndpointV2(address(wstTBYBridge.endpoint())).delegates(
                 address(wstTBYBridge)
-            ),
-            address(1)
-        );
-        assertEq(
-            EndpointV2(address(messenger.endpoint())).delegates(
-                address(messenger)
             ),
             address(1)
         );

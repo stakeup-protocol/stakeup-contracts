@@ -80,9 +80,8 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         address bpsFeed,
         address wstTBY,
         address layerZeroEndpoint,
-        address bridgeOperator,
-        address yieldOracle
-    ) StTBYBase(layerZeroEndpoint, bridgeOperator, yieldOracle) {
+        address bridgeOperator
+    ) StTBYBase(layerZeroEndpoint, bridgeOperator) {
         if (
             underlyingToken == address(0) ||
             bloomFactory == address(0) ||
