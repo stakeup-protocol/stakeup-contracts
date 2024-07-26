@@ -5,8 +5,6 @@ import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
-import {MessagingHelpers} from "./MessagingHelpers.t.sol";
-import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {StTBY} from "src/token/StTBY.sol";
@@ -43,10 +41,6 @@ contract StTBYTest is StTBYSetup {
     }
 
     function test_deposit_fail_with_TBYNotActive() public {
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
         registry.setTokenInfos(false);
         vm.expectRevert(Errors.TBYNotActive.selector);
         vm.prank(alice);
@@ -56,10 +50,6 @@ contract StTBYTest is StTBYSetup {
     function test_deposit_fail_with_InsufficientBalance() public {
         pool.mint(alice, 0.5 ether);
         registry.setTokenInfos(true);
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
 
         vm.startPrank(alice);
         pool.approve(address(stTBY), 1 ether);
@@ -71,10 +61,6 @@ contract StTBYTest is StTBYSetup {
     function test_deposit_fail_with_InsufficientAllowance() public {
         pool.mint(alice, 1 ether);
         registry.setTokenInfos(true);
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
 
         vm.startPrank(alice);
         pool.approve(address(stTBY), 0.5 ether);
@@ -221,13 +207,8 @@ contract StTBYTest is StTBYSetup {
         // Donate to stTBY
         stableToken.mint(address(stTBY), donationAmount);
 
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Deposit
-        );
-
         // Expect nothing to happen if the pool is not in the last 24 hours
-        stTBY.poke(settings);
+        stTBY.poke();
         assertEq(stTBY.getTotalUsd(), startingUSDCAliceBalance * 1e12);
         assertEq(stableToken.balanceOf(address(stTBY)), donationAmount);
 
@@ -236,7 +217,7 @@ contract StTBYTest is StTBYSetup {
         skip(pool.COMMIT_PHASE_END() - 1 hours);
         vm.expectEmit(true, true, true, true);
         emit TBYAutoMinted(address(pool), donationAmount);
-        stTBY.poke(settings);
+        stTBY.poke();
 
         assertEq(stableToken.balanceOf(address(stTBY)), 0);
         assertEq(
@@ -258,9 +239,7 @@ contract StTBYTest is StTBYSetup {
         stableToken.mint(address(stTBY), unmatchedAmount);
         pool.mint(address(stTBY), tbyReturned);
 
-        uint256 startingRemainingBalance = stTBY.getRemainingBalance();
-        uint256 expectedRemainingBalanceEnd = startingRemainingBalance +
-            unmatchedAmount;
+        uint256 expectedRemainingBalanceEnd = unmatchedAmount;
 
         // Rate will also be adjusted
         registry.setExchangeRate(address(pool), exchangeRate);
@@ -268,7 +247,7 @@ contract StTBYTest is StTBYSetup {
         pool.setState(IBloomPool.State.Holding);
         vm.expectEmit(true, true, true, true);
         emit RemainingBalanceAdjusted(unmatchedAmount);
-        stTBY.poke(settings);
+        stTBY.poke();
 
         uint256 underlyingScaledBalance = stableToken.balanceOf(
             address(stTBY)
@@ -344,19 +323,14 @@ contract StTBYTest is StTBYSetup {
             amount *
             1e12;
 
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Poke
-        );
-
-        stTBY.poke(settings);
+        stTBY.poke();
         assertEq(stTBY.getTotalUsd(), expectedUSDPreEmergency);
 
         stableToken.mint(address(emergencyHandler), amount);
 
         vm.startPrank(alice);
         emergencyHandler.setNumTokensToRedeem(amount);
-        stTBY.harvestTBY(address(newPool), settings);
+        stTBY.harvestTBY(address(newPool));
 
         assertEq(stableToken.balanceOf(address(emergencyHandler)), 0);
         assertEq(stableToken.balanceOf(address(stTBY)), amount);
@@ -423,17 +397,8 @@ contract StTBYTest is StTBYSetup {
         uint256 performanceFeeInShares = stTBY.getSharesByUsd(
             expectedPerformanceFee
         );
-        ILayerZeroSettings.LzSettings memory pokeSettings = _generateSettings(
-            messenger,
-            Operation.Poke
-        );
-        stTBY.poke(pokeSettings);
-        ILayerZeroSettings.LzSettings
-            memory harvestSettings = _generateSettings(
-                messenger,
-                Operation.Redeem
-            );
-        stTBY.harvestTBY(address(pool), harvestSettings);
+
+        stTBY.harvestTBY(address(pool));
 
         uint256 sharesPerUsd = (stTBY.getTotalShares() * 1e18) /
             stTBY.getTotalUsd();
@@ -504,13 +469,8 @@ contract StTBYTest is StTBYSetup {
 
         uint256 expectedReward = (3 days * yearOneRewards) / 52 weeks;
 
-        ILayerZeroSettings.LzSettings memory settings = _generateSettings(
-            messenger,
-            Operation.Poke
-        );
-
         vm.startPrank(alice);
-        stTBY.poke(settings);
+        stTBY.poke();
         vm.stopPrank();
 
         assertEq(supToken.balanceOf(alice), expectedReward);

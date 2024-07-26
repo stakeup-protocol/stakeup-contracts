@@ -7,7 +7,6 @@ import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
 
 import {StTBYBase} from "src/token/StTBYBase.sol";
 import {WstTBYBase} from "src/token/WstTBYBase.sol";
-import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 import {StakeUpTokenLite} from "src/token/StakeUpTokenLite.sol";
 import {WstTBYBridge} from "src/messaging/WstTBYBridge.sol";
 import {BridgeOperator} from "src/messaging/BridgeOperator.sol";
@@ -44,19 +43,10 @@ contract DeployLiteScript is Script {
         );
 
         StTBYBase stTBY = new StTBYBase(
-            expectedMessengerAddress,
             address(LAYER_ZERO_ENDPOINT_SEP),
             expectedBridgeOperatorAddress
         );
         console2.log("stTBY", address(stTBY));
-
-        StakeUpMessenger messenger = new StakeUpMessenger(
-            address(stTBY),
-            address(LAYER_ZERO_ENDPOINT_SEP),
-            expectedBridgeOperatorAddress
-        );
-
-        console2.log("messenger", address(messenger));
 
         StakeUpTokenLite sup = new StakeUpTokenLite(
             address(LAYER_ZERO_ENDPOINT_SEP),
@@ -80,12 +70,10 @@ contract DeployLiteScript is Script {
         BridgeOperator bridgeOperator = new BridgeOperator(
             address(stTBY),
             address(wstTBYBridge),
-            address(messenger),
             owner
         );
         console2.log("bridgeOperator", address(bridgeOperator));
 
-        require(address(messenger) == expectedMessengerAddress, "Incorrect messenger address");
         require(
             address(bridgeOperator) == expectedBridgeOperatorAddress,
             "Incorrect bridge operator address"

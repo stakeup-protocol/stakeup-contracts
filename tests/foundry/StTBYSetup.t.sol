@@ -7,8 +7,6 @@ import {LibRLP} from "solady/utils/LibRLP.sol";
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
 import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
-import {MessagingHelpers} from "./MessagingHelpers.t.sol";
-import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 import {WstTBYBridge} from "src/messaging/WstTBYBridge.sol";
 
 import {IStTBY} from "src/interfaces/IStTBY.sol";
@@ -21,8 +19,9 @@ import {MockBloomPool, IBloomPool} from "../mocks/MockBloomPool.sol";
 import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
 import {MockEmergencyHandler} from "../mocks/MockEmergencyHandler.sol";
 import {MockRegistry} from "../mocks/MockRegistry.sol";
+import {MockBPSFeed} from "../mocks/MockBPSFeed.sol";
 
-abstract contract StTBYSetup is Test, MessagingHelpers {
+abstract contract StTBYSetup is Test {
     StTBY internal stTBY;
     WstTBY internal wstTBY;
 
@@ -35,11 +34,11 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
     MockRegistry internal registry;
     StakeUpStaking internal staking;
     MockEmergencyHandler internal emergencyHandler;
+    MockBPSFeed internal bpsFeed;
 
     MockEndpoint internal layerZeroEndpointA;
     MockEndpoint internal layerZeroEndpointB;
 
-    StakeUpMessenger internal messenger;
     WstTBYBridge internal wstTBYBridge;
 
     address internal owner = makeAddr("owner");
@@ -115,8 +114,8 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
             address(staking),
             address(factory),
             address(registry),
+            address(bpsFeed),
             expectedWrapperAddress,
-            expectedMessengerAddress,
             address(layerZeroEndpointA),
             owner
         );
@@ -129,11 +128,6 @@ abstract contract StTBYSetup is Test, MessagingHelpers {
         wstTBY = new WstTBY(address(stTBY));
         vm.label(address(wstTBY), "WstTBY");
 
-        messenger = new StakeUpMessenger(
-            address(stTBY),
-            address(layerZeroEndpointA),
-            owner
-        );
         assertEq(address(wstTBY), expectedWrapperAddress);
         assertEq(address(wstTBY.getStTBY()), address(stTBY));
 

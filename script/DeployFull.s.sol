@@ -7,7 +7,6 @@ import {LibRLP} from "solady/utils/LibRLP.sol";
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
 import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
-import {StakeUpMessenger} from "src/messaging/StakeUpMessenger.sol";
 import {WstTBYBridge} from "src/messaging/WstTBYBridge.sol";
 import {BridgeOperator} from "src/messaging/BridgeOperator.sol";
 import {StakeUpToken} from "src/token/StakeUpToken.sol";
@@ -18,6 +17,7 @@ contract DeployFullScript is Script {
     address public BIB01_ARB_SEP = 0x50868a9E0C576bea3aFe97e4b8b1f9E18aa8095d;
     address public factory = 0x7b1dE7ba3bC08408df1dA65c8F4E19efdC51515d;
     address public registry = 0x7B828A8cE30594F8Ee0d4f5EA7fF23F386752F26;
+    address public bpsFeed = 0x7B828A8cE30594F8Ee0d4f5EA7fF23F386752F26;
 
     uint256 public LAYER_ZERO_EID_ARB_SEP = 40231;
     address public LAYER_ZERO_ENDPOINT_ARB_SEP =
@@ -66,29 +66,21 @@ contract DeployFullScript is Script {
             owner,
             vm.getNonce(owner) + 1
         );
-        address expectedMessengerAddress = LibRLP.computeAddress(
-            owner,
-            vm.getNonce(owner) + 2
-        );
+
         StTBY stTBY = new StTBY(
             address(USDC_ARB_SEP),
             address(staking),
             address(factory),
             address(registry),
+            address(bpsFeed),
             expectedWrapperAddress,
-            expectedMessengerAddress,
             address(LAYER_ZERO_ENDPOINT_ARB_SEP),
             expectedBridgeOperatorAddress
         );
         console2.log("stTBY", address(stTBY));
         WstTBY wstTBY = new WstTBY(address(stTBY));
         console2.log("wstTBY", address(wstTBY));
-        StakeUpMessenger messenger = new StakeUpMessenger(
-            address(stTBY),
-            address(LAYER_ZERO_ENDPOINT_ARB_SEP),
-            expectedBridgeOperatorAddress
-        );
-        console2.log("messenger", address(messenger));
+
         WstTBYBridge wstTBYBridge = new WstTBYBridge(
             address(wstTBY),
             address(LAYER_ZERO_ENDPOINT_ARB_SEP),
@@ -98,16 +90,9 @@ contract DeployFullScript is Script {
         BridgeOperator bridgeOperator = new BridgeOperator(
             address(stTBY),
             address(wstTBYBridge),
-            address(messenger),
             owner
         );
         console2.log("bridgeOperator", address(bridgeOperator));
-
-        // Check expected addresses
-        require(
-            address(messenger) == expectedMessengerAddress,
-            "Incorrect messenger address"
-        );
 
         require(
             address(wstTBY) == expectedWrapperAddress,

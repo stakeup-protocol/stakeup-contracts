@@ -96,7 +96,7 @@ def test_performance_fee():
     bloom_pool.setState(IBloomPool.State.FinalWithdraw)
 
     bal_before = st_tby.balanceOf(stakeup.address)
-    st_tby.redeemUnderlying(bloom_pool.address, settings, from_=user, value=0)
+    st_tby.redeemUnderlying(bloom_pool.address, from_=user, value=0)
     fees_collected = st_tby.balanceOf(stakeup.address) - bal_before
 
     expected_performance_fee = (EvmMath.parse_eth(yield_gained)) * performance_fee
@@ -139,7 +139,7 @@ def test_exchange_rate():
     # Uncomment out when poke exchange rate fix is merged
     # registry.setExchangeRate(bloom_pool.address, EvmMath.parse_eth(1.05))
     # print(f'Exchange Rate {registry.getExchangeRate(bloom_pool.address)}')
-    # st_tby.poke(settings)
+    # st_tby.poke()
     # print(f'Total USD {st_tby.getTotalUsd()}')
     # print(f'Total Shares {st_tby.getTotalShares()}')
     # rate = st_tby.getTotalUsd() * 1e18 / st_tby.getTotalShares()
@@ -170,7 +170,7 @@ def test_auto_minting():
     user_bal_before = st_tby.balanceOf(user.address)
     user_shares_before = st_tby.sharesOf(user.address)
     bloom_pool.mint(st_tby.address, EvmMath.parse_decimals(usdc_deposit_amount, 6))
-    st_tby.harvestTBY(bloom_pool.address, settings, from_=user, value=0)
+    st_tby.harvestTBY(bloom_pool.address, from_=user, value=0)
     user_bal_after = st_tby.balanceOf(user.address)
     user_shares_after = st_tby.sharesOf(user.address)
 
@@ -184,7 +184,7 @@ def test_auto_minting():
     bloom_pool_2.setState(IBloomPool.State.Commit)
     
     factory.setLastCreatedPool(bloom_pool_2.address)
-    st_tby.poke(settings)
+    st_tby.poke()
 
     # TODO Fix: Currently bloom pool tokens are set active in the registry upon deployment. This is a dangerous
     # scenerio in the poke function when we have deposited tokens but have yet to be minted TBY,
@@ -200,14 +200,14 @@ def test_auto_minting():
     default_chain.mine(lambda x: x + Constants.ONE_DAY * 3 - Constants.ONE_HOUR)
 
     # Poke should deposit the remaining balance of usdc into the new bloom pool
-    st_tby.poke(settings)
+    st_tby.poke()
     assert st_tby.getRemainingBalance() == 0
     assert usdc.balanceOf(st_tby.address) == 0
 
     # Mine to past the end of the commit phase and initiate the pending prehold swap
     default_chain.mine(lambda x: x + Constants.ONE_HOUR * 2)
     bloom_pool_2.setState(IBloomPool.State.PendingPreHoldSwap)
-    st_tby.poke(settings)
+    st_tby.poke()
     assert st_tby.getRemainingBalance() == 0
     
 

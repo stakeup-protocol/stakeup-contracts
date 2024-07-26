@@ -8,8 +8,14 @@ interface IYieldRelayer {
     /// @notice Update yield accrued for the stTBY contract
     function updateYield(uint256 yieldPerShares) external;
 
+    /// @notice Updates the address of the bridge operator
+    function setBridgeOperator(address bridgeOperator) external;
+
     /// @notice Updates the address of the keeper
     function setKeeper(address keeper) external;
+
+    /// @notice Get the address of the bridge operator
+    function getBridgeOperator() external view returns (address);
 
     /// @notice Get the address of the keeper
     function getKeeper() external view returns (address);
