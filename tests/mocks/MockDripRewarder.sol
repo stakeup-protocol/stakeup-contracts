@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {StakeUpRewardMathLib} from "src/rewards/lib/StakeUpRewardMathLib.sol";
 
@@ -12,12 +12,6 @@ contract MockDripRewarder {
         uint256 rewardsRemaining,
         bool isRewardGauge
     ) external view returns (uint256) {
-        return
-            StakeUpRewardMathLib._calculateDripAmount(
-                rewardSupply,
-                startTimestamp,
-                rewardsRemaining,
-                isRewardGauge
-            );
+        return StakeUpRewardMathLib._calculateDripAmount(rewardSupply, startTimestamp, rewardsRemaining, isRewardGauge);
     }
 }

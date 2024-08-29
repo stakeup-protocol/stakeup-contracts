@@ -8,7 +8,7 @@
 ╚═════╝░╚══════╝░╚════╝░░╚════╝░╚═╝░░░░░╚═╝
 */
 
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {IExchangeRateRegistry} from "src/interfaces/bloom/IExchangeRateRegistry.sol";
 
@@ -22,26 +22,16 @@ contract MockRegistry is IExchangeRateRegistry {
         pool = _pool;
     }
 
-    function tokenInfos(
-        address /*token*/
-    ) external view override returns (TokenInfo memory) {
+    function tokenInfos(address /*token*/ ) external view override returns (TokenInfo memory) {
         return tokenInfo;
     }
 
     function setTokenInfos(bool registeredAndActive) public {
-        tokenInfo = TokenInfo({
-            registered: registeredAndActive,
-            active: registeredAndActive,
-            createdAt: block.timestamp
-        });
+        tokenInfo =
+            TokenInfo({registered: registeredAndActive, active: registeredAndActive, createdAt: block.timestamp});
     }
 
-    function getActiveTokens()
-        external
-        view
-        override
-        returns (address[] memory)
-    {
+    function getActiveTokens() external view override returns (address[] memory) {
         return activeTokens;
     }
 
@@ -49,9 +39,7 @@ contract MockRegistry is IExchangeRateRegistry {
         activeTokens = tokens;
     }
 
-    function getExchangeRate(
-        address token
-    ) external view override returns (uint256) {
+    function getExchangeRate(address token) external view override returns (uint256) {
         return exchangeRates[token];
     }
 

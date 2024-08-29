@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IOAppCore} from "@LayerZero/oapp/interfaces/IOAppCore.sol";
@@ -20,16 +20,8 @@ contract BridgeOperator is Ownable2Step {
     bytes private _stakeUpContracts;
 
     // ================== Constructor ================
-    constructor(
-        address stTBY,
-        address wstTBYBridge,
-        address owner
-    ) Ownable2Step() {
-        if (
-            stTBY == address(0) ||
-            wstTBYBridge == address(0) ||
-            owner == address(0)
-        ) {
+    constructor(address stTBY, address wstTBYBridge, address owner) Ownable2Step() {
+        if (stTBY == address(0) || wstTBYBridge == address(0) || owner == address(0)) {
             revert Errors.ZeroAddress();
         }
         _transferOwnership(owner);
@@ -45,7 +37,7 @@ contract BridgeOperator is Ownable2Step {
      * @param newYieldRelayer The address of the new yield relayer
      */
     function setYieldRelayer(address newYieldRelayer) external onlyOwner {
-        (address stTBY, ) = _decodeContracts();
+        (address stTBY,) = _decodeContracts();
         OFTController(stTBY).setYieldRelayer(newYieldRelayer);
     }
 
@@ -74,9 +66,7 @@ contract BridgeOperator is Ownable2Step {
      * @dev Can only be called by the owner
      * @param newBridgeOperator The new bridge operator address
      */
-    function migrateBridgeOperator(
-        address newBridgeOperator
-    ) external onlyOwner {
+    function migrateBridgeOperator(address newBridgeOperator) external onlyOwner {
         _setBridgeOperator(newBridgeOperator);
     }
 
@@ -86,10 +76,7 @@ contract BridgeOperator is Ownable2Step {
      * @param eid The LayerZero Endpoint ID
      * @param bridgeAddress The address of the wstTBY bridge contract
      */
-    function setWstTBYBridge(
-        uint32 eid,
-        address bridgeAddress
-    ) external onlyOwner {
+    function setWstTBYBridge(uint32 eid, address bridgeAddress) external onlyOwner {
         (, address wstTBYBridge) = _decodeContracts();
         IWstTBYBridge(wstTBYBridge).setWstTBYBridge(eid, bridgeAddress);
     }
@@ -123,11 +110,7 @@ contract BridgeOperator is Ownable2Step {
     }
 
     /// @notice Decodes the _stakeUpContracts bytes to get the respective addresses
-    function _decodeContracts()
-        internal
-        view
-        returns (address stTBY, address wstTBYBridge)
-    {
+    function _decodeContracts() internal view returns (address stTBY, address wstTBYBridge) {
         return abi.decode(_stakeUpContracts, (address, address));
     }
 }

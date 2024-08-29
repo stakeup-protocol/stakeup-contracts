@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
@@ -9,18 +9,10 @@ interface IWstTBYBase {
     // =================== Events ===================
 
     /// @notice Emitted when stTBY is wrapped to wstTBY
-    event StTBYWrapped(
-        address indexed user,
-        uint256 stTBYAmount,
-        uint256 wstTBYAmount
-    );
+    event StTBYWrapped(address indexed user, uint256 stTBYAmount, uint256 wstTBYAmount);
 
     /// @notice Emitted when wstTBY is unwrapped to stTBY
-    event WtTBYUnwrapped(
-        address indexed user,
-        uint256 wstTBYAmount,
-        uint256 stTBYAmount
-    );
+    event WtTBYUnwrapped(address indexed user, uint256 wstTBYAmount, uint256 stTBYAmount);
 
     // =================== Functions ===================
 
@@ -45,27 +37,21 @@ interface IWstTBYBase {
      * @param wstTBYAmount amount of wstTBY to uwrap in exchange for stTBY
      * @return stTBYAmount Amount of stTBY user receives after unwrap
      */
-    function unwrap(
-        uint256 wstTBYAmount
-    ) external returns (uint256 stTBYAmount);
+    function unwrap(uint256 wstTBYAmount) external returns (uint256 stTBYAmount);
 
     /**
      * @notice Get amount of wstTBY for a given amount of stTBY
      * @param stTBYAmount amount of stTBY
      * @return Amount of wstTBY for a given stTBY amount
      */
-    function getWstTBYByStTBY(
-        uint256 stTBYAmount
-    ) external view returns (uint256);
+    function getWstTBYByStTBY(uint256 stTBYAmount) external view returns (uint256);
 
     /**
      * @notice Get amount of stTBY for a given amount of wstTBY
      * @param wstTBYAmount amount of wstTBY
      * @return Amount of stTBY for a given wstTBY amount
      */
-    function getStTBYByWstTBY(
-        uint256 wstTBYAmount
-    ) external view returns (uint256);
+    function getStTBYByWstTBY(uint256 wstTBYAmount) external view returns (uint256);
 
     /**
      * @notice Get amount of stTBY for a one wstTBY

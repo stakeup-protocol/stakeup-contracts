@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -77,17 +77,18 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     // ================== functions ==================
 
     /// @inheritdoc IStakeUpStaking
-    function stake(
-        uint256 stakeupAmount
-    ) external override updateIndex distributeRewards {
+    function stake(uint256 stakeupAmount) external override updateIndex distributeRewards {
         _stake(msg.sender, stakeupAmount);
     }
 
     /// @inheritdoc IStakeUpStaking
-    function unstake(
-        uint256 stakeupAmount,
-        bool harvestRewards
-    ) external override nonReentrant updateIndex distributeRewards {
+    function unstake(uint256 stakeupAmount, bool harvestRewards)
+        external
+        override
+        nonReentrant
+        updateIndex
+        distributeRewards
+    {
         StakingData storage userStakingData = _stakingData[msg.sender];
 
         if (userStakingData.amountStaked == 0) revert Errors.UserHasNoStake();
@@ -120,28 +121,14 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeUpStaking
-    function processFees()
-        public
-        payable
-        override
-        onlyStTBY
-        nonReentrant
-        updateIndex
-    {
+    function processFees() public payable override onlyStTBY nonReentrant updateIndex {
         // solhint-ignore-previous-line no-empty-blocks
     }
 
     /// @inheritdoc IStakeUpStaking
-    function claimableRewards(
-        address account
-    ) external view override returns (uint256) {
-        return
-            _stakingData[account].rewardsAccrued +
-            _calculateRewardDelta(
-                _stakingData[account],
-                account,
-                _rewardData.index
-            );
+    function claimableRewards(address account) external view override returns (uint256) {
+        return _stakingData[account].rewardsAccrued
+            + _calculateRewardDelta(_stakingData[account], account, _rewardData.index);
     }
 
     /// @inheritdoc IStakeUpStaking
@@ -165,9 +152,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getUserStakingData(
-        address user
-    ) external view returns (StakingData memory) {
+    function getUserStakingData(address user) external view returns (StakingData memory) {
         return _stakingData[user];
     }
 
@@ -182,11 +167,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
 
         if (amount == 0) revert Errors.ZeroTokensStaked();
 
-        IERC20(address(_stakeupToken)).safeTransferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
+        IERC20(address(_stakeupToken)).safeTransferFrom(msg.sender, address(this), amount);
 
         userStakingData.amountStaked += uint128(amount);
         _totalStakeUpStaked += amount;
@@ -204,12 +185,10 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         if (_lastRewardBlock != block.number) {
             _lastRewardBlock = block.number;
 
-            uint256 totalStakeUpLocked = _totalStakeUpStaked +
-                _totalStakeUpVesting;
+            uint256 totalStakeUpLocked = _totalStakeUpStaked + _totalStakeUpVesting;
             RewardData storage rewards = _rewardData;
 
-            uint256 accrued = _stTBY.sharesOf(address(this)) -
-                rewards.lastShares;
+            uint256 accrued = _stTBY.sharesOf(address(this)) - rewards.lastShares;
 
             if (rewards.index == 0) {
                 rewards.index = uint128(Constants.INITIAL_REWARD_INDEX);
@@ -247,11 +226,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         uint256 rewardIndex = _rewardData.index;
         if (rewardIndex == userStakingData.index) return 0;
 
-        uint256 rewardDelta = _calculateRewardDelta(
-            userStakingData,
-            user,
-            rewardIndex
-        );
+        uint256 rewardDelta = _calculateRewardDelta(userStakingData, user, rewardIndex);
 
         userStakingData.index = uint128(rewardIndex);
         userStakingData.rewardsAccrued += uint128(rewardDelta);
@@ -267,11 +242,11 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
      * @param user The users address who's reward delta is being calculated
      * @param globalIndex The global reward index the calculation is occurring at
      */
-    function _calculateRewardDelta(
-        StakingData memory userData,
-        address user,
-        uint256 globalIndex
-    ) internal view returns (uint256) {
+    function _calculateRewardDelta(StakingData memory userData, address user, uint256 globalIndex)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 userIndex = userData.index;
 
         if (userIndex == 0) {

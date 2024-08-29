@@ -8,7 +8,7 @@
 ╚═════╝░╚══════╝░╚════╝░░╚════╝░╚═╝░░░░░╚═╝
 */
 
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -31,12 +31,7 @@ contract MockBloomPool is IBloomPool, MockERC20 {
     uint256 private _poolPhaseEnd;
     address private _emergencyHandler;
 
-    constructor(
-        address _underlyingToken,
-        address _billToken,
-        address _swap,
-        uint8 _decimals
-    ) MockERC20(_decimals) {
+    constructor(address _underlyingToken, address _billToken, address _swap, uint8 _decimals) MockERC20(_decimals) {
         underlyingToken = _underlyingToken;
         billToken = _billToken;
         swap = IMockSwapFacility(_swap);
@@ -59,21 +54,15 @@ contract MockBloomPool is IBloomPool, MockERC20 {
     function withdrawLender(uint256 _amount) external {
         _burn(msg.sender, _amount);
         uint256 exchangeRate = swap.exchangeRate();
-        uint256 amountToSend = (_amount * exchangeRate) /
-            10 ** IERC20Metadata(billToken).decimals();
+        uint256 amountToSend = (_amount * exchangeRate) / 10 ** IERC20Metadata(billToken).decimals();
         uint256 underlyingBalance = underlyingToken.balanceOf(address(this));
         if (amountToSend > underlyingBalance) {
-            MockERC20(underlyingToken).mint(
-                address(this),
-                amountToSend - underlyingBalance
-            );
+            MockERC20(underlyingToken).mint(address(this), amountToSend - underlyingBalance);
         }
         underlyingToken.safeTransfer(msg.sender, amountToSend);
     }
 
-    function depositLender(
-        uint256 amount
-    ) external override returns (uint256 newId) {
+    function depositLender(uint256 amount) external override returns (uint256 newId) {
         underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
         return 0;
     }

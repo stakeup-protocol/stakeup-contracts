@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.23;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
@@ -47,41 +47,27 @@ library StakeUpRewardMathLib {
             tokensUnlocked = rewardSupply;
         } else {
             // Calculate total tokens unlocked using the formula for the sum of a geometric series
-            tokensUnlocked =
-                (rewardSupply *
-                    (Constants.FIXED_POINT_ONE -
-                        (Constants.FIXED_POINT_ONE / 2 ** year))) /
-                Constants.FIXED_POINT_ONE;
+            tokensUnlocked = (rewardSupply * (Constants.FIXED_POINT_ONE - (Constants.FIXED_POINT_ONE / 2 ** year)))
+                / Constants.FIXED_POINT_ONE;
         }
 
         if (year > 1 && timeElapsed % Constants.ONE_YEAR != 0) {
             uint256 previousYear = year - 1;
-            previousYearAllocation =
-                (rewardSupply *
-                    (Constants.FIXED_POINT_ONE -
-                        (Constants.FIXED_POINT_ONE / 2 ** previousYear))) /
-                Constants.FIXED_POINT_ONE;
+            previousYearAllocation = (
+                rewardSupply * (Constants.FIXED_POINT_ONE - (Constants.FIXED_POINT_ONE / 2 ** previousYear))
+            ) / Constants.FIXED_POINT_ONE;
 
             if (rewardsPaid > 0) {
-                uint256 previousYearsRewardsPaid = Math.min(
-                    rewardsPaid,
-                    previousYearAllocation
-                );
-                leftoverRewards =
-                    previousYearAllocation -
-                    previousYearsRewardsPaid;
+                uint256 previousYearsRewardsPaid = Math.min(rewardsPaid, previousYearAllocation);
+                leftoverRewards = previousYearAllocation - previousYearsRewardsPaid;
                 rewardsPaid -= previousYearsRewardsPaid;
             }
         }
 
         uint256 allocationForYear = tokensUnlocked - previousYearAllocation;
-        uint256 timeElapsedInYear = timeElapsed % Constants.ONE_YEAR == 0
-            ? Constants.ONE_YEAR
-            : timeElapsed % Constants.ONE_YEAR;
+        uint256 timeElapsedInYear =
+            timeElapsed % Constants.ONE_YEAR == 0 ? Constants.ONE_YEAR : timeElapsed % Constants.ONE_YEAR;
 
-        return
-            ((timeElapsedInYear * allocationForYear) / Constants.ONE_YEAR) +
-            leftoverRewards -
-            rewardsPaid;
+        return ((timeElapsedInYear * allocationForYear) / Constants.ONE_YEAR) + leftoverRewards - rewardsPaid;
     }
 }

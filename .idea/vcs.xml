@@ -2,6 +2,38 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe/lib/forge-std" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe/lib/forge-std/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe/lib/solmate" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe/lib/solmate/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe/lib/surl" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe/lib/surl/lib/forge-std" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe/lib/surl/lib/forge-std/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe/lib/surl/lib/solidity-stringutils" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-safe/lib/surl/lib/solidity-stringutils/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-std" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/forge-std/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-contracts" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-contracts-upgradeable" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-contracts-upgradeable/lib/erc4626-tests" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-contracts-upgradeable/lib/forge-std" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-contracts-upgradeable/lib/forge-std/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-contracts/lib/erc4626-tests" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-contracts/lib/forge-std" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-contracts/lib/forge-std/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-foundry-upgrades" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-foundry-upgrades/lib/forge-std" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-foundry-upgrades/lib/forge-std/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-foundry-upgrades/lib/solidity-stringutils" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/openzeppelin-foundry-upgrades/lib/solidity-stringutils/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/solady" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/solady/lib/solmate" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/solady/lib/solmate/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/solmate" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/Bloom-protocol/lib/solmate/lib/ds-test" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/LayerZero-v2" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/LayerZero-v2/lib/forge-std" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/lib/LayerZero-v2/lib/forge-std/lib/ds-test" vcs="Git" />

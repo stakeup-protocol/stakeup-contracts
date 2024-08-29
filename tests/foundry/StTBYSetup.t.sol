@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
@@ -9,55 +9,56 @@ import {WstTBY} from "src/token/WstTBY.sol";
 import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
 import {WstTBYBridge} from "src/messaging/WstTBYBridge.sol";
 
-import {IStTBY} from "src/interfaces/IStTBY.sol";
-import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
-
 import {MockEndpoint} from "../mocks/MockEndpoint.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockSwapFacility} from "../mocks/MockSwapFacility.sol";
-import {MockBloomPool, IBloomPool} from "../mocks/MockBloomPool.sol";
-import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
+import {BloomFactory} from "@Bloom/BloomFactory.sol";
+import {BloomPool} from "@Bloom/BloomPool.sol";
+import {MockBloomPool} from "../mocks/MockBloomPool.sol";
 import {MockEmergencyHandler} from "../mocks/MockEmergencyHandler.sol";
+import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
 import {MockRegistry} from "../mocks/MockRegistry.sol";
 import {MockBPSFeed} from "../mocks/MockBPSFeed.sol";
+import {MockEndpoint} from "../mocks/MockEndpoint.sol";
 
 abstract contract StTBYSetup is Test {
+    // StakeUp Contracts
     StTBY internal stTBY;
     WstTBY internal wstTBY;
+    WstTBYBridge internal wstTBYBridge;
+    StakeUpStaking internal staking;
 
+    MockBloomFactory internal factory;
+
+    // Bloom Pool Contracts
     MockERC20 internal stableToken;
     MockERC20 internal billyToken;
     MockERC20 internal supToken;
-    MockSwapFacility internal swap;
+
     MockBloomPool internal pool;
-    MockBloomFactory internal factory;
+    MockSwapFacility internal swap;
     MockRegistry internal registry;
-    StakeUpStaking internal staking;
-    MockEmergencyHandler internal emergencyHandler;
     MockBPSFeed internal bpsFeed;
 
     MockEndpoint internal layerZeroEndpointA;
     MockEndpoint internal layerZeroEndpointB;
+    MockEmergencyHandler internal emergencyHandler;
 
-    WstTBYBridge internal wstTBYBridge;
-
+    // Users
     address internal owner = makeAddr("owner");
-    address internal layerZeroEndpoint = makeAddr("layerZeroEndpoint");
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
 
-    // Fees
-    uint16 internal mintBps = 1;
-    uint16 internal redeemBps = 50;
+    // Constants
     uint16 internal performanceFeeBps = 1000;
 
     uint16 internal constant BPS = 10000;
+    uint256 internal constant SCALER = 1e12;
 
     uint32 internal constant EID_A = 1;
     uint32 internal constant EID_B = 2;
 
-    bytes internal constant NOT_OWNER_ERROR =
-        bytes("Ownable: caller is not the owner");
+    bytes internal constant NOT_OWNER_ERROR = bytes("Ownable: caller is not the owner");
 
     function setUp() public virtual {
         stableToken = new MockERC20(6);
@@ -70,12 +71,7 @@ abstract contract StTBYSetup is Test {
         swap = new MockSwapFacility(stableToken, billyToken);
         vm.label(address(swap), "MockSwapFacility");
 
-        pool = new MockBloomPool(
-            address(stableToken),
-            address(billyToken),
-            address(swap),
-            6
-        );
+        pool = new MockBloomPool(address(stableToken), address(billyToken), address(swap), 6);
         vm.label(address(pool), "MockBloomPool");
 
         emergencyHandler = new MockEmergencyHandler();
@@ -94,21 +90,14 @@ abstract contract StTBYSetup is Test {
         layerZeroEndpointA = new MockEndpoint();
         layerZeroEndpointB = new MockEndpoint();
 
-        address expectedstTBYddress = LibRLP.computeAddress(
-            owner,
-            vm.getNonce(owner) + 1
-        );
+        address expectedstTBYddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 2);
 
         staking = new StakeUpStaking(address(supToken), expectedstTBYddress);
 
-        address expectedWrapperAddress = LibRLP.computeAddress(
-            owner,
-            vm.getNonce(owner) + 1
-        );
-        address expectedMessengerAddress = LibRLP.computeAddress(
-            owner,
-            vm.getNonce(owner) + 2
-        );
+        address expectedWrapperAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 2);
+
+        bpsFeed = new MockBPSFeed();
+
         stTBY = new StTBY(
             address(stableToken),
             address(staking),
@@ -131,11 +120,7 @@ abstract contract StTBYSetup is Test {
         assertEq(address(wstTBY), expectedWrapperAddress);
         assertEq(address(wstTBY.getStTBY()), address(stTBY));
 
-        wstTBYBridge = new WstTBYBridge(
-            address(wstTBY),
-            address(layerZeroEndpointA),
-            owner
-        );
+        wstTBYBridge = new WstTBYBridge(address(wstTBY), address(layerZeroEndpointA), owner);
 
         vm.stopPrank();
     }

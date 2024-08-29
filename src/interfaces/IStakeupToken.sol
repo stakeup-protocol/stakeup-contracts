@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
-
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 interface IStakeUpToken {
     /**
@@ -53,18 +52,12 @@ interface IStakeUpToken {
      * @param recipients An array of TokenRecipients that will receive tokens
      * @param percentOfTotalSupply The percentage of the total supply that will be minted
      */
-    function airdropTokens(
-        TokenRecipient[] memory recipients,
-        uint256 percentOfTotalSupply
-    ) external;
+    function airdropTokens(TokenRecipient[] memory recipients, uint256 percentOfTotalSupply) external;
 
     /**
      * @notice Mints the initial supply of tokens
      * @param allocations An array of token Allocations for the initial supply mint
      * @param initialMintPercentage The percentage of the total supply that will be minted
      */
-    function mintInitialSupply(
-        Allocation[] memory allocations,
-        uint256 initialMintPercentage
-    ) external;
+    function mintInitialSupply(Allocation[] memory allocations, uint256 initialMintPercentage) external;
 }

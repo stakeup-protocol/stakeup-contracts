@@ -7,7 +7,7 @@
 ██████╦╝███████╗╚█████╔╝╚█████╔╝██║░╚═╝░██║
 ╚═════╝░╚══════╝░╚════╝░░╚════╝░╚═╝░░░░░╚═╝
 */
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -42,10 +42,7 @@ contract MockERC20 is ERC20 {
     }
 
     /// Used for unit testing the staking rewards
-    function transferShares(
-        address to,
-        uint256 amount
-    ) external returns (uint256) {
+    function transferShares(address to, uint256 amount) external returns (uint256) {
         transfer(to, amount);
         return amount;
     }

@@ -8,7 +8,7 @@
 ╚═════╝░╚══════╝░╚════╝░░╚════╝░╚═╝░░░░░╚═╝
 */
 
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 interface IExchangeRateRegistry {
     /**

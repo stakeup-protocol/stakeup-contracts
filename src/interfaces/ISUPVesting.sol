@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 interface ISUPVesting {
     /// @dev The max supply of SUP tokens is 1 billion so we can use uint32 for balances
@@ -14,9 +14,7 @@ interface ISUPVesting {
      * @param account The account to check
      * @return The amount of tokens available to be claimed
      */
-    function getAvailableTokens(
-        address account
-    ) external view returns (uint256);
+    function getAvailableTokens(address account) external view returns (uint256);
 
     /**
      * @notice Set the accounting variables to track vested tokens for an account

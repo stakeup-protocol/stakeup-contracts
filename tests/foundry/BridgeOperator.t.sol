@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {EndpointV2} from "@LayerZero-Protocol/EndpointV2.sol";
@@ -13,11 +13,7 @@ contract BridgeOperatorTest is StTBYSetup {
 
     function setUp() public override {
         super.setUp();
-        bridgeOperator = new BridgeOperator(
-            address(stTBY),
-            address(wstTBYBridge),
-            owner
-        );
+        bridgeOperator = new BridgeOperator(address(stTBY), address(wstTBYBridge), owner);
 
         vm.startPrank(owner);
         // Set the delegate to the bridge operator
@@ -64,16 +60,10 @@ contract BridgeOperatorTest is StTBYSetup {
     }
 
     function test_SetPeers() public {
-        bytes32[3] memory peers = [
-            addressToBytes32(address(1)),
-            addressToBytes32(address(2)),
-            addressToBytes32(address(3))
-        ];
-        bytes32[3] memory invalidPeers = [
-            addressToBytes32(address(0)),
-            addressToBytes32(address(1)),
-            addressToBytes32(address(1))
-        ];
+        bytes32[3] memory peers =
+            [addressToBytes32(address(1)), addressToBytes32(address(2)), addressToBytes32(address(3))];
+        bytes32[3] memory invalidPeers =
+            [addressToBytes32(address(0)), addressToBytes32(address(1)), addressToBytes32(address(1))];
         // Fails if not called by owner
         vm.startPrank(alice);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -107,16 +97,8 @@ contract BridgeOperatorTest is StTBYSetup {
         vm.startPrank(owner);
         bridgeOperator.updateDelegate(address(1));
 
-        assertEq(
-            EndpointV2(address(stTBY.endpoint())).delegates(address(stTBY)),
-            address(1)
-        );
-        assertEq(
-            EndpointV2(address(wstTBYBridge.endpoint())).delegates(
-                address(wstTBYBridge)
-            ),
-            address(1)
-        );
+        assertEq(EndpointV2(address(stTBY.endpoint())).delegates(address(stTBY)), address(1));
+        assertEq(EndpointV2(address(wstTBYBridge.endpoint())).delegates(address(wstTBYBridge)), address(1));
     }
 
     function addressToBytes32(address _addr) internal pure returns (bytes32) {

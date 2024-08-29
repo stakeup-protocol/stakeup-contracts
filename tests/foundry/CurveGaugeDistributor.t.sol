@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
@@ -62,10 +62,7 @@ contract CurveGaugeDistributorTest is Test {
             })
         );
 
-        stakeupStaking = new StakeUpStaking(
-            address(mockStakeUpToken),
-            address(mockStTBY)
-        );
+        stakeupStaking = new StakeUpStaking(address(mockStakeUpToken), address(mockStTBY));
 
         curveGaugeDistributor = new CurveGaugeDistributor(address(this));
     }
@@ -80,24 +77,16 @@ contract CurveGaugeDistributorTest is Test {
         intializationTimestamp = block.timestamp;
         curveGaugeDistributor.seedGauges();
 
-        ICurveGaugeDistributor.CurvePoolData[]
-            memory data = curveGaugeDistributor.getCurvePoolData();
+        ICurveGaugeDistributor.CurvePoolData[] memory data = curveGaugeDistributor.getCurvePoolData();
 
-        for (uint256 i = 0; i < data.length; i++) {
+        for (uint256 i = 0; i < data.length; ++i) {
             uint256 yearOneRewards = data[i].maxRewards / 2;
 
             uint256 timeElapsed = block.timestamp - intializationTimestamp;
-            uint256 expectedReward = ((1 weeks + timeElapsed) *
-                yearOneRewards) / 52 weeks;
+            uint256 expectedReward = ((1 weeks + timeElapsed) * yearOneRewards) / 52 weeks;
 
-            assertEq(
-                data[i].rewardsRemaining,
-                data[i].maxRewards - expectedReward
-            );
-            assertEq(
-                mockStakeUpToken.balanceOf(data[i].curveGauge),
-                expectedReward
-            );
+            assertEq(data[i].rewardsRemaining, data[i].maxRewards - expectedReward);
+            assertEq(mockStakeUpToken.balanceOf(data[i].curveGauge), expectedReward);
         }
 
         // Fail to seed the gauges if called too early
