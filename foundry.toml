@@ -21,7 +21,7 @@ remappings = [
     "@layerzerolabs/=lib/LayerZero-v2/oapp/node_modules/@layerzerolabs/",
     "@LayerZeroTesting/=lib/LayerZero-v2/oapp/test/",
     "solidity-bytes-utils/=lib/LayerZero-v2/oapp/node_modules/solidity-bytes-utils/",
-    "@Bloom/=lib/Bloom-protocol/src/",
+    "@bloom-v2/=lib/bloom-v2/src/",
 ]
 
 [rpc_endpoints]
