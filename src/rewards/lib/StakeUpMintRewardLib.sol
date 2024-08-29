@@ -4,7 +4,7 @@ pragma solidity 0.8.23;
 /**
  * @title StakeUpMintRewardLib
  * @notice Libraries that provides mint reward cutoffs for different chains as well as logic to set the
- *         mint reward allocation for a given stTBY deployment based on the chain ID.
+ *         mint reward allocation for a given stUsdc deployment based on the chain ID.
  * @dev This library contains the mint rewards for chains that support native minting and burning as well as
  *      testnets.
  */
@@ -22,7 +22,7 @@ library StakeUpMintRewardLib {
 
     // ======================== Functions ========================
 
-    /// @notice Returns the mint reward allocation for a given stTBY deployment based on the chain ID
+    /// @notice Returns the mint reward allocation for a given stUsdc deployment based on the chain ID
     function _getMintRewardAllocation() internal view returns (uint256) {
         if (block.chainid == 42161) {
             return MINT_REWARD_CUTOFF_ARBITRUM;

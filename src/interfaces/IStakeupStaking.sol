@@ -2,7 +2,7 @@
 pragma solidity 0.8.23;
 
 import {IStakeUpToken} from "./IStakeUpToken.sol";
-import {IStTBY} from "./IStTBY.sol";
+import {IStUsdc} from "./IStUsdc.sol";
 import {ISUPVesting} from "./ISUPVesting.sol";
 
 interface IStakeUpStaking is ISUPVesting {
@@ -81,7 +81,7 @@ interface IStakeUpStaking is ISUPVesting {
     function getStakupToken() external view returns (IStakeUpToken);
 
     /// @notice Returns the stTBY token
-    function getStTBY() external view returns (IStTBY);
+    function getStUsdc() external view returns (IStUsdc);
 
     /**
      * @notice Returns the amount of claimable rewards for a user

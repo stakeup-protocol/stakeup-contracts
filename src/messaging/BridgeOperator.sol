@@ -6,7 +6,7 @@ import {IOAppCore} from "@LayerZero/oapp/interfaces/IOAppCore.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {IWstTBYBridge} from "../interfaces/IWstTBYBridge.sol";
+import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
 
 import {ControllerBase} from "./controllers/ControllerBase.sol";
 import {OFTController} from "./controllers/OFTController.sol";
@@ -20,13 +20,13 @@ contract BridgeOperator is Ownable2Step {
     bytes private _stakeUpContracts;
 
     // ================== Constructor ================
-    constructor(address stTBY, address wstTBYBridge, address owner) Ownable2Step() {
-        if (stTBY == address(0) || wstTBYBridge == address(0) || owner == address(0)) {
+    constructor(address stUsdc, address wstUsdcBridge, address owner) Ownable2Step() {
+        if (stUsdc == address(0) || wstUsdcBridge == address(0) || owner == address(0)) {
             revert Errors.ZeroAddress();
         }
         _transferOwnership(owner);
 
-        _stakeUpContracts = abi.encode(stTBY, wstTBYBridge);
+        _stakeUpContracts = abi.encode(stUsdc, wstUsdcBridge);
     }
 
     // =================== Functions ===================
@@ -37,14 +37,14 @@ contract BridgeOperator is Ownable2Step {
      * @param newYieldRelayer The address of the new yield relayer
      */
     function setYieldRelayer(address newYieldRelayer) external onlyOwner {
-        (address stTBY,) = _decodeContracts();
-        OFTController(stTBY).setYieldRelayer(newYieldRelayer);
+        (address stUsdc,) = _decodeContracts();
+        OFTController(stUsdc).setYieldRelayer(newYieldRelayer);
     }
 
     /**
      * @notice Adds a new endpoint to the StakeUp ecosystem
      * @dev Can only be called by the owner
-     * @dev The order of the peers is [stTBY, wstTBYBridge, stakeUpMessenger]
+     * @dev The order of the peers is [stUsdc, wstUsdcBridge, stakeUpMessenger]
      * @param eid The endpoint ID
      * @param peers An array of peer addresses converted to bytes32 for other OApps
      */
@@ -71,14 +71,14 @@ contract BridgeOperator is Ownable2Step {
     }
 
     /**
-     * @notice Sets the wstTBY bridge address for the given endpoint ID
+     * @notice Sets the wstUsdc bridge address for the given endpoint ID
      * @dev Can only be called by the owner
      * @param eid The LayerZero Endpoint ID
-     * @param bridgeAddress The address of the wstTBY bridge contract
+     * @param bridgeAddress The address of the wstUsdc bridge contract
      */
-    function setWstTBYBridge(uint32 eid, address bridgeAddress) external onlyOwner {
-        (, address wstTBYBridge) = _decodeContracts();
-        IWstTBYBridge(wstTBYBridge).setWstTBYBridge(eid, bridgeAddress);
+    function setWstUsdcBridge(uint32 eid, address bridgeAddress) external onlyOwner {
+        (, address wstUsdcBridge) = _decodeContracts();
+        IWstUsdcBridge(wstUsdcBridge).setWstUsdcBridge(eid, bridgeAddress);
     }
 
     /**
@@ -87,30 +87,30 @@ contract BridgeOperator is Ownable2Step {
      * @param peers An array of peer addresses for other OApps
      */
     function _setPeers(uint32 eid, bytes32[3] memory peers) internal {
-        (address stTBY, address wstTBYBridge) = _decodeContracts();
+        (address stUsdc, address wstUsdcBridge) = _decodeContracts();
 
-        IOAppCore(stTBY).setPeer(eid, peers[0]);
-        IOAppCore(wstTBYBridge).setPeer(eid, peers[1]);
+        IOAppCore(stUsdc).setPeer(eid, peers[0]);
+        IOAppCore(wstUsdcBridge).setPeer(eid, peers[1]);
     }
 
     /// @notice Logic for updating the delegate for all contracts in the StakeUp ecosystem
     function _setDelegates(address newDelegate) internal {
-        (address stTBY, address wstTBYBridge) = _decodeContracts();
+        (address stUsdc, address wstUsdcBridge) = _decodeContracts();
 
-        ControllerBase(stTBY).forceSetDelegate(newDelegate);
-        ControllerBase(wstTBYBridge).forceSetDelegate(newDelegate);
+        ControllerBase(stUsdc).forceSetDelegate(newDelegate);
+        ControllerBase(wstUsdcBridge).forceSetDelegate(newDelegate);
     }
 
     /// @notice Logic for updating the Bridge Operator for all contracts in the StakeUp ecosystem
     function _setBridgeOperator(address newBridgeOperator) internal {
-        (address stTBY, address wstTBYBridge) = _decodeContracts();
+        (address stUsdc, address wstUsdcBridge) = _decodeContracts();
 
-        ControllerBase(stTBY).setBridgeOperator(newBridgeOperator);
-        ControllerBase(wstTBYBridge).setBridgeOperator(newBridgeOperator);
+        ControllerBase(stUsdc).setBridgeOperator(newBridgeOperator);
+        ControllerBase(wstUsdcBridge).setBridgeOperator(newBridgeOperator);
     }
 
     /// @notice Decodes the _stakeUpContracts bytes to get the respective addresses
-    function _decodeContracts() internal view returns (address stTBY, address wstTBYBridge) {
+    function _decodeContracts() internal view returns (address stUsdc, address wstUsdcBridge) {
         return abi.decode(_stakeUpContracts, (address, address));
     }
 }

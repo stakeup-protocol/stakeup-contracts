@@ -54,7 +54,7 @@ library StakeUpErrors {
     /// @notice The total number of shares have not been fully allocated
     error SharesNotFullyAllocated();
 
-    // ========================= StTBY Token ===========================
+    // ========================= StUsdc Token ===========================
     /// @notice Parameter out of bounds
     error ParameterOutOfBounds();
 
@@ -83,7 +83,7 @@ library StakeUpErrors {
     /// @dev Error emitted when caller is not allowed to execute a function
     error UnauthorizedCaller();
 
-    /// @notice WstTBY already initialized
+    /// @notice WstUsdc already initialized
     error AlreadyInitialized();
 
     /// @notice Emitted if the caller passes an invalid address

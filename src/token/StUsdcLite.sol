@@ -6,11 +6,11 @@ import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {IStTBYBase} from "../interfaces/IStTBYBase.sol";
+import {IStUsdcLite} from "../interfaces/IStUsdcLite.sol";
 import {OFTController} from "src/messaging/controllers/OFTController.sol";
 
 /// @title Staked TBY Base Contract
-contract StTBYBase is IStTBYBase, OFTController {
+contract StUsdcLite is IStUsdcLite, OFTController {
     using FixedPointMathLib for uint256;
 
     // =================== Storage ===================
@@ -56,7 +56,7 @@ contract StTBYBase is IStTBYBase, OFTController {
 
     // =================== Functions ==================
 
-    /// @inheritdoc IStTBYBase
+    /// @inheritdoc IStUsdcLite
     function accrueYield(uint256 yieldPerShares) external onlyRelayer {
         _accrueYield(yieldPerShares);
     }
@@ -71,7 +71,7 @@ contract StTBYBase is IStTBYBase, OFTController {
         return _getTotalUsd();
     }
 
-    /// @inheritdoc IStTBYBase
+    /// @inheritdoc IStUsdcLite
     function getTotalUsd() external view override returns (uint256) {
         return _getTotalUsd();
     }
@@ -182,17 +182,17 @@ contract StTBYBase is IStTBYBase, OFTController {
         return true;
     }
 
-    /// @inheritdoc IStTBYBase
+    /// @inheritdoc IStUsdcLite
     function getTotalShares() external view override returns (uint256) {
         return _getTotalShares();
     }
 
-    /// @inheritdoc IStTBYBase
+    /// @inheritdoc IStUsdcLite
     function sharesOf(address account) external view override returns (uint256) {
         return _sharesOf(account);
     }
 
-    /// @inheritdoc IStTBYBase
+    /// @inheritdoc IStUsdcLite
     function getSharesByUsd(uint256 usdAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         uint256 totalUsd = _getTotalUsd();
@@ -207,7 +207,7 @@ contract StTBYBase is IStTBYBase, OFTController {
         return usdAmount.mulWad(totalShares).divWad(totalUsd);
     }
 
-    /// @inheritdoc IStTBYBase
+    /// @inheritdoc IStUsdcLite
     function getUsdByShares(uint256 sharesAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
@@ -216,7 +216,7 @@ contract StTBYBase is IStTBYBase, OFTController {
         return sharesAmount.mulWadUp(_getTotalUsd()).divWadUp(totalShares);
     }
 
-    /// @inheritdoc IStTBYBase
+    /// @inheritdoc IStUsdcLite
     function transferShares(address recipient, uint256 sharesAmount) external returns (uint256) {
         _transferShares(msg.sender, recipient, sharesAmount);
         uint256 tokensAmount = getUsdByShares(sharesAmount);
@@ -224,7 +224,7 @@ contract StTBYBase is IStTBYBase, OFTController {
         return tokensAmount;
     }
 
-    /// @inheritdoc IStTBYBase
+    /// @inheritdoc IStUsdcLite
     function transferSharesFrom(address sender, address recipient, uint256 sharesAmount) external returns (uint256) {
         uint256 tokensAmount = getUsdByShares(sharesAmount);
         _spendAllowance(sender, msg.sender, tokensAmount);

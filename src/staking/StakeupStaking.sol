@@ -11,18 +11,18 @@ import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 import {SUPVesting} from "./SUPVesting.sol";
 
-import {IStTBY} from "../interfaces/IStTBY.sol";
+import {IStUsdc} from "../interfaces/IStUsdc.sol";
 import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 
 /**
  * @title StakeUpStaking
- * @notice Allows users to stake their STAKEUP tokens to earn stTBY rewards.
+ * @notice Allows users to stake their STAKEUP tokens to earn stUsdc rewards.
  *         Tokens can be staked for any amount of time and can be unstaked at any time.
  *         The rewards tracking system is based on the methods similar to those used by
  *         Pendle Finance for rewarding Liquidity Providers.
  * @dev Rewards will be streamed to the staking contract anytime fees are collected and
- *      are immediately claimable by the user. The rewards are denominated in stTBY shares.
+ *      are immediately claimable by the user. The rewards are denominated in stUsdc shares.
  */
 contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -30,8 +30,8 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
 
     // =================== Storage ===================
 
-    /// @notice The stTBY token
-    IStTBY private immutable _stTBY;
+    /// @notice The stUsdc token
+    IStUsdc private immutable _stUsdc;
 
     /// @dev Global reward data
     RewardData private _rewardData;
@@ -60,8 +60,8 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @notice Only the reward token or the contract itself can call this function
-    modifier onlyStTBY() {
-        if (msg.sender != address(_stTBY)) {
+    modifier onlyStUsdc() {
+        if (msg.sender != address(_stUsdc)) {
             revert Errors.UnauthorizedCaller();
         }
         _;
@@ -69,8 +69,8 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
 
     // ================= Constructor =================
 
-    constructor(address stakeupToken, address stTBY) SUPVesting(stakeupToken) {
-        _stTBY = IStTBY(stTBY);
+    constructor(address stakeupToken, address stUsdc) SUPVesting(stakeupToken) {
+        _stUsdc = IStUsdc(stUsdc);
         _lastRewardBlock = block.number;
     }
 
@@ -121,7 +121,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeUpStaking
-    function processFees() public payable override onlyStTBY nonReentrant updateIndex {
+    function processFees() public payable override onlyStUsdc nonReentrant updateIndex {
         // solhint-ignore-previous-line no-empty-blocks
     }
 
@@ -137,8 +137,8 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getStTBY() external view returns (IStTBY) {
-        return _stTBY;
+    function getStUsdc() external view returns (IStUsdc) {
+        return _stUsdc;
     }
 
     /// @inheritdoc IStakeUpStaking
@@ -188,7 +188,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
             uint256 totalStakeUpLocked = _totalStakeUpStaked + _totalStakeUpVesting;
             RewardData storage rewards = _rewardData;
 
-            uint256 accrued = _stTBY.sharesOf(address(this)) - rewards.lastShares;
+            uint256 accrued = _stUsdc.sharesOf(address(this)) - rewards.lastShares;
 
             if (rewards.index == 0) {
                 rewards.index = uint128(Constants.INITIAL_REWARD_INDEX);
@@ -275,7 +275,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         if (rewardsEarned > 0) {
             userStakingData.rewardsAccrued = 0;
             rewards.lastShares -= rewardsEarned;
-            _stTBY.transferShares(user, rewardsEarned);
+            _stUsdc.transferShares(user, rewardsEarned);
         }
     }
 
