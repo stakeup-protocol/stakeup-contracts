@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -12,75 +12,75 @@ import {IWstUsdcLite} from "../interfaces/IWstUsdcLite.sol";
 
 /**
  * @title Wrapped Staked TBY Base
- * @notice The non-rebasing, wrapped version of the stTBY token that accues yield from TBYs
- * @dev This contract is the minimal implementation of the WstTBY token
+ * @notice The non-rebasing, wrapped version of the stUsdc token that accues yield from TBYs
+ * @dev This contract is the minimal implementation of the WstUsdc token
  */
 contract WstUsdcLite is IWstUsdcLite, ERC20 {
     // =================== Constants ===================
 
-    /// @notice Instance of the stTBY contract
-    IStTBY internal immutable _stTBY;
+    /// @notice Instance of the stUsdc contract
+    IStUsdc internal immutable _stUsdc;
 
     // ================== Constructor ==================
 
-    constructor(address stTBY) ERC20("Wrapped staked TBY", "wstTBY") {
-        _stTBY = IStTBY(stTBY);
+    constructor(address stUsdc_) ERC20("wrapped staked USDC", "wstUsdc") {
+        _stUsdc = IStUsdc(stUsdc_);
     }
 
     // =================== Functions ===================
 
-    /// @inheritdoc IWstTBYBase
-    function wrap(uint256 stTBYAmount) external returns (uint256 wstTBYAmount) {
-        wstTBYAmount = _mintWstTBY(stTBYAmount);
+    /// @inheritdoc IWstUsdcLite
+    function wrap(uint256 stUsdcAmount) external returns (uint256 wstUsdcAmount) {
+        wstUsdcAmount = _mintWstUsdc(stUsdcAmount);
 
-        ERC20(address(_stTBY)).transferFrom(msg.sender, address(this), stTBYAmount);
+        ERC20(address(_stUsdc)).transferFrom(msg.sender, address(this), stUsdcAmount);
 
-        emit StTBYWrapped(msg.sender, stTBYAmount, wstTBYAmount);
+        emit StUsdcWrapped(msg.sender, stUsdcAmount, wstUsdcAmount);
     }
 
-    /// @inheritdoc IWstTBYBase
-    function unwrap(uint256 wstTBYAmount) external returns (uint256 stTBYAmount) {
-        stTBYAmount = _stTBY.getUsdByShares(wstTBYAmount);
-        if (stTBYAmount == 0) revert Errors.ZeroAmount();
+    /// @inheritdoc IWstUsdcLite
+    function unwrap(uint256 wstUsdcAmount) external returns (uint256 stUsdcAmount) {
+        stUsdcAmount = _stUsdc.getUsdByShares(wstUsdcAmount);
+        if (stUsdcAmount == 0) revert Errors.ZeroAmount();
 
-        _burn(msg.sender, wstTBYAmount);
-        StTBYBase(address(_stTBY)).transferShares(msg.sender, wstTBYAmount);
+        _burn(msg.sender, wstUsdcAmount);
+        StUsdcLite(address(_stUsdc)).transferShares(msg.sender, wstUsdcAmount);
 
-        emit WtTBYUnwrapped(msg.sender, wstTBYAmount, stTBYAmount);
+        emit WtTBYUnwrapped(msg.sender, wstUsdcAmount, stUsdcAmount);
     }
 
-    /// @inheritdoc IWstTBYBase
-    function wstTBYByStTBY(uint256 stTBYAmount) external view returns (uint256) {
-        return _stTBY.getSharesByUsd(stTBYAmount);
+    /// @inheritdoc IWstUsdcLite
+    function wstUsdcByStUsdc(uint256 stUsdcAmount) external view returns (uint256) {
+        return _stUsdc.getSharesByUsd(stUsdcAmount);
     }
 
-    /// @inheritdoc IWstTBYBase
-    function stTBYByWstTBY(uint256 wstTBYAmount) external view returns (uint256) {
-        return _stTBY.getUsdByShares(wstTBYAmount);
+    /// @inheritdoc IWstUsdcLite
+    function stUsdcByWstUsdc(uint256 wstUsdcAmount) external view returns (uint256) {
+        return _stUsdc.getUsdByShares(wstUsdcAmount);
     }
 
-    /// @inheritdoc IWstTBYBase
-    function stTBYPerToken() external view returns (uint256) {
-        return _stTBY.getUsdByShares(1 ether);
+    /// @inheritdoc IWstUsdcLite
+    function stUsdcPerToken() external view returns (uint256) {
+        return _stUsdc.getUsdByShares(1 ether);
     }
 
-    /// @inheritdoc IWstTBYBase
-    function tokensPerStTBY() external view returns (uint256) {
-        return _stTBY.getSharesByUsd(1 ether);
+    /// @inheritdoc IWstUsdcLite
+    function tokensPerStUsdc() external view returns (uint256) {
+        return _stUsdc.getSharesByUsd(1 ether);
     }
 
-    /// @inheritdoc IWstTBYBase
-    function stTBY() external view override returns (IStTBY) {
-        return _stTBY;
+    /// @inheritdoc IWstUsdcLite
+    function stUsdc() external view override returns (IStUsdc) {
+        return _stUsdc;
     }
 
     /**
-     * @notice Mint wstTBY to the user
-     * @param amount The amount of stTBY to wrap
+     * @notice Mint wstUsdc to the user
+     * @param amount The amount of stUsdc to wrap
      */
-    function _mintWstTBY(uint256 amount) internal returns (uint256 wstTBYAmount) {
-        wstTBYAmount = _stTBY.getSharesByUsd(amount);
-        if (wstTBYAmount == 0) revert Errors.ZeroAmount();
-        _mint(msg.sender, wstTBYAmount);
+    function _mintWstUsdc(uint256 amount) internal returns (uint256 wstUsdcAmount) {
+        wstUsdcAmount = _stUsdc.getSharesByUsd(amount);
+        if (wstUsdcAmount == 0) revert Errors.ZeroAmount();
+        _mint(msg.sender, wstUsdcAmount);
     }
 }

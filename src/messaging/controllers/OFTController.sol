@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 import {OFT} from "@LayerZero/oft/OFT.sol";
 import {OAppCore} from "@LayerZero/oapp/OApp.sol";
@@ -18,9 +18,9 @@ abstract contract OFTController is ControllerBase, OFT {
     IYieldRelayer internal _yieldRelayer;
 
     // ================= Constructor =================
-    constructor(string memory tokenName, string memory tokenSymbol, address layerZeroEndpoint, address bridgeOperator)
-        OFT(tokenName, tokenSymbol, layerZeroEndpoint, bridgeOperator)
-        ControllerBase(bridgeOperator)
+    constructor(string memory tokenName, string memory tokenSymbol, address layerZeroEndpoint, address bridgeOperator_)
+        OFT(tokenName, tokenSymbol, layerZeroEndpoint, bridgeOperator_)
+        ControllerBase(bridgeOperator_)
     {
         // Solhint-disable-previous-line no-empty-blocks
     }

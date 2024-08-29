@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 import {OFT} from "@LayerZero/oft/OFT.sol";
 import {OApp, OAppCore} from "@LayerZero/oapp/OApp.sol";

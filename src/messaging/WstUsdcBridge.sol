@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OApp, Origin} from "@LayerZero/oapp/OApp.sol";
@@ -36,11 +36,11 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
 
     // ================= Constructor =================
 
-    constructor(address wstUsdc, address layerZeroEndpoint, address bridgeOperator)
+    constructor(address wstUsdc_, address layerZeroEndpoint, address bridgeOperator)
         OAppController(layerZeroEndpoint, bridgeOperator)
     {
-        _wstUsdc = WstUsdcLite(wstUsdc);
-        _stUsdc = address(WstUsdcLite(wstUsdc).getStUsdc());
+        _wstUsdc = WstUsdcLite(wstUsdc_);
+        _stUsdc = address(WstUsdcLite(wstUsdc_).getStUsdc());
     }
 
     // =================== Functions ===================

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -257,7 +257,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
             return 0;
         }
 
-        uint256 amountStaked = userData.amountStaked + getCurrentBalance(user);
+        uint256 amountStaked = userData.amountStaked + currentBalance(user);
         uint256 delta = globalIndex - userIndex;
 
         return amountStaked.mulWad(delta);
