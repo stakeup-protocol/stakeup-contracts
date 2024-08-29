@@ -60,24 +60,24 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
     }
 
     /// @inheritdoc IWstUsdcBridge
-    function setWstUsdcBridge(uint32 eid, address bridgeAddress) external override onlyBridgeOperator {
+    function wstUsdcBridge(uint32 eid, address bridge) external override onlyBridgeOperator {
         if (eid == 0) revert Errors.InvalidPeerID();
-        if (bridgeAddress == address(0)) revert Errors.ZeroAddress();
-        _wstUsdcBridges[eid] = bridgeAddress;
+        if (bridge == address(0)) revert Errors.ZeroAddress();
+        _wstUsdcBridges[eid] = bridge;
     }
 
     /// @inheritdoc IWstUsdcBridge
-    function getStUsdc() external view returns (address) {
+    function stUsdc() external view returns (address) {
         return _stUsdc;
     }
 
     /// @inheritdoc IWstUsdcBridge
-    function getWstUsdc() external view returns (address) {
+    function wstUsdc() external view returns (address) {
         return address(_wstUsdc);
     }
 
     /// @inheritdoc IWstUsdcBridge
-    function getBridgeByEid(uint32 eid) external view returns (address) {
+    function bridgeByEid(uint32 eid) external view returns (address) {
         return _wstUsdcBridges[eid];
     }
 

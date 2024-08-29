@@ -23,23 +23,23 @@ abstract contract ControllerBase {
     }
 
     // ================= Constructor =================
-    constructor(address bridgeOperator) {
-        if (bridgeOperator == address(0)) revert Errors.ZeroAddress();
-        _bridgeOperator = bridgeOperator;
+    constructor(address bridgeOperator_) {
+        if (bridgeOperator_ == address(0)) revert Errors.ZeroAddress();
+        _bridgeOperator = bridgeOperator_;
     }
 
     // =================== Functions ==================
     /**
      * @notice Sets the bridge operator address
-     * @param bridgeOperator The new bridge operator address
+     * @param bridgeOperator_ The new bridge operator address
      */
-    function setBridgeOperator(address bridgeOperator) external onlyBridgeOperator {
-        if (bridgeOperator == address(0)) revert Errors.ZeroAddress();
-        _bridgeOperator = bridgeOperator;
+    function setBridgeOperator(address bridgeOperator_) external onlyBridgeOperator {
+        if (bridgeOperator_ == address(0)) revert Errors.ZeroAddress();
+        _bridgeOperator = bridgeOperator_;
     }
 
     /// @notice Get the Bridge Operator address
-    function getBridgeOperator() external view returns (address) {
+    function bridgeOperator() external view returns (address) {
         return _bridgeOperator;
     }
 

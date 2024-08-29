@@ -66,14 +66,14 @@ interface IStUsdcLite {
      * @return the entire amount of Usd controlled by the protocol.
      * @dev The sum of all USD balances in the protocol, equals to the total supply of stUsdc.
      */
-    function getTotalUsd() external view returns (uint256);
+    function totalUsd() external view returns (uint256);
 
     /**
      * @notice Get the total amount of shares in existence.
      * @dev The sum of all accounts' shares can be an arbitrary number, therefore
      * it is necessary to store it in order to calculate each account's relative share.
      */
-    function getTotalShares() external view returns (uint256);
+    function totalShares() external view returns (uint256);
 
     /**
      * @notice Get the amount of shares owned by `_account`
@@ -85,12 +85,12 @@ interface IStUsdcLite {
      * @notice Get the amount of shares that corresponds to a given dollar value.
      * @param usdAmount Amount of Usd
      */
-    function getSharesByUsd(uint256 usdAmount) external view returns (uint256);
+    function sharesByUsd(uint256 usdAmount) external view returns (uint256);
 
     /**
      * @notice Get the amount of Usd that corresponds to a given number of token shares.
      * @param sharesAmount Amount of shares
      * @return Amount of Usd that corresponds to `sharesAmount` token shares.
      */
-    function getUsdByShares(uint256 sharesAmount) external view returns (uint256);
+    function usdByShares(uint256 sharesAmount) external view returns (uint256);
 }

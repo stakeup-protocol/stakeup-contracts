@@ -14,9 +14,9 @@ import {ControllerBase} from "./ControllerBase.sol";
  */
 abstract contract OAppController is ControllerBase, OApp {
     // ================= Constructor =================
-    constructor(address layerZeroEndpoint, address bridgeOperator)
-        OApp(layerZeroEndpoint, bridgeOperator)
-        ControllerBase(bridgeOperator)
+    constructor(address layerZeroEndpoint, address bridgeOperator_)
+        OApp(layerZeroEndpoint, bridgeOperator_)
+        ControllerBase(bridgeOperator_)
     {
         // Solhint-disable-previous-line no-empty-blocks
     }

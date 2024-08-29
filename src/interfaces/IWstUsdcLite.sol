@@ -44,14 +44,14 @@ interface IWstUsdcLite {
      * @param stUsdcAmount amount of stUsdc
      * @return Amount of wstUsdc for a given stUsdc amount
      */
-    function getWstUsdcByStUsdc(uint256 stUsdcAmount) external view returns (uint256);
+    function wstUsdcByStUsdc(uint256 stUsdcAmount) external view returns (uint256);
 
     /**
      * @notice Get amount of stUsdc for a given amount of wstUsdc
      * @param wstUsdcAmount amount of wstUsdc
      * @return Amount of stUsdc for a given wstUsdc amount
      */
-    function getStUsdcByWstUsdc(uint256 wstUsdcAmount) external view returns (uint256);
+    function stUsdcByWstUsdc(uint256 wstUsdcAmount) external view returns (uint256);
 
     /**
      * @notice Get amount of stUsdc for a one wstUsdc
@@ -68,5 +68,5 @@ interface IWstUsdcLite {
     /**
      * @notice stUsdc token
      */
-    function getStUsdc() external view returns (IStUsdc);
+    function stUsdc() external view returns (IStUsdc);
 }

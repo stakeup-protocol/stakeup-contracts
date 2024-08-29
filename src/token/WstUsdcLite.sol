@@ -50,12 +50,12 @@ contract WstUsdcLite is IWstUsdcLite, ERC20 {
     }
 
     /// @inheritdoc IWstTBYBase
-    function getWstTBYByStTBY(uint256 stTBYAmount) external view returns (uint256) {
+    function wstTBYByStTBY(uint256 stTBYAmount) external view returns (uint256) {
         return _stTBY.getSharesByUsd(stTBYAmount);
     }
 
     /// @inheritdoc IWstTBYBase
-    function getStTBYByWstTBY(uint256 wstTBYAmount) external view returns (uint256) {
+    function stTBYByWstTBY(uint256 wstTBYAmount) external view returns (uint256) {
         return _stTBY.getUsdByShares(wstTBYAmount);
     }
 
@@ -70,7 +70,7 @@ contract WstUsdcLite is IWstUsdcLite, ERC20 {
     }
 
     /// @inheritdoc IWstTBYBase
-    function getStTBY() external view override returns (IStTBY) {
+    function stTBY() external view override returns (IStTBY) {
         return _stTBY;
     }
 

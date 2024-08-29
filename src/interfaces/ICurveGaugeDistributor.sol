@@ -57,5 +57,5 @@ interface ICurveGaugeDistributor {
      * @notice Returns the data for all Curve pool registered with the distributor
      * @return CurvePoolData[] Array of Curve pool data
      */
-    function getCurvePoolData() external view returns (CurvePoolData[] memory);
+    function curvePoolData() external view returns (CurvePoolData[] memory);
 }

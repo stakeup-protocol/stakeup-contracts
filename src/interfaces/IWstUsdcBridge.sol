@@ -32,15 +32,15 @@ interface IWstUsdcBridge is ILayerZeroSettings {
     function setWstUsdcBridge(uint32 eid, address bridgeAddress) external;
 
     /// @notice Returns the address of the stUsdc contract
-    function getStUsdc() external view returns (address);
+    function stUsdc() external view returns (address);
 
     /// @notice Returns the address of the wstUsdc contract
-    function getWstUsdc() external view returns (address);
+    function wstUsdc() external view returns (address);
 
     /**
      * @notice Returns the address of the wstUsdc bridge contract for the given endpoint ID
      * @param eid The LayerZero Endpoint ID
      * @return The address of the wstUsdc bridge contract
      */
-    function getBridgeByEid(uint32 eid) external view returns (address);
+    function bridgeByEid(uint32 eid) external view returns (address);
 }

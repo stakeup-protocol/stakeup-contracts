@@ -78,10 +78,10 @@ interface IStakeUpStaking is ISUPVesting {
     function processFees() external payable;
 
     /// @notice Returns the StakeUp Token
-    function getStakupToken() external view returns (IStakeUpToken);
+    function stakupToken() external view returns (IStakeUpToken);
 
     /// @notice Returns the stTBY token
-    function getStUsdc() external view returns (IStUsdc);
+    function stUsdc() external view returns (IStUsdc);
 
     /**
      * @notice Returns the amount of claimable rewards for a user
@@ -93,14 +93,14 @@ interface IStakeUpStaking is ISUPVesting {
     function totalStakeUpStaked() external view returns (uint256);
 
     /// @notice Gets the information for the current rewards period
-    function getRewardData() external view returns (RewardData memory);
+    function rewardData() external view returns (RewardData memory);
 
     /**
      * @notice Gets the staking data for a user
      * @param user Address of the user to get the staking data for
      */
-    function getUserStakingData(address user) external view returns (StakingData memory);
+    function userStakingData(address user) external view returns (StakingData memory);
 
     /// @notice Returns the last block that global reward data was updated
-    function getLastRewardBlock() external view returns (uint256);
+    function lastRewardBlock() external view returns (uint256);
 }
