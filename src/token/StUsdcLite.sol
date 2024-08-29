@@ -72,7 +72,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @inheritdoc IStUsdcLite
-    function getTotalUsd() external view override returns (uint256) {
+    function totalUsd() external view override returns (uint256) {
         return _getTotalUsd();
     }
 
@@ -84,7 +84,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @return Amount of tokens owned by the `_account`
      */
     function balanceOf(address account) public view override returns (uint256) {
-        return getUsdByShares(_sharesOf(account));
+        return usdByShares(_sharesOf(account));
     }
 
     /**
@@ -183,7 +183,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @inheritdoc IStUsdcLite
-    function getTotalShares() external view override returns (uint256) {
+    function totalShares() external view override returns (uint256) {
         return _getTotalShares();
     }
 
@@ -193,40 +193,40 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @inheritdoc IStUsdcLite
-    function getSharesByUsd(uint256 usdAmount) public view override returns (uint256) {
-        uint256 totalShares = _getTotalShares();
-        uint256 totalUsd = _getTotalUsd();
+    function sharesByUsd(uint256 usdAmount) public view override returns (uint256) {
+        uint256 totalShares_ = _getTotalShares();
+        uint256 totalUsd_ = _getTotalUsd();
 
-        if (totalShares == 0) {
+        if (totalShares_ == 0) {
             return usdAmount;
         }
-        if (totalUsd == 0) {
-            return totalShares;
+        if (totalUsd_ == 0) {
+            return totalShares_;
         }
 
-        return usdAmount.mulWad(totalShares).divWad(totalUsd);
+        return usdAmount.mulWad(totalShares_).divWad(totalUsd_);
     }
 
     /// @inheritdoc IStUsdcLite
-    function getUsdByShares(uint256 sharesAmount) public view override returns (uint256) {
-        uint256 totalShares = _getTotalShares();
-        if (totalShares == 0) {
+    function usdByShares(uint256 sharesAmount) public view override returns (uint256) {
+        uint256 totalShares_ = _getTotalShares();
+        if (totalShares_ == 0) {
             return sharesAmount;
         }
-        return sharesAmount.mulWadUp(_getTotalUsd()).divWadUp(totalShares);
+        return sharesAmount.mulWadUp(_getTotalUsd()).divWadUp(totalShares_);
     }
 
     /// @inheritdoc IStUsdcLite
     function transferShares(address recipient, uint256 sharesAmount) external returns (uint256) {
         _transferShares(msg.sender, recipient, sharesAmount);
-        uint256 tokensAmount = getUsdByShares(sharesAmount);
+        uint256 tokensAmount = usdByShares(sharesAmount);
         _emitTransferEvents(msg.sender, recipient, tokensAmount, sharesAmount);
         return tokensAmount;
     }
 
     /// @inheritdoc IStUsdcLite
     function transferSharesFrom(address sender, address recipient, uint256 sharesAmount) external returns (uint256) {
-        uint256 tokensAmount = getUsdByShares(sharesAmount);
+        uint256 tokensAmount = usdByShares(sharesAmount);
         _spendAllowance(sender, msg.sender, tokensAmount);
         _transferShares(sender, recipient, sharesAmount);
         _emitTransferEvents(sender, recipient, tokensAmount, sharesAmount);
@@ -256,7 +256,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @dev Emits a `TransferShares` event.
      */
     function _transfer(address sender, address recipient, uint256 amount) internal override {
-        uint256 sharesToTransfer = getSharesByUsd(amount);
+        uint256 sharesToTransfer = sharesByUsd(amount);
         _transferShares(sender, recipient, sharesToTransfer);
         _emitTransferEvents(sender, recipient, amount, sharesToTransfer);
     }
@@ -361,14 +361,14 @@ contract StUsdcLite is IStUsdcLite, OFTController {
         uint256 accountShares = _shares[account];
         require(sharesAmount <= accountShares, "BALANCE_EXCEEDED");
 
-        uint256 preRebaseTokenAmount = getUsdByShares(sharesAmount);
+        uint256 preRebaseTokenAmount = usdByShares(sharesAmount);
 
         newTotalShares = _getTotalShares() - sharesAmount;
         _totalShares = newTotalShares;
 
         _shares[account] = accountShares - sharesAmount;
 
-        uint256 postRebaseTokenAmount = getUsdByShares(sharesAmount);
+        uint256 postRebaseTokenAmount = usdByShares(sharesAmount);
 
         emit SharesBurnt(account, preRebaseTokenAmount, postRebaseTokenAmount, sharesAmount);
 
@@ -402,7 +402,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     {
         (amountSentLD, amountReceivedLD) = _debitView(_amountLD, _minAmountLD, _dstEid);
 
-        uint256 shares = getSharesByUsd(amountSentLD);
+        uint256 shares = sharesByUsd(amountSentLD);
         _burnShares(msg.sender, shares);
         _setTotalUsd(_getTotalUsd() - amountSentLD);
     }
@@ -412,7 +412,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
         override
         returns (uint256 amountReceivedLD)
     {
-        _mintShares(_to, getSharesByUsd(_amountToCreditLD));
+        _mintShares(_to, sharesByUsd(_amountToCreditLD));
         _setTotalUsd(_getTotalUsd() + _amountToCreditLD);
         return _amountToCreditLD;
     }

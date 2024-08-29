@@ -15,11 +15,11 @@ interface IYieldRelayer {
     function setKeeper(address keeper) external;
 
     /// @notice Get the address of the bridge operator
-    function getBridgeOperator() external view returns (address);
+    function bridgeOperator() external view returns (address);
 
     /// @notice Get the address of the keeper
-    function getKeeper() external view returns (address);
+    function keeper() external view returns (address);
 
     /// @notice Get the address of the stTBY contract
-    function getStUsdc() external view returns (address);
+    function stUsdc() external view returns (address);
 }

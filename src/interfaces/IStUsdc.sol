@@ -3,7 +3,7 @@ pragma solidity 0.8.23;
 
 import {IBloomPool} from "@bloom-v2/interfaces/IBloomPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC1155} from "@openzeppelin/contracts/interfaces/IERC1155.sol";
+import {ERC1155} from "solady/tokens/ERC1155.sol";
 
 import {IStakeUpStaking} from "./IStakeUpStaking.sol";
 import {IStUsdcLite} from "./IStUsdcLite.sol";
@@ -96,27 +96,27 @@ interface IStUsdc is IStUsdcLite {
      */
     function poke() external;
 
-    /// @notice Returns the WstUsdc contract
-    function getWstUsdc() external view returns (IWstUsdc);
-
-    /// @notice Returns the underlying token
+    /// @notice Returns the underlying asset
     function asset() external view returns (IERC20);
 
-    /// @notice Returns the Bloom Pool Factory
-    function getBloomFactory() external view returns (IBloomFactory);
+    /// @notice Returns the address of the TBY token
+    function tby() external view returns (ERC1155);
 
-    /// @notice Returns the Exchange Rate Registry
-    function getExchangeRateRegistry() external view returns (IExchangeRateRegistry);
+    /// @notice Returns the Bloom Pool Factory
+    function bloomPool() external view returns (IBloomPool);
+
+    /// @notice Returns the WstUsdc contract
+    function wstUsdc() external view returns (IWstUsdc);
 
     /// @notice Returns the StakeUpStaking contract.
-    function getStakeUpStaking() external view returns (IStakeUpStaking);
+    function stakeUpStaking() external view returns (IStakeUpStaking);
 
     /// @notice Returns the performanceBps.
-    function getPerformanceBps() external view returns (uint256);
+    function performanceBps() external view returns (uint256);
 
     /// @notice Returns if underlying tokens from a TBY have been redeemed.
     function isTbyRedeemed(uint256 tbyId) external view returns (bool);
 
     /// @notice The total shares of stUsdc tokens in circulation on all chains
-    function getGlobalShares() external view returns (uint256);
+    function globalShares() external view returns (uint256);
 }

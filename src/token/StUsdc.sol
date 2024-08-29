@@ -29,7 +29,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
     // =================== Storage ===================
 
     /// @dev Underlying token
-    IERC20 private immutable _underlyingToken;
+    IERC20 private immutable _asset;
 
     /// @dev TBY Contract
     ERC1155 private immutable _tby;
@@ -62,7 +62,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
     uint256 private immutable _scalingFactor;
 
     /// @dev Underlying token decimals
-    uint8 internal immutable _underlyingDecimals;
+    uint8 internal immutable _assetDecimals;
 
     /// @dev Mapping of TBYs that have been redeemed
     mapping(address => bool) private _tbyRedeemed;
@@ -70,29 +70,29 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
     // ================== Constructor ==================
 
     constructor(
-        address underlyingToken,
-        address bloomPool,
-        address stakeupStaking,
-        address wstUsdc,
+        address asset_,
+        address bloomPool_,
+        address stakeupStaking_,
+        address wstUsdc_,
         address layerZeroEndpoint,
         address bridgeOperator
     ) StUsdcLite(layerZeroEndpoint, bridgeOperator) {
-        if (underlyingToken == address(0) || stakeupStaking == address(0) || wstUsdc == address(0)) {
+        if (asset_ == address(0) || stakeupStaking_ == address(0) || wstUsdc_ == address(0)) {
             revert Errors.InvalidAddress();
         }
 
-        _underlyingToken = IERC20(underlyingToken);
-        _underlyingDecimals = IERC20Metadata(underlyingToken).decimals();
+        _asset = IERC20(asset_);
+        _assetDecimals = IERC20Metadata(asset_).decimals();
 
-        require(IBloomPool(bloomPool).asset() == underlyingToken, "Invalid underlying token");
-        _bloomPool = IBloomPool(bloomPool);
-        _tby = ERC1155(bloomPool.tby());
+        require(IBloomPool(bloomPool_).asset() == asset_, "Invalid underlying token");
+        _bloomPool = IBloomPool(bloomPool_);
+        _tby = ERC1155(bloomPool_.tby());
 
-        _stakeupStaking = IStakeUpStaking(stakeupStaking);
-        _stakeupToken = IStakeUpStaking(stakeupStaking).getStakupToken();
-        _wstUsdc = IWstUsdc(wstUsdc);
+        _stakeupStaking = IStakeUpStaking(stakeupStaking_);
+        _stakeupToken = IStakeUpStaking(stakeupStaking_).getStakupToken();
+        _wstUsdc = IWstUsdc(wstUsdc_);
 
-        _scalingFactor = 10 ** (18 - _underlyingDecimals);
+        _scalingFactor = 10 ** (18 - _assetDecimals);
         _startTimestamp = block.timestamp;
         _lastRateUpdate = block.timestamp;
 
@@ -108,19 +108,19 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
 
         // If the token is a TBY, we need to get the current exchange rate of the token
         //     to accurately calculate the amount of stUsdc to mint.
-        amountMinted = _bloomPool.getRate(tbyId);
+        amountMinted = _bloomPool.getRate(tbyId).mulWad(amount);
         _deposit(amountMinted);
         emit TbyDeposited(msg.sender, tbyId, amount, amountMinted);
         _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
     }
 
     /// @inheritdoc IStUsdc
-    function depositUnderlying(uint256 amount) external nonReentrant returns (uint256 amountMinted) {
-        _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
+    function depositAsset(uint256 amount) external nonReentrant returns (uint256 amountMinted) {
+        _asset.safeTransferFrom(msg.sender, address(this), amount);
         amountMinted = amount * _scalingFactor;
         _deposit(amountMinted);
         emit AssetDeposited(msg.sender, amount);
-        IERC20(_underlyingToken).safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(_asset).safeTransferFrom(msg.sender, address(this), amount);
     }
 
     /// @inheritdoc IStUsdc
@@ -133,7 +133,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
         uint256 shares = getSharesByUsd(amount);
 
         underlyingAmount = amount / _scalingFactor;
-        if (underlyingAmount > _underlyingToken.balanceOf(address(this))) {
+        if (underlyingAmount > _asset.balanceOf(address(this))) {
             revert Errors.InsufficientBalance();
         }
 
@@ -141,9 +141,8 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
         _setTotalUsd(_getTotalUsd() - amount);
         _globalShares -= shares;
 
-        _underlyingToken.safeTransfer(msg.sender, underlyingAmount);
-
         emit Redeemed(msg.sender, shares, underlyingAmount);
+        _asset.safeTransfer(msg.sender, underlyingAmount);
     }
 
     /// @inheritdoc IStUsdc
@@ -156,7 +155,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
 
         IBloomPool pool = IBloomPool(tby);
         uint256 amount = pool.balanceOf(address(this));
-        uint256 beforeUnderlyingBalance = _underlyingToken.balanceOf(address(this));
+        uint256 beforeUnderlyingBalance = _asset.balanceOf(address(this));
 
         if (pool.state() == IBloomPool.State.EmergencyExit) {
             IEmergencyHandler emergencyHandler = IEmergencyHandler(pool.EMERGENCY_HANDLER());
@@ -175,7 +174,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
             pool.withdrawLender(amount);
         }
 
-        uint256 withdrawn = _underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
+        uint256 withdrawn = _asset.balanceOf(address(this)) - beforeUnderlyingBalance;
 
         _processProceeds(amount, withdrawn);
 
@@ -204,43 +203,38 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
     }
 
     /// @inheritdoc IStUsdc
-    function getWstUsdc() external view returns (IWstUsdc) {
+    function asset() external view returns (IERC20) {
+        return _asset;
+    }
+
+    /// @inheritdoc IStUsdc
+    function wstUsdc() external view returns (IWstUsdc) {
         return _wstUsdc;
     }
 
     /// @inheritdoc IStUsdc
-    function getUnderlyingToken() external view returns (IERC20) {
-        return _underlyingToken;
+    function bloomPool() external view returns (IBloomPool) {
+        return _bloomPool;
     }
 
     /// @inheritdoc IStUsdc
-    function getBloomFactory() external view returns (IBloomFactory) {
-        return _bloomFactory;
-    }
-
-    /// @inheritdoc IStUsdc
-    function getExchangeRateRegistry() external view returns (IExchangeRateRegistry) {
-        return _registry;
-    }
-
-    /// @inheritdoc IStUsdc
-    function getStakeUpStaking() external view returns (IStakeUpStaking) {
+    function stakeUpStaking() external view returns (IStakeUpStaking) {
         return _stakeupStaking;
     }
 
     /// @inheritdoc IStUsdc
-    function getPerformanceBps() external pure returns (uint256) {
+    function performanceBps() external pure returns (uint256) {
         return Constants.PERFORMANCE_BPS;
     }
 
     /// @inheritdoc IStUsdc
-    function getGlobalShares() external view override returns (uint256) {
+    function globalShares() external view override returns (uint256) {
         return _globalShares;
     }
 
     /// @inheritdoc IStUsdc
-    function isTbyRedeemed(address tby) external view returns (bool) {
-        return _tbyRedeemed[tby];
+    function isTbyRedeemed(uint256 tbyId) external view returns (bool) {
+        return _tbyRedeemed[tbyId];
     }
 
     /**
@@ -296,10 +290,10 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
      * @return depositAmount The amount of USDC deposited
      */
     function _autoMintTBY(IBloomPool pool) internal returns (uint256 depositAmount) {
-        depositAmount = _underlyingToken.balanceOf(address(this));
+        depositAmount = _asset.balanceOf(address(this));
 
         if (depositAmount > 0) {
-            _underlyingToken.safeApprove(address(pool), depositAmount);
+            _asset.safeApprove(address(pool), depositAmount);
             pool.depositLender(depositAmount);
 
             emit TBYAutoMinted(address(pool), depositAmount);

@@ -74,11 +74,11 @@ contract BridgeOperator is Ownable2Step {
      * @notice Sets the wstUsdc bridge address for the given endpoint ID
      * @dev Can only be called by the owner
      * @param eid The LayerZero Endpoint ID
-     * @param bridgeAddress The address of the wstUsdc bridge contract
+     * @param bridge The address of the wstUsdc bridge contract
      */
-    function setWstUsdcBridge(uint32 eid, address bridgeAddress) external onlyOwner {
+    function setWstUsdcBridge(uint32 eid, address bridge) external onlyOwner {
         (, address wstUsdcBridge) = _decodeContracts();
-        IWstUsdcBridge(wstUsdcBridge).setWstUsdcBridge(eid, bridgeAddress);
+        IWstUsdcBridge(wstUsdcBridge).setWstUsdcBridge(eid, bridge);
     }
 
     /**

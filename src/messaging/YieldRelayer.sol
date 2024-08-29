@@ -36,10 +36,10 @@ contract YieldRelayer is IYieldRelayer {
 
     // ================= Constructor =================
 
-    constructor(address stUsdc, address bridgeOperator, address keeper) {
-        _stUsdc = stUsdc;
-        _bridgeOperator = bridgeOperator;
-        _keeper = keeper;
+    constructor(address stUsdc_, address bridgeOperator_, address keeper_) {
+        _stUsdc = stUsdc_;
+        _bridgeOperator = bridgeOperator_;
+        _keeper = keeper_;
     }
 
     // =================== Functions ===================
@@ -52,31 +52,31 @@ contract YieldRelayer is IYieldRelayer {
 
     /**
      * @notice Sets the bridge operator address
-     * @param bridgeOperator The new bridge operator address
+     * @param bridgeOperator_ The new bridge operator address
      */
-    function setBridgeOperator(address bridgeOperator) external onlyBridgeOperator {
-        if (bridgeOperator == address(0)) revert Errors.ZeroAddress();
-        _bridgeOperator = bridgeOperator;
+    function setBridgeOperator(address bridgeOperator_) external onlyBridgeOperator {
+        if (bridgeOperator_ == address(0)) revert Errors.ZeroAddress();
+        _bridgeOperator = bridgeOperator_;
     }
 
     /// @inheritdoc IYieldRelayer
-    function setKeeper(address keeper) external override onlyBridgeOperator {
-        if (keeper == address(0)) revert Errors.ZeroAddress();
-        _keeper = keeper;
+    function setKeeper(address keeper_) external override onlyBridgeOperator {
+        if (keeper_ == address(0)) revert Errors.ZeroAddress();
+        _keeper = keeper_;
     }
 
     /// @inheritdoc IYieldRelayer
-    function getBridgeOperator() external view override returns (address) {
+    function bridgeOperator() external view override returns (address) {
         return _bridgeOperator;
     }
 
     /// @inheritdoc IYieldRelayer
-    function getKeeper() external view override returns (address) {
+    function keeper() external view override returns (address) {
         return _keeper;
     }
 
     /// @inheritdoc IYieldRelayer
-    function getStUsdc() external view returns (address) {
+    function stUsdc() external view returns (address) {
         return _stUsdc;
     }
 }
