@@ -8,7 +8,7 @@
 ╚═════╝░╚══════╝░╚════╝░░╚════╝░╚═╝░░░░░╚═╝
 */
 
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {IMockSwapFacility} from "./interfaces/IMockSwapFacility.sol";
 
@@ -18,12 +18,7 @@ import {ISwapRecipient} from "./interfaces/ISwapRecipient.sol";
 contract MockSwapFacility is IMockSwapFacility {
     uint256 internal constant WAD = 1e18;
 
-    error MockSwapFacility_WrongTokens(
-        address inToken,
-        address outToken,
-        address token0,
-        address token1
-    );
+    error MockSwapFacility_WrongTokens(address inToken, address outToken, address token0, address token1);
 
     MockERC20 public immutable token0;
     MockERC20 public immutable token1;
@@ -53,44 +48,24 @@ contract MockSwapFacility is IMockSwapFacility {
         PendingSwap memory pswap = pendingSwaps[totalSwaps - 1];
         pendingSwaps.pop();
         pswap.token.mint(pswap.to, pswap.amount);
-        ISwapRecipient(pswap.to).completeSwap(
-            address(pswap.token),
-            pswap.amount
-        );
+        ISwapRecipient(pswap.to).completeSwap(address(pswap.token), pswap.amount);
     }
 
-    function swap(
-        address inToken,
-        address outToken,
-        uint256 inAmount,
-        bytes32[] calldata
-    ) external {
+    function swap(address inToken, address outToken, uint256 inAmount, bytes32[] calldata) external {
         if (
-            !((inToken == address(token0) && outToken == address(token1)) ||
-                (inToken == address(token1) && outToken == address(token0)))
+            !(
+                (inToken == address(token0) && outToken == address(token1))
+                    || (inToken == address(token1) && outToken == address(token0))
+            )
         ) {
-            revert MockSwapFacility_WrongTokens(
-                inToken,
-                outToken,
-                address(token0),
-                address(token1)
-            );
+            revert MockSwapFacility_WrongTokens(inToken, outToken, address(token0), address(token1));
         }
 
-        require(
-            MockERC20(inToken).transferFrom(msg.sender, address(this), inAmount)
-        );
+        require(MockERC20(inToken).transferFrom(msg.sender, address(this), inAmount));
 
-        uint256 outAmount = inToken == address(token0)
-            ? (inAmount * WAD) / exchangeRate
-            : (inAmount * exchangeRate) / WAD;
+        uint256 outAmount =
+            inToken == address(token0) ? (inAmount * WAD) / exchangeRate : (inAmount * exchangeRate) / WAD;
 
-        pendingSwaps.push(
-            PendingSwap({
-                to: msg.sender,
-                token: MockERC20(outToken),
-                amount: outAmount
-            })
-        );
+        pendingSwaps.push(PendingSwap({to: msg.sender, token: MockERC20(outToken), amount: outAmount}));
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {MessagingFee, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
@@ -13,16 +13,11 @@ contract MockStakeUpStaking is IStakeUpStaking {
 
     function stake(uint256 stakeupAmount) external override {}
 
-    function unstake(
-        uint256 stakeupAmount,
-        bool harvestRewards
-    ) external override {}
+    function unstake(uint256 stakeupAmount, bool harvestRewards) external override {}
 
     function harvest() external override {}
 
-    function claimableRewards(
-        address account
-    ) external view override returns (uint256) {}
+    function claimableRewards(address account) external view override returns (uint256) {}
 
     function getStakupToken() external view override returns (IStakeUpToken) {}
 
@@ -36,16 +31,9 @@ contract MockStakeUpStaking is IStakeUpStaking {
 
     function totalStakeUpStaked() external view override returns (uint256) {}
 
-    function getRewardData()
-        external
-        view
-        override
-        returns (RewardData memory)
-    {}
+    function getRewardData() external view override returns (RewardData memory) {}
 
-    function getUserStakingData(
-        address user
-    ) external view override returns (StakingData memory) {}
+    function getUserStakingData(address user) external view override returns (StakingData memory) {}
 
     // This function is only used for unit testing
     function setFeeProcessed(bool feeProcessed) external {
@@ -57,17 +45,13 @@ contract MockStakeUpStaking is IStakeUpStaking {
         return _feeProcessed;
     }
 
-    function getAvailableTokens(
-        address account
-    ) external view override returns (uint256) {}
+    function getAvailableTokens(address account) external view override returns (uint256) {}
 
     function vestTokens(address account, uint256 amount) external override {}
 
     function claimAvailableTokens() external override returns (uint256) {}
 
-    function getCurrentBalance(
-        address account
-    ) external view override returns (uint256) {}
+    function getCurrentBalance(address account) external view override returns (uint256) {}
 
     function getLastRewardBlock() external view override returns (uint256) {}
 

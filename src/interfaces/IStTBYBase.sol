@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 interface IStTBYBase {
     /**
@@ -9,11 +9,7 @@ interface IStTBYBase {
      * @param to Address of the recipient
      * @param sharesAmount Amount of shares transferred
      */
-    event TransferShares(
-        address indexed from,
-        address indexed to,
-        uint256 sharesAmount
-    );
+    event TransferShares(address indexed from, address indexed to, uint256 sharesAmount);
 
     /**
      * @notice An executed `burnShares` request
@@ -26,10 +22,7 @@ interface IStTBYBase {
      * @param sharesAmount amount of burnt shares
      */
     event SharesBurnt(
-        address indexed account,
-        uint256 preRebaseTokenAmount,
-        uint256 postRebaseTokenAmount,
-        uint256 sharesAmount
+        address indexed account, uint256 preRebaseTokenAmount, uint256 postRebaseTokenAmount, uint256 sharesAmount
     );
 
     /// @notice Emitted when yieldPerShares is updated
@@ -53,10 +46,7 @@ interface IStTBYBase {
      * @param recipient recipient of stTBY tokens
      * @param sharesAmount Amount of shares being transfered
      */
-    function transferShares(
-        address recipient,
-        uint256 sharesAmount
-    ) external returns (uint256);
+    function transferShares(address recipient, uint256 sharesAmount) external returns (uint256);
 
     /**
      * @notice Transfer shares from one account to another
@@ -70,11 +60,7 @@ interface IStTBYBase {
      * @param recipient Destination of stTBY tokens
      * @param sharesAmount Amount of shares being transfered
      */
-    function transferSharesFrom(
-        address sender,
-        address recipient,
-        uint256 sharesAmount
-    ) external returns (uint256);
+    function transferSharesFrom(address sender, address recipient, uint256 sharesAmount) external returns (uint256);
 
     /**
      * @return the entire amount of Usd controlled by the protocol.
@@ -106,7 +92,5 @@ interface IStTBYBase {
      * @param sharesAmount Amount of shares
      * @return Amount of Usd that corresponds to `sharesAmount` token shares.
      */
-    function getUsdByShares(
-        uint256 sharesAmount
-    ) external view returns (uint256);
+    function getUsdByShares(uint256 sharesAmount) external view returns (uint256);
 }

@@ -1,40 +1,23 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {Test} from "forge-std/Test.sol";
-import {LibRLP} from "solady/utils/LibRLP.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 
 import {StTBY} from "src/token/StTBY.sol";
 import {WstTBY} from "src/token/WstTBY.sol";
-import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
-
-import {IStTBY} from "src/interfaces/IStTBY.sol";
-import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
 
 import {StTBYSetup} from "./StTBYSetup.t.sol";
-import {MockEndpoint} from "../mocks/MockEndpoint.sol";
-import {MockERC20} from "../mocks/MockERC20.sol";
-import {MockSwapFacility} from "../mocks/MockSwapFacility.sol";
+
 import {MockBloomPool, IBloomPool} from "../mocks/MockBloomPool.sol";
-import {MockBloomFactory} from "../mocks/MockBloomFactory.sol";
-import {MockEmergencyHandler} from "../mocks/MockEmergencyHandler.sol";
-import {MockRegistry} from "../mocks/MockRegistry.sol";
 
 contract StTBYTest is StTBYSetup {
     // ============== Redefined Events ===============
-    event Deposit(
-        address indexed account,
-        address tby,
-        uint256 amount,
-        uint256 shares
-    );
+    event Deposit(address indexed account, address tby, uint256 amount, uint256 shares);
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
-    event Withdrawn(address indexed account, uint256 amount);
     event TBYAutoMinted(address indexed account, uint256 amount);
-    event RemainingBalanceAdjusted(uint256 amount);
 
     function setUp() public override {
         super.setUp();
@@ -50,6 +33,7 @@ contract StTBYTest is StTBYSetup {
     function test_deposit_fail_with_InsufficientBalance() public {
         pool.mint(alice, 0.5 ether);
         registry.setTokenInfos(true);
+        pool.setState(IBloomPool.State.Holding);
 
         vm.startPrank(alice);
         pool.approve(address(stTBY), 1 ether);
@@ -61,6 +45,7 @@ contract StTBYTest is StTBYSetup {
     function test_deposit_fail_with_InsufficientAllowance() public {
         pool.mint(alice, 1 ether);
         registry.setTokenInfos(true);
+        pool.setState(IBloomPool.State.Holding);
 
         vm.startPrank(alice);
         pool.approve(address(stTBY), 0.5 ether);
@@ -69,20 +54,22 @@ contract StTBYTest is StTBYSetup {
         vm.stopPrank();
     }
 
-    function test_depositTBY_success() public {
-        uint256 amountTBY = 1.1e6;
-        uint256 amountStTBY = 1.1e18;
+    function test_depositTBY_success(uint256 tbyAmount) public {
+        bound(tbyAmount, 1e6, 10_000_000e6);
 
-        pool.mint(alice, amountTBY);
+        uint256 amountStTBY = tbyAmount * SCALER;
+
+        pool.mint(alice, tbyAmount);
         registry.setTokenInfos(true);
+        pool.setState(IBloomPool.State.Holding);
         registry.setExchangeRate(address(pool), 1e18);
 
         vm.startPrank(alice);
-        pool.approve(address(stTBY), amountTBY);
+        pool.approve(address(stTBY), tbyAmount);
 
         vm.expectEmit(true, true, true, true);
-        emit Deposit(alice, address(pool), amountTBY, amountStTBY);
-        stTBY.depositTby(address(pool), amountTBY);
+        emit Deposit(alice, address(pool), tbyAmount, amountStTBY);
+        stTBY.depositTby(address(pool), tbyAmount);
         vm.stopPrank();
 
         assertEq(stTBY.balanceOf(alice), amountStTBY);
@@ -129,6 +116,7 @@ contract StTBYTest is StTBYSetup {
         pool.mint(alice, amount);
         registry.setTokenInfos(true);
         registry.setExchangeRate(address(pool), 1e18);
+        pool.setState(IBloomPool.State.Holding);
 
         vm.startPrank(alice);
         pool.approve(address(stTBY), amount);
@@ -220,10 +208,7 @@ contract StTBYTest is StTBYSetup {
         stTBY.poke();
 
         assertEq(stableToken.balanceOf(address(stTBY)), 0);
-        assertEq(
-            stableToken.balanceOf(address(pool)),
-            donationAmount + startingUSDCAliceBalance
-        );
+        assertEq(stableToken.balanceOf(address(pool)), donationAmount + startingUSDCAliceBalance);
         assertEq(stTBY.sharesOf(alice), stTBYMintAmount);
 
         // fast forward to 1 day after the end of the commit phase
@@ -231,9 +216,7 @@ contract StTBYTest is StTBYSetup {
         // should be adjusted
         skip(1 days);
         uint256 unmatchedAmount = 10e6;
-        uint256 tbyReturned = donationAmount -
-            unmatchedAmount +
-            startingUSDCAliceBalance;
+        uint256 tbyReturned = donationAmount - unmatchedAmount + startingUSDCAliceBalance;
 
         // Send some TBYs & underlying to stTBY to simulate a partial match
         stableToken.mint(address(stTBY), unmatchedAmount);
@@ -245,24 +228,15 @@ contract StTBYTest is StTBYSetup {
         registry.setExchangeRate(address(pool), exchangeRate);
 
         pool.setState(IBloomPool.State.Holding);
-        vm.expectEmit(true, true, true, true);
-        emit RemainingBalanceAdjusted(unmatchedAmount);
+
         stTBY.poke();
 
-        uint256 underlyingScaledBalance = stableToken.balanceOf(
-            address(stTBY)
-        ) * 1e12;
+        uint256 underlyingScaledBalance = stableToken.balanceOf(address(stTBY)) * 1e12;
         uint256 tbyScaledBalance = pool.balanceOf(address(stTBY)) * 1e12;
 
-        assertEq(
-            stTBY.getTotalUsd(),
-            (tbyScaledBalance * exchangeRate) / 1e18 + underlyingScaledBalance
-        );
+        assertEq(stTBY.getTotalUsd(), (tbyScaledBalance * exchangeRate) / 1e18 + underlyingScaledBalance);
         assertEq(pool.balanceOf(address(stTBY)), tbyReturned);
-        assertEq(
-            stableToken.balanceOf(address(stTBY)),
-            expectedRemainingBalanceEnd
-        );
+        assertEq(stableToken.balanceOf(address(stTBY)), expectedRemainingBalanceEnd);
         assertEq(stTBY.sharesOf(alice), stTBYMintAmount);
     }
 
@@ -270,7 +244,7 @@ contract StTBYTest is StTBYSetup {
         uint256 amount = 100e6;
         registry.setTokenInfos(true);
         registry.setExchangeRate(address(pool), 1e18);
-
+        bpsFeed.updateRate(1e4);
         pool.setState(IBloomPool.State.Commit);
         pool.setCommitPhaseEnd(2 days);
 
@@ -278,24 +252,19 @@ contract StTBYTest is StTBYSetup {
         vm.startPrank(alice);
         pool.approve(address(stTBY), amount);
 
+        skip(2 days);
+        pool.setState(IBloomPool.State.Holding);
         stTBY.depositTby(address(pool), amount);
         vm.stopPrank();
 
         registry.setExchangeRate(address(pool), 1.04e18);
-
-        skip(2 days);
-        pool.setState(IBloomPool.State.Holding);
-
-        MockBloomPool newPool = new MockBloomPool(
-            address(stableToken),
-            address(billyToken),
-            address(swap),
-            6
-        );
+        MockBloomPool newPool = new MockBloomPool(address(stableToken), address(billyToken), address(swap), 6);
         factory.setLastCreatedPool(address(newPool));
         registry.setExchangeRate(address(newPool), 1e18);
 
         newPool.mint(alice, amount);
+        newPool.setState(IBloomPool.State.Holding);
+
         vm.startPrank(alice);
         newPool.approve(address(stTBY), amount);
         stTBY.depositTby(address(newPool), amount);
@@ -317,11 +286,8 @@ contract StTBYTest is StTBYSetup {
         activeTokens[1] = address(newPool);
         registry.setActiveTokens(activeTokens);
 
-        uint256 expectedUSDPreEmergency = ((amount * 1e12 * 1.04e18) / 1e18) +
-            ((amount * 1e12 * 1.02e18) / 1e18);
-        uint256 expectedUSDPostEmergency = ((amount * 1e12 * 1.04e18) / 1e18) +
-            amount *
-            1e12;
+        uint256 expectedUSDPreEmergency = ((amount * 1e12 * 1.04e18) / 1e18) + ((amount * 1e12 * 1.02e18) / 1e18);
+        uint256 expectedUSDPostEmergency = ((amount * 1e12 * 1.04e18) / 1e18) + amount * 1e12;
 
         stTBY.poke();
         assertEq(stTBY.getTotalUsd(), expectedUSDPreEmergency);
@@ -394,17 +360,12 @@ contract StTBYTest is StTBYSetup {
 
         // ####### Verify performance fee #################
         uint256 stakeupStakingShares = stTBY.sharesOf(address(staking));
-        uint256 performanceFeeInShares = stTBY.getSharesByUsd(
-            expectedPerformanceFee
-        );
+        uint256 performanceFeeInShares = stTBY.getSharesByUsd(expectedPerformanceFee);
 
         stTBY.harvestTBY(address(pool));
 
-        uint256 sharesPerUsd = (stTBY.getTotalShares() * 1e18) /
-            stTBY.getTotalUsd();
-        uint256 usdPerShares = (stTBY.getTotalUsd() * 1e18) /
-            stTBY.getTotalShares() +
-            1; // Add 1 to round up
+        uint256 sharesPerUsd = (stTBY.getTotalShares() * 1e18) / stTBY.getTotalUsd();
+        uint256 usdPerShares = (stTBY.getTotalUsd() * 1e18) / stTBY.getTotalShares() + 1; // Add 1 to round up
 
         assertEq(wstTBY.stTBYPerToken(), usdPerShares);
         assertEq(wstTBY.tokensPerStTBY(), sharesPerUsd);
@@ -418,9 +379,7 @@ contract StTBYTest is StTBYSetup {
         uint256 scaler = 10 ** (18 - stableToken.decimals());
         uint256 aliceExpectedStableBalance = aliceBalance1 / scaler;
 
-        uint256 bobExpectedStableBalance = stTBY.getUsdByShares(
-            bobWrappedAmount
-        ) / scaler;
+        uint256 bobExpectedStableBalance = stTBY.getUsdByShares(bobWrappedAmount) / scaler;
 
         vm.startPrank(alice);
         stTBY.approve(address(stTBY), UINT256_MAX);
@@ -432,11 +391,7 @@ contract StTBYTest is StTBYSetup {
         vm.startPrank(bob);
         wstTBY.approve(address(stTBY), UINT256_MAX);
         vm.expectEmit(true, true, true, true);
-        emit Redeemed(
-            address(wstTBY),
-            bobWrappedAmount,
-            bobExpectedStableBalance
-        );
+        emit Redeemed(address(wstTBY), bobWrappedAmount, bobExpectedStableBalance);
         wstTBY.redeemWstTBY(bobWrappedAmount);
         vm.stopPrank();
 
@@ -446,10 +401,7 @@ contract StTBYTest is StTBYSetup {
         assertEq(stTBY.sharesOf(bob), 0);
         assertEq(stableToken.balanceOf(bob), bobExpectedStableBalance);
 
-        assertEq(
-            stTBY.sharesOf(address(staking)),
-            stakeupStakingShares + performanceFeeInShares
-        );
+        assertEq(stTBY.sharesOf(address(staking)), stakeupStakingShares + performanceFeeInShares);
         // ###############################################
     }
 
@@ -463,9 +415,8 @@ contract StTBYTest is StTBYSetup {
 
         skip(3 days);
         uint256 year = 1;
-        uint256 yearOneRewards = (MAX_POKE_REWARDS *
-            (FixedPointMathLib.WAD - (FixedPointMathLib.WAD / 2 ** year))) /
-            FixedPointMathLib.WAD;
+        uint256 yearOneRewards =
+            (MAX_POKE_REWARDS * (FixedPointMathLib.WAD - (FixedPointMathLib.WAD / 2 ** year))) / FixedPointMathLib.WAD;
 
         uint256 expectedReward = (3 days * yearOneRewards) / 52 weeks;
 

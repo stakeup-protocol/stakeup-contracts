@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -34,19 +34,13 @@ contract WstTBYBase is IWstTBYBase, ERC20 {
     function wrap(uint256 stTBYAmount) external returns (uint256 wstTBYAmount) {
         wstTBYAmount = _mintWstTBY(stTBYAmount);
 
-        ERC20(address(_stTBY)).transferFrom(
-            msg.sender,
-            address(this),
-            stTBYAmount
-        );
+        ERC20(address(_stTBY)).transferFrom(msg.sender, address(this), stTBYAmount);
 
         emit StTBYWrapped(msg.sender, stTBYAmount, wstTBYAmount);
     }
 
     /// @inheritdoc IWstTBYBase
-    function unwrap(
-        uint256 wstTBYAmount
-    ) external returns (uint256 stTBYAmount) {
+    function unwrap(uint256 wstTBYAmount) external returns (uint256 stTBYAmount) {
         stTBYAmount = _stTBY.getUsdByShares(wstTBYAmount);
         if (stTBYAmount == 0) revert Errors.ZeroAmount();
 
@@ -57,16 +51,12 @@ contract WstTBYBase is IWstTBYBase, ERC20 {
     }
 
     /// @inheritdoc IWstTBYBase
-    function getWstTBYByStTBY(
-        uint256 stTBYAmount
-    ) external view returns (uint256) {
+    function getWstTBYByStTBY(uint256 stTBYAmount) external view returns (uint256) {
         return _stTBY.getSharesByUsd(stTBYAmount);
     }
 
     /// @inheritdoc IWstTBYBase
-    function getStTBYByWstTBY(
-        uint256 wstTBYAmount
-    ) external view returns (uint256) {
+    function getStTBYByWstTBY(uint256 wstTBYAmount) external view returns (uint256) {
         return _stTBY.getUsdByShares(wstTBYAmount);
     }
 
@@ -89,9 +79,7 @@ contract WstTBYBase is IWstTBYBase, ERC20 {
      * @notice Mint wstTBY to the user
      * @param amount The amount of stTBY to wrap
      */
-    function _mintWstTBY(
-        uint256 amount
-    ) internal returns (uint256 wstTBYAmount) {
+    function _mintWstTBY(uint256 amount) internal returns (uint256 wstTBYAmount) {
         wstTBYAmount = _stTBY.getSharesByUsd(amount);
         if (wstTBYAmount == 0) revert Errors.ZeroAmount();
         _mint(msg.sender, wstTBYAmount);

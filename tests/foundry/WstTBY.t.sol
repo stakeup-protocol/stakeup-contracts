@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
@@ -58,6 +58,7 @@ contract WstTBYTest is StTBYSetup {
         pool.setCommitPhaseEnd(block.timestamp + 25 hours);
         registry.setTokenInfos(true);
         registry.setExchangeRate(address(pool), 1e18);
+        bpsFeed.updateRate(1e4);
 
         // Mint wstTBY using stable token
         vm.startPrank(alice);
@@ -65,12 +66,11 @@ contract WstTBYTest is StTBYSetup {
         wstTBY.depositUnderlying(depositAmount);
 
         assertEq(stTBY.balanceOf(alice), 0);
-        assertEq(
-            wstTBY.balanceOf(alice),
-            stTBY.getSharesByUsd(expectedMintAmount)
-        );
+        assertEq(wstTBY.balanceOf(alice), stTBY.getSharesByUsd(expectedMintAmount));
 
         vm.stopPrank();
+
+        pool.setState(IBloomPool.State.ReadyPreHoldSwap);
 
         // Mint wstTBY using pool token
         vm.startPrank(bob);
@@ -78,9 +78,6 @@ contract WstTBYTest is StTBYSetup {
         wstTBY.depositTby(address(pool), depositAmount);
 
         assertEq(stTBY.balanceOf(bob), 0);
-        assertEq(
-            wstTBY.balanceOf(bob),
-            stTBY.getSharesByUsd(expectedMintAmount)
-        );
+        assertEq(wstTBY.balanceOf(bob), stTBY.getSharesByUsd(expectedMintAmount));
     }
 }

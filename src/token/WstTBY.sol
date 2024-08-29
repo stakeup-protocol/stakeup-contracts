@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -30,9 +30,7 @@ contract WstTBY is IWstTBY, WstTBYBase {
     // =================== Functions ===================
 
     /// @inheritdoc IWstTBY
-    function depositUnderlying(
-        uint256 amount
-    ) external override returns (uint256 amountMinted) {
+    function depositUnderlying(uint256 amount) external override returns (uint256 amountMinted) {
         _stageDeposit(address(_stTBYUnderlying), amount);
 
         amountMinted = _stTBY.depositUnderlying(amount);
@@ -40,10 +38,7 @@ contract WstTBY is IWstTBY, WstTBYBase {
     }
 
     /// @inheritdoc IWstTBY
-    function depositTby(
-        address tby,
-        uint256 amount
-    ) external override returns (uint256 amountMinted) {
+    function depositTby(address tby, uint256 amount) external override returns (uint256 amountMinted) {
         _stageDeposit(tby, amount);
 
         amountMinted = _stTBY.depositTby(tby, amount);
@@ -51,9 +46,7 @@ contract WstTBY is IWstTBY, WstTBYBase {
     }
 
     /// @inheritdoc IWstTBY
-    function redeemWstTBY(
-        uint256 amount
-    ) external override returns (uint256 underlyingRedeemed) {
+    function redeemWstTBY(uint256 amount) external override returns (uint256 underlyingRedeemed) {
         _burn(msg.sender, amount);
         uint256 stTBYAmount = _stTBY.getUsdByShares(amount);
 

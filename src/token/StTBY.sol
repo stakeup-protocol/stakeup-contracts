@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -21,9 +21,8 @@ import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 import {IStTBY} from "../interfaces/IStTBY.sol";
 import {IWstTBY} from "../interfaces/IWstTBY.sol";
+import "forge-std/console2.sol";
 
-/// TODO: Create a tby deposit that prevents front running
-///       - Switch to a index variable that increments based on yield added to the system
 /// @title Staked TBY Contract
 contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     using Math for uint256;
@@ -83,11 +82,8 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         address bridgeOperator
     ) StTBYBase(layerZeroEndpoint, bridgeOperator) {
         if (
-            underlyingToken == address(0) ||
-            bloomFactory == address(0) ||
-            registry == address(0) ||
-            stakeupStaking == address(0) ||
-            wstTBY == address(0)
+            underlyingToken == address(0) || bloomFactory == address(0) || registry == address(0)
+                || stakeupStaking == address(0) || wstTBY == address(0)
         ) {
             revert Errors.InvalidAddress();
         }
@@ -103,6 +99,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         _scalingFactor = 10 ** (18 - _underlyingDecimals);
         _startTimestamp = block.timestamp;
+        _lastRateUpdate = block.timestamp;
 
         _pokeRewardsRemaining = Constants.POKE_REWARDS;
         _mintRewardsRemaining = StakeUpMintRewardLib._getMintRewardAllocation();
@@ -111,14 +108,8 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     // =================== Functions ==================
 
     /// @inheritdoc IStTBY
-    function depositTby(
-        address tby,
-        uint256 amount
-    ) external nonReentrant returns (uint256 amountMinted) {
-        if (
-            IBloomPool(tby).state() != IBloomPool.State.Holding ||
-            !_registry.tokenInfos(tby).active
-        ) {
+    function depositTby(address tby, uint256 amount) external nonReentrant returns (uint256 amountMinted) {
+        if (!_isValidTbyState(IBloomPool(tby).state()) || !_registry.tokenInfos(tby).active) {
             revert Errors.TBYNotActive();
         }
 
@@ -132,9 +123,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function depositUnderlying(
-        uint256 amount
-    ) external nonReentrant returns (uint256 amountMinted) {
+    function depositUnderlying(uint256 amount) external nonReentrant returns (uint256 amountMinted) {
         _underlyingToken.safeTransferFrom(msg.sender, address(this), amount);
         IBloomPool latestPool = _getLatestPool();
 
@@ -151,9 +140,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function redeemStTBY(
-        uint256 amount
-    ) external nonReentrant returns (uint256 underlyingAmount) {
+    function redeemStTBY(uint256 amount) external nonReentrant returns (uint256 underlyingAmount) {
         if (amount == 0) revert Errors.ZeroAmount();
         if (balanceOf(msg.sender) < amount) {
             revert Errors.InsufficientBalance();
@@ -185,14 +172,10 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
 
         IBloomPool pool = IBloomPool(tby);
         uint256 amount = pool.balanceOf(address(this));
-        uint256 beforeUnderlyingBalance = _underlyingToken.balanceOf(
-            address(this)
-        );
+        uint256 beforeUnderlyingBalance = _underlyingToken.balanceOf(address(this));
 
         if (pool.state() == IBloomPool.State.EmergencyExit) {
-            IEmergencyHandler emergencyHandler = IEmergencyHandler(
-                pool.EMERGENCY_HANDLER()
-            );
+            IEmergencyHandler emergencyHandler = IEmergencyHandler(pool.EMERGENCY_HANDLER());
             pool.safeApprove(address(emergencyHandler), amount);
             emergencyHandler.redeemLender(pool);
 
@@ -208,8 +191,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
             pool.withdrawLender(amount);
         }
 
-        uint256 withdrawn = _underlyingToken.balanceOf(address(this)) -
-            beforeUnderlyingBalance;
+        uint256 withdrawn = _underlyingToken.balanceOf(address(this)) - beforeUnderlyingBalance;
 
         _processProceeds(amount, withdrawn);
 
@@ -231,12 +213,9 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         uint256 currentBlock = block.timestamp;
         uint256 lastUpdate = _lastRateUpdate;
         if (currentBlock - lastUpdate >= 24 hours) {
-            _accrueYield(
-                _calcYieldAccrued(currentBlock, lastUpdate).divWadUp(
-                    _globalShares
-                )
-            );
+            _accrueYield(_calcYieldAccrued(currentBlock, lastUpdate).divWadUp(_globalShares));
             _distributePokeRewards();
+            _lastRateUpdate = currentBlock;
         }
     }
 
@@ -256,11 +235,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @inheritdoc IStTBY
-    function getExchangeRateRegistry()
-        external
-        view
-        returns (IExchangeRateRegistry)
-    {
+    function getExchangeRateRegistry() external view returns (IExchangeRateRegistry) {
         return _registry;
     }
 
@@ -290,11 +265,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
      * @param amount The amount of tokens being deposited
      * @param isTby True if the token being deposited is a TBY
      */
-    function _deposit(
-        address token,
-        uint256 amount,
-        bool isTby
-    ) internal returns (uint256 amountMinted) {
+    function _deposit(address token, uint256 amount, bool isTby) internal returns (uint256 amountMinted) {
         // TBYs will always have the same underlying decimals as the underlying token
         amountMinted = amount * _scalingFactor;
 
@@ -304,13 +275,11 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         //     in order to prevent front running of rate updates which would result in
         //     overvaluing TBY yield.
         if (isTby) {
-            uint256 timeSinceUpdate = _lastRateUpdate - block.timestamp;
-            uint256 rateAdjustment = _scaleBpsRate(_bpsFeed.currentRate()) *
-                timeSinceUpdate;
-
-            amountMinted =
-                _registry.getExchangeRate(token).mulWad(amountMinted) -
-                rateAdjustment;
+            uint256 timeSinceUpdate = block.timestamp - _lastRateUpdate;
+            uint256 rateAdjustment = _scaleBpsRate(_bpsFeed.getWeightedRate()) * timeSinceUpdate;
+            console2.log("Rate adjustment: {}", rateAdjustment);
+            amountMinted = _registry.getExchangeRate(token).mulWad(amountMinted) - rateAdjustment;
+            console2.log("Amount minted: {}", amountMinted);
         }
 
         uint256 sharesAmount = getSharesByUsd(amountMinted);
@@ -322,10 +291,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
 
         if (mintRewardsRemaining > 0) {
-            uint256 eligibleAmount = Math.min(
-                amountMinted,
-                mintRewardsRemaining
-            );
+            uint256 eligibleAmount = Math.min(amountMinted, mintRewardsRemaining);
             _mintRewardsRemaining -= eligibleAmount;
 
             _stakeupToken.mintRewards(msg.sender, eligibleAmount);
@@ -342,15 +308,10 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
      * @param startingAmount Amount of USD that was initially deposited
      * @param amountWithdrawn Amount of USD that was withdrawn
      */
-    function _processProceeds(
-        uint256 startingAmount,
-        uint256 amountWithdrawn
-    ) internal {
+    function _processProceeds(uint256 startingAmount, uint256 amountWithdrawn) internal {
         uint256 proceeds = amountWithdrawn - startingAmount;
         uint256 yieldScaled = proceeds * _scalingFactor;
-        uint256 performanceFee = (yieldScaled *
-            _scalingFactor *
-            Constants.PERFORMANCE_BPS) / Constants.BPS_DENOMINATOR;
+        uint256 performanceFee = (yieldScaled * _scalingFactor * Constants.PERFORMANCE_BPS) / Constants.BPS_DENOMINATOR;
 
         if (performanceFee > 0) {
             uint256 sharesFeeAmount = getSharesByUsd(performanceFee);
@@ -370,9 +331,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
      * @param pool The latest Bloom pool
      * @return depositAmount The amount of USDC deposited
      */
-    function _autoMintTBY(
-        IBloomPool pool
-    ) internal returns (uint256 depositAmount) {
+    function _autoMintTBY(IBloomPool pool) internal returns (uint256 depositAmount) {
         depositAmount = _underlyingToken.balanceOf(address(this));
 
         if (depositAmount > 0) {
@@ -388,19 +347,17 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
      * @param pool The Bloom Pool that is being checked
      * @param currentState The current state of the pool
      */
-    function _within24HoursOfCommitPhaseEnd(
-        IBloomPool pool,
-        IBloomPool.State currentState
-    ) internal view returns (bool) {
+    function _within24HoursOfCommitPhaseEnd(IBloomPool pool, IBloomPool.State currentState)
+        internal
+        view
+        returns (bool)
+    {
         uint256 commitPhaseEnd = pool.COMMIT_PHASE_END();
-        uint256 last24hoursOfCommitPhase = pool.COMMIT_PHASE_END() -
-            Constants.AUTO_STAKE_PHASE;
+        uint256 last24hoursOfCommitPhase = pool.COMMIT_PHASE_END() - Constants.AUTO_STAKE_PHASE;
 
         if (currentState == IBloomPool.State.Commit) {
             uint256 currentTime = block.timestamp;
-            return
-                currentTime >= last24hoursOfCommitPhase &&
-                currentTime < commitPhaseEnd;
+            return currentTime >= last24hoursOfCommitPhase && currentTime < commitPhaseEnd;
         }
 
         return false;
@@ -418,10 +375,7 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     function _distributePokeRewards() internal {
         if (_pokeRewardsRemaining > 0) {
             uint256 amount = StakeUpRewardMathLib._calculateDripAmount(
-                Constants.POKE_REWARDS,
-                _startTimestamp,
-                _pokeRewardsRemaining,
-                false
+                Constants.POKE_REWARDS, _startTimestamp, _pokeRewardsRemaining, false
             );
 
             if (amount > 0) {
@@ -433,34 +387,39 @@ contract StTBY is IStTBY, StTBYBase, ReentrancyGuard {
     }
 
     /// @notice Calculates the yield accrued by the stTBY contract since the last update
-    function _calcYieldAccrued(
-        uint256 blockTimestamp,
-        uint256 lastRateUpdate
-    ) internal view returns (uint256 yieldAccrued) {
+    function _calcYieldAccrued(uint256 blockTimestamp, uint256 lastRateUpdate)
+        internal
+        view
+        returns (uint256 yieldAccrued)
+    {
         address[] memory tbys = _registry.getActiveTokens();
-        uint256 currentRate = _scaleBpsRate(_bpsFeed.currentRate());
+        uint256 currentRate = _scaleBpsRate(_bpsFeed.getWeightedRate());
         uint256 timeElapsed = blockTimestamp - lastRateUpdate;
 
         uint256 length = tbys.length;
-        for (uint256 i = 0; i < length; i++) {
-            uint256 balance = IBloomPool(tbys[i]).balanceOf(address(this));
+        for (uint256 i = 0; i < length; ++i) {
+            IBloomPool tby = IBloomPool(tbys[i]);
+            uint256 balance = tby.balanceOf(address(this));
 
             if (balance != 0) {
-                if (IBloomPool(tbys[i]).state() == IBloomPool.State.Holding) {
-                    yieldAccrued +=
-                        (currentRate * timeElapsed * balance) /
-                        Math.WAD;
-                } else {
-                    uint256 poolPhaseEnd = IBloomPool(tbys[i]).POOL_PHASE_END();
-                    if (poolPhaseEnd - timeElapsed > lastRateUpdate) {
-                        uint256 poolTimeElapsed = poolPhaseEnd - lastRateUpdate;
-                        yieldAccrued +=
-                            (currentRate * poolTimeElapsed * balance) /
-                            Math.WAD;
+                IBloomPool.State state = tby.state();
+                if (_isValidTbyState(state)) {
+                    yieldAccrued += (currentRate * timeElapsed * balance) / Math.WAD;
+                    continue;
+                }
+                if (state > IBloomPool.State.Holding) {
+                    uint256 poolPhaseEnd = tby.POOL_PHASE_END();
+                    uint256 poolTimeElapsed = poolPhaseEnd - lastRateUpdate;
+                    if (poolTimeElapsed != 0) {
+                        yieldAccrued += (currentRate * poolTimeElapsed * balance) / Math.WAD;
                     }
                 }
             }
         }
+    }
+
+    function _isValidTbyState(IBloomPool.State state) internal pure returns (bool) {
+        return state > IBloomPool.State.Commit && state <= IBloomPool.State.Holding;
     }
 
     /**

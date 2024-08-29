@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 
@@ -72,10 +72,7 @@ contract StakeUpTokenTest is Test {
         uint256 expectedSupply = 1_000_000e18; // .01 * 1 billion
         _deployOneAllocation(initialMintPercentage);
 
-        assertEq(
-            stakeupToken.balanceOf(address(stakeupStaking)),
-            expectedSupply
-        );
+        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
     }
 
     function testMultiAllocationMint() public {
@@ -83,18 +80,9 @@ contract StakeUpTokenTest is Test {
 
         // Alice and bob split the first allocation 50/50, rando gets the second allocation
         // Both allocations are 50% of the total supply
-        _deployMultiAllocation(
-            initialMintPercentage,
-            false,
-            false,
-            false,
-            bytes4(0)
-        );
+        _deployMultiAllocation(initialMintPercentage, false, false, false, bytes4(0));
 
-        assertEq(
-            stakeupToken.balanceOf(address(stakeupStaking)),
-            expectedSupply
-        );
+        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
     }
 
     function testMintLpSupply() public {
@@ -105,8 +93,7 @@ contract StakeUpTokenTest is Test {
 
         _deployOneAllocation(initialMintPercentage);
 
-        IStakeUpToken.TokenRecipient[]
-            memory lpRecipients = new IStakeUpToken.TokenRecipient[](2);
+        IStakeUpToken.TokenRecipient[] memory lpRecipients = new IStakeUpToken.TokenRecipient[](2);
         lpRecipients[0] = IStakeUpToken.TokenRecipient({
             recipient: lp1,
             percentOfAllocation: 5e17 // 50%
@@ -116,8 +103,7 @@ contract StakeUpTokenTest is Test {
             percentOfAllocation: 5e17 // 50%
         });
 
-        IStakeUpToken.Allocation[]
-            memory lpAllocation = new IStakeUpToken.Allocation[](1);
+        IStakeUpToken.Allocation[] memory lpAllocation = new IStakeUpToken.Allocation[](1);
         lpAllocation[0] = IStakeUpToken.Allocation({
             recipients: lpRecipients,
             percentOfSupply: lpPercentage // .01%
@@ -133,10 +119,7 @@ contract StakeUpTokenTest is Test {
         vm.stopPrank();
 
         // Check that the LP supply was minted
-        assertEq(
-            stakeupToken.balanceOf(address(stakeupStaking)),
-            expectedSupply
-        );
+        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
     }
 
@@ -148,8 +131,7 @@ contract StakeUpTokenTest is Test {
 
         _deployOneAllocation(initialMintPercentage);
 
-        IStakeUpToken.TokenRecipient[]
-            memory airdropRecipients = new IStakeUpToken.TokenRecipient[](2);
+        IStakeUpToken.TokenRecipient[] memory airdropRecipients = new IStakeUpToken.TokenRecipient[](2);
         airdropRecipients[0] = IStakeUpToken.TokenRecipient({
             recipient: airdrop1,
             percentOfAllocation: 5e17 // 50%
@@ -169,53 +151,30 @@ contract StakeUpTokenTest is Test {
         vm.stopPrank();
 
         // Check that the LP supply was minted
-        assertEq(
-            stakeupToken.balanceOf(address(stakeupStaking)),
-            expectedSupply / 2
-        );
+        assertEq(stakeupToken.balanceOf(address(stakeupStaking)), expectedSupply / 2);
         assertEq(stakeupToken.balanceOf(airdrop1), 500_000e18);
         assertEq(stakeupToken.balanceOf(airdrop2), 500_000e18);
         assertEq(stakeupToken.totalSupply(), expectedSupply);
     }
 
     function testRevertZeroAddress() public {
-        _deployMultiAllocation(
-            initialMintPercentage,
-            true,
-            false,
-            false,
-            Errors.InvalidRecipient.selector
-        );
+        _deployMultiAllocation(initialMintPercentage, true, false, false, Errors.InvalidRecipient.selector);
     }
 
     function testRevertExcessTokens() public {
-        _deployMultiAllocation(
-            initialMintPercentage,
-            false,
-            true,
-            false,
-            Errors.ExceedsAvailableTokens.selector
-        );
+        _deployMultiAllocation(initialMintPercentage, false, true, false, Errors.ExceedsAvailableTokens.selector);
     }
 
     function testRevertNotFullyAllocated() public {
-        _deployMultiAllocation(
-            initialMintPercentage,
-            false,
-            false,
-            true,
-            Errors.SharesNotFullyAllocated.selector
-        );
+        _deployMultiAllocation(initialMintPercentage, false, false, true, Errors.SharesNotFullyAllocated.selector);
     }
 
     function _deployOneAllocation(uint64 initialMintPercent) internal {
-        IStakeUpToken.TokenRecipient memory recipient = IStakeUpToken
-            .TokenRecipient({
-                recipient: alice,
-                percentOfAllocation: 1e18 // 100%
-            });
-        IStakeUpToken.TokenRecipient[]
-            memory recipients = new IStakeUpToken.TokenRecipient[](1);
+        IStakeUpToken.TokenRecipient memory recipient = IStakeUpToken.TokenRecipient({
+            recipient: alice,
+            percentOfAllocation: 1e18 // 100%
+        });
+        IStakeUpToken.TokenRecipient[] memory recipients = new IStakeUpToken.TokenRecipient[](1);
 
         recipients[0] = recipient;
 
@@ -224,18 +183,11 @@ contract StakeUpTokenTest is Test {
             percentOfSupply: initialMintPercent // .1%
         });
 
-        IStakeUpToken.Allocation[]
-            memory allocations = new IStakeUpToken.Allocation[](1);
+        IStakeUpToken.Allocation[] memory allocations = new IStakeUpToken.Allocation[](1);
 
         allocations[0] = allocation;
 
-        stakeupToken = new StakeUpToken(
-            address(stakeupStaking),
-            address(0),
-            owner,
-            address(layerZeroEndpointA),
-            owner
-        );
+        stakeupToken = new StakeUpToken(address(stakeupStaking), address(0), owner, address(layerZeroEndpointA), owner);
 
         vm.startPrank(owner);
         stakeupToken.mintInitialSupply(allocations, initialMintPercent);
@@ -270,31 +222,22 @@ contract StakeUpTokenTest is Test {
             aliceAllocation -= 1e16;
         }
 
-        IStakeUpToken.TokenRecipient[]
-            memory recipientsList1 = new IStakeUpToken.TokenRecipient[](2);
-        IStakeUpToken.TokenRecipient[]
-            memory recipientsList2 = new IStakeUpToken.TokenRecipient[](1);
+        IStakeUpToken.TokenRecipient[] memory recipientsList1 = new IStakeUpToken.TokenRecipient[](2);
+        IStakeUpToken.TokenRecipient[] memory recipientsList2 = new IStakeUpToken.TokenRecipient[](1);
 
-        IStakeUpToken.Allocation[]
-            memory allocations = new IStakeUpToken.Allocation[](2);
+        IStakeUpToken.Allocation[] memory allocations = new IStakeUpToken.Allocation[](2);
 
         {
             // First allocation
-            IStakeUpToken.TokenRecipient memory recipient1 = IStakeUpToken
-                .TokenRecipient({
-                    recipient: alice,
-                    percentOfAllocation: aliceAllocation
-                });
+            IStakeUpToken.TokenRecipient memory recipient1 =
+                IStakeUpToken.TokenRecipient({recipient: alice, percentOfAllocation: aliceAllocation});
             recipientsList1[0] = recipient1;
-            IStakeUpToken.TokenRecipient memory recipient2 = IStakeUpToken
-                .TokenRecipient({recipient: bob, percentOfAllocation: 5e17});
+            IStakeUpToken.TokenRecipient memory recipient2 =
+                IStakeUpToken.TokenRecipient({recipient: bob, percentOfAllocation: 5e17});
             recipientsList1[1] = recipient2;
 
-            IStakeUpToken.Allocation memory allocation1 = IStakeUpToken
-                .Allocation({
-                    recipients: recipientsList1,
-                    percentOfSupply: percentPerAllocation
-                });
+            IStakeUpToken.Allocation memory allocation1 =
+                IStakeUpToken.Allocation({recipients: recipientsList1, percentOfSupply: percentPerAllocation});
 
             allocations[0] = allocation1;
 
@@ -303,20 +246,12 @@ contract StakeUpTokenTest is Test {
                 percentOfAllocation: 1e18 // 100%
             });
 
-            IStakeUpToken.Allocation memory allocation2 = IStakeUpToken
-                .Allocation({
-                    recipients: recipientsList2,
-                    percentOfSupply: percentPerAllocation
-                });
+            IStakeUpToken.Allocation memory allocation2 =
+                IStakeUpToken.Allocation({recipients: recipientsList2, percentOfSupply: percentPerAllocation});
             allocations[1] = allocation2;
 
-            stakeupToken = new StakeUpToken(
-                address(stakeupStaking),
-                address(stTBY),
-                owner,
-                address(layerZeroEndpointA),
-                owner
-            );
+            stakeupToken =
+                new StakeUpToken(address(stakeupStaking), address(stTBY), owner, address(layerZeroEndpointA), owner);
         }
 
         vm.startPrank(owner);

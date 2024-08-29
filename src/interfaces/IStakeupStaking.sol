@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {IStakeUpToken} from "./IStakeUpToken.sol";
 import {IStTBY} from "./IStTBY.sol";
@@ -84,10 +84,10 @@ interface IStakeUpStaking is ISUPVesting {
     function getStTBY() external view returns (IStTBY);
 
     /**
-     * @notice Adds stTBY rewards to the next period's reward pool
-     * @param shares Amount of shares of stTBY to add to the reward pool
+     * @notice Returns the amount of claimable rewards for a user
+     * @param account The address of the user to check claimable rewards for.
      */
-    function claimableRewards(address shares) external view returns (uint256);
+    function claimableRewards(address account) external view returns (uint256);
 
     /// @notice Returns the total amount of STAKEUP staked within the contract
     function totalStakeUpStaked() external view returns (uint256);
@@ -99,9 +99,7 @@ interface IStakeUpStaking is ISUPVesting {
      * @notice Gets the staking data for a user
      * @param user Address of the user to get the staking data for
      */
-    function getUserStakingData(
-        address user
-    ) external view returns (StakingData memory);
+    function getUserStakingData(address user) external view returns (StakingData memory);
 
     /// @notice Returns the last block that global reward data was updated
     function getLastRewardBlock() external view returns (uint256);

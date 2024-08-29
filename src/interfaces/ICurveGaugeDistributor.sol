@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 interface ICurveGaugeDistributor {
     /**
@@ -51,10 +51,7 @@ interface ICurveGaugeDistributor {
 
     // /// @notice Deploys Curve gauges for all pools set during deployment
     // function deployCurveGauges() external;
-    function initialize(
-        CurvePoolData[] calldata curvePools,
-        address stakeupToken
-    ) external;
+    function initialize(CurvePoolData[] calldata curvePools, address stakeupToken) external;
 
     /**
      * @notice Returns the data for all Curve pool registered with the distributor

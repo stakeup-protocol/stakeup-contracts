@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {OFT} from "@LayerZero/oft/OFT.sol";
 import {OAppCore} from "@LayerZero/oapp/OApp.sol";
@@ -18,12 +18,7 @@ abstract contract OFTController is ControllerBase, OFT {
     IYieldRelayer internal _yieldRelayer;
 
     // ================= Constructor =================
-    constructor(
-        string memory tokenName,
-        string memory tokenSymbol,
-        address layerZeroEndpoint,
-        address bridgeOperator
-    )
+    constructor(string memory tokenName, string memory tokenSymbol, address layerZeroEndpoint, address bridgeOperator)
         OFT(tokenName, tokenSymbol, layerZeroEndpoint, bridgeOperator)
         ControllerBase(bridgeOperator)
     {
@@ -44,10 +39,7 @@ abstract contract OFTController is ControllerBase, OFT {
     }
 
     /// @inheritdoc ControllerBase
-    function setPeer(
-        uint32 eid,
-        bytes32 peer
-    ) public virtual override(ControllerBase, OAppCore) onlyBridgeOperator {
+    function setPeer(uint32 eid, bytes32 peer) public virtual override(ControllerBase, OAppCore) onlyBridgeOperator {
         if (eid == 0) {
             revert Errors.InvalidPeerID();
         }
@@ -59,9 +51,7 @@ abstract contract OFTController is ControllerBase, OFT {
     }
 
     /// @inheritdoc ControllerBase
-    function forceSetDelegate(
-        address newDelegate
-    ) external override onlyBridgeOperator {
+    function forceSetDelegate(address newDelegate) external override onlyBridgeOperator {
         if (newDelegate == address(0)) {
             revert Errors.ZeroAddress();
         }

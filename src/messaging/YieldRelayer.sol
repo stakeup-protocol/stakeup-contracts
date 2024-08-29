@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
@@ -54,9 +54,7 @@ contract YieldRelayer is IYieldRelayer {
      * @notice Sets the bridge operator address
      * @param bridgeOperator The new bridge operator address
      */
-    function setBridgeOperator(
-        address bridgeOperator
-    ) external onlyBridgeOperator {
+    function setBridgeOperator(address bridgeOperator) external onlyBridgeOperator {
         if (bridgeOperator == address(0)) revert Errors.ZeroAddress();
         _bridgeOperator = bridgeOperator;
     }

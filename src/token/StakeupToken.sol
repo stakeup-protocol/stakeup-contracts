@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -36,16 +36,11 @@ contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
         address owner,
         address layerZeroEndpoint,
         address layerZeroDelegate
-    )
-        OFT("StakeUp Token", "SUP", layerZeroEndpoint, layerZeroDelegate)
-        Ownable2Step()
-    {
+    ) OFT("StakeUp Token", "SUP", layerZeroEndpoint, layerZeroDelegate) Ownable2Step() {
         _stakeupStaking = stakeupStaking;
 
         _authorizedMinters[_stakeupStaking] = true;
-        _authorizedMinters[
-            address(IStakeUpStaking(stakeupStaking).getStTBY())
-        ] = true;
+        _authorizedMinters[address(IStakeUpStaking(stakeupStaking).getStTBY())] = true;
 
         if (gaugeDistributor != address(0)) {
             _authorizedMinters[gaugeDistributor] = true;
@@ -63,19 +58,14 @@ contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
     }
 
     /// @inheritdoc IStakeUpToken
-    function airdropTokens(
-        TokenRecipient[] memory recipients,
-        uint256 percentOfTotalSupply
-    ) external onlyOwner {
+    function airdropTokens(TokenRecipient[] memory recipients, uint256 percentOfTotalSupply) external onlyOwner {
         uint256 length = recipients.length;
-        uint256 tokenAllocation = (Constants.MAX_SUPPLY *
-            percentOfTotalSupply) / Constants.FIXED_POINT_ONE;
+        uint256 tokenAllocation = (Constants.MAX_SUPPLY * percentOfTotalSupply) / Constants.FIXED_POINT_ONE;
         uint256 tokensRemaining = tokenAllocation;
 
         for (uint256 i = 0; i < length; ++i) {
             address recipient = recipients[i].recipient;
-            uint256 amount = (recipients[i].percentOfAllocation *
-                tokenAllocation) / Constants.FIXED_POINT_ONE;
+            uint256 amount = (recipients[i].percentOfAllocation * tokenAllocation) / Constants.FIXED_POINT_ONE;
 
             if (amount > tokensRemaining) {
                 revert Errors.ExceedsAvailableTokens();
@@ -88,18 +78,16 @@ contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
     }
 
     /// @inheritdoc IStakeUpToken
-    function mintRewards(
-        address recipient,
-        uint256 amount
-    ) external override onlyAuthorized {
+    function mintRewards(address recipient, uint256 amount) external override onlyAuthorized {
         _mint(recipient, amount);
     }
 
     /// @inheritdoc IStakeUpToken
-    function mintInitialSupply(
-        Allocation[] memory allocations,
-        uint256 initialMintPercentage
-    ) external override onlyOwner {
+    function mintInitialSupply(Allocation[] memory allocations, uint256 initialMintPercentage)
+        external
+        override
+        onlyOwner
+    {
         uint256 sharesRemaining = initialMintPercentage;
         uint256 length = allocations.length;
 
@@ -110,26 +98,22 @@ contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
             sharesRemaining -= allocations[i].percentOfSupply;
             _mintAndVest(allocations[i], _stakeupStaking);
         }
-        if (totalSupply() > Constants.MAX_SUPPLY)
+        if (totalSupply() > Constants.MAX_SUPPLY) {
             revert Errors.ExceedsMaxAllocationLimit();
+        }
 
         if (sharesRemaining > 0) revert Errors.SharesNotFullyAllocated();
     }
 
-    function _mintAndVest(
-        Allocation memory allocation,
-        address stakeupStaking
-    ) internal {
+    function _mintAndVest(Allocation memory allocation, address stakeupStaking) internal {
         TokenRecipient[] memory recipients = allocation.recipients;
-        uint256 tokensReserved = (Constants.MAX_SUPPLY *
-            allocation.percentOfSupply) / Constants.FIXED_POINT_ONE;
+        uint256 tokensReserved = (Constants.MAX_SUPPLY * allocation.percentOfSupply) / Constants.FIXED_POINT_ONE;
         uint256 allocationRemaining = tokensReserved;
         uint256 length = recipients.length;
 
         for (uint256 i = 0; i < length; ++i) {
             address recipient = recipients[i].recipient;
-            uint256 amount = (tokensReserved *
-                recipients[i].percentOfAllocation) / Constants.FIXED_POINT_ONE;
+            uint256 amount = (tokensReserved * recipients[i].percentOfAllocation) / Constants.FIXED_POINT_ONE;
 
             if (recipient == address(0)) revert Errors.InvalidRecipient();
             if (amount > allocationRemaining) {
@@ -146,15 +130,11 @@ contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
         if (allocationRemaining > 0) revert Errors.SharesNotFullyAllocated();
     }
 
-    function transferOwnership(
-        address newOwner
-    ) public override(Ownable, Ownable2Step) {
+    function transferOwnership(address newOwner) public override(Ownable, Ownable2Step) {
         super.transferOwnership(newOwner);
     }
 
-    function _transferOwnership(
-        address newOwner
-    ) internal override(Ownable, Ownable2Step) {
+    function _transferOwnership(address newOwner) internal override(Ownable, Ownable2Step) {
         super._transferOwnership(newOwner);
     }
 

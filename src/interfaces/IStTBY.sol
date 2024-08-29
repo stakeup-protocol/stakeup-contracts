@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -47,12 +47,7 @@ interface IStTBY is IStTBYBase {
      * @param amount Amount of tokens deposited
      * @param shares Amount of shares minted to the user
      */
-    event Deposit(
-        address indexed account,
-        address token,
-        uint256 amount,
-        uint256 shares
-    );
+    event Deposit(address indexed account, address token, uint256 amount, uint256 shares);
 
     /**
      * @notice Deposit TBY and get stTBY minted
@@ -60,31 +55,23 @@ interface IStTBY is IStTBYBase {
      * @param amount TBY amount to deposit
      * @return amountMinted Amount of stTBY minted
      */
-    function depositTby(
-        address tby,
-        uint256 amount
-    ) external returns (uint256 amountMinted);
+    function depositTby(address tby, uint256 amount) external returns (uint256 amountMinted);
 
     /**
      * @notice Deposit underlying tokens and get stTBY minted
      * @param amount Amount of underlying tokens to deposit
      * @return amountMinted Amount of stTBY minted
      */
-    function depositUnderlying(
-        uint256 amount
-    ) external returns (uint256 amountMinted);
+    function depositUnderlying(uint256 amount) external returns (uint256 amountMinted);
 
     /**
      * @notice Redeem stTBY in exchange for underlying tokens. Underlying
-     * tokens can be withdrawn with the `withdraw()` method, once the
-     * redemption is processed.
+     * tokens.
      * @dev Emits a {Redeemed} event.
      * @param amount Amount of stTBY to redeem
      * @return underlyingAmount The Amount of underlying tokens redeemed
      */
-    function redeemStTBY(
-        uint256 amount
-    ) external returns (uint256 underlyingAmount);
+    function redeemStTBY(uint256 amount) external returns (uint256 underlyingAmount);
 
     /**
      * @notice Redeems the underlying token from a Bloom Pool in exchange for TBYs
@@ -112,10 +99,7 @@ interface IStTBY is IStTBYBase {
     function getBloomFactory() external view returns (IBloomFactory);
 
     /// @notice Returns the Exchange Rate Registry
-    function getExchangeRateRegistry()
-        external
-        view
-        returns (IExchangeRateRegistry);
+    function getExchangeRateRegistry() external view returns (IExchangeRateRegistry);
 
     /// @notice Returns the StakeUpStaking contract.
     function getStakeUpStaking() external view returns (IStakeUpStaking);

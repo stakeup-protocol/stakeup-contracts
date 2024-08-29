@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
@@ -12,9 +12,7 @@ interface IWstTBY is IWstTBYBase {
      * @param amount Underlying amount to deposit
      * @return amountMinted Amount of wstTBY minted
      */
-    function depositUnderlying(
-        uint256 amount
-    ) external returns (uint256 amountMinted);
+    function depositUnderlying(uint256 amount) external returns (uint256 amountMinted);
 
     /**
      * @notice Mints wstTBY directly to the user using TBYs
@@ -22,20 +20,13 @@ interface IWstTBY is IWstTBYBase {
      * @param amount TBY amount to deposit
      * @return amountMinted Amount of wstTBY minted
      */
-    function depositTby(
-        address tby,
-        uint256 amount
-    ) external returns (uint256 amountMinted);
+    function depositTby(address tby, uint256 amount) external returns (uint256 amountMinted);
 
     /**
-     * @notice Redeem wstTBY in exchange for underlying tokens. Underlying
-     * tokens can be withdrawn with the `withdraw()` method, once the
-     * redemption is processed.
+     * @notice Redeem wstTBY in exchange for underlying tokens.
      * @dev Emits a {Redeemed} event.
      * @param wstTBYAmount Amount of wstTBY
      * @return underlyingRedeemed The Amount of underlying tokens redeemed
      */
-    function redeemWstTBY(
-        uint256 wstTBYAmount
-    ) external returns (uint256 underlyingRedeemed);
+    function redeemWstTBY(uint256 wstTBYAmount) external returns (uint256 underlyingRedeemed);
 }

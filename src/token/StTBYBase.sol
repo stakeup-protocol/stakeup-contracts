@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.23;
 
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
@@ -40,17 +40,17 @@ contract StTBYBase is IStTBYBase, OFTController {
     // =================== Modifiers ===================
 
     modifier onlyRelayer() {
-        if (msg.sender != address(_yieldRelayer))
+        if (msg.sender != address(_yieldRelayer)) {
             revert Errors.UnauthorizedCaller();
+        }
         _;
     }
 
     // ================== Constructor ==================
 
-    constructor(
-        address layerZeroEndpoint,
-        address bridgeOperator
-    ) OFTController("Staked TBY", "stTBY", layerZeroEndpoint, bridgeOperator) {
+    constructor(address layerZeroEndpoint, address bridgeOperator)
+        OFTController("Staked TBY", "stTBY", layerZeroEndpoint, bridgeOperator)
+    {
         _lastRateUpdate = block.timestamp;
     }
 
@@ -98,10 +98,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * @param recipient recipient of stTBY tokens
      * @param amount Amount of tokens being transfered
      */
-    function transfer(
-        address recipient,
-        uint256 amount
-    ) public override returns (bool) {
+    function transfer(address recipient, uint256 amount) public override returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
@@ -113,10 +110,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * @param owner Owner of the tokens
      * @param spender Spender of the tokens
      */
-    function allowance(
-        address owner,
-        address spender
-    ) public view override returns (uint256) {
+    function allowance(address owner, address spender) public view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
@@ -128,10 +122,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * @param spender Spender of stTBY tokens
      * @param amount Amount of stTBY tokens allowed to be spent
      */
-    function approve(
-        address spender,
-        uint256 amount
-    ) public override returns (bool) {
+    function approve(address spender, uint256 amount) public override returns (bool) {
         _approve(msg.sender, spender, amount);
         return true;
     }
@@ -150,11 +141,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * @param recipient Destination of stTBY tokens
      * @param amount Amount of tokens being transfered
      */
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) public override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
         _spendAllowance(sender, msg.sender, amount);
         _transfer(sender, recipient, amount);
         return true;
@@ -171,15 +158,8 @@ contract StTBYBase is IStTBYBase, OFTController {
      * @param spender The address which the allowance is increased for
      * @param addedValue The additional amount of allowance to be granted
      */
-    function increaseAllowance(
-        address spender,
-        uint256 addedValue
-    ) public override returns (bool) {
-        _approve(
-            msg.sender,
-            spender,
-            _allowances[msg.sender][spender] + addedValue
-        );
+    function increaseAllowance(address spender, uint256 addedValue) public override returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
         return true;
     }
 
@@ -195,10 +175,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * @param spender The address which the allowance is decreased for
      * @param subtractedValue The amount of allowance to be reduced
      */
-    function decreaseAllowance(
-        address spender,
-        uint256 subtractedValue
-    ) public override returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) public override returns (bool) {
         uint256 currentAllowance = _allowances[msg.sender][spender];
         require(currentAllowance >= subtractedValue, "ALLOWANCE_BELOW_ZERO");
         _approve(msg.sender, spender, currentAllowance - subtractedValue);
@@ -211,16 +188,12 @@ contract StTBYBase is IStTBYBase, OFTController {
     }
 
     /// @inheritdoc IStTBYBase
-    function sharesOf(
-        address account
-    ) external view override returns (uint256) {
+    function sharesOf(address account) external view override returns (uint256) {
         return _sharesOf(account);
     }
 
     /// @inheritdoc IStTBYBase
-    function getSharesByUsd(
-        uint256 usdAmount
-    ) public view override returns (uint256) {
+    function getSharesByUsd(uint256 usdAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         uint256 totalUsd = _getTotalUsd();
 
@@ -235,9 +208,7 @@ contract StTBYBase is IStTBYBase, OFTController {
     }
 
     /// @inheritdoc IStTBYBase
-    function getUsdByShares(
-        uint256 sharesAmount
-    ) public view override returns (uint256) {
+    function getUsdByShares(uint256 sharesAmount) public view override returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
             return sharesAmount;
@@ -246,10 +217,7 @@ contract StTBYBase is IStTBYBase, OFTController {
     }
 
     /// @inheritdoc IStTBYBase
-    function transferShares(
-        address recipient,
-        uint256 sharesAmount
-    ) external returns (uint256) {
+    function transferShares(address recipient, uint256 sharesAmount) external returns (uint256) {
         _transferShares(msg.sender, recipient, sharesAmount);
         uint256 tokensAmount = getUsdByShares(sharesAmount);
         _emitTransferEvents(msg.sender, recipient, tokensAmount, sharesAmount);
@@ -257,11 +225,7 @@ contract StTBYBase is IStTBYBase, OFTController {
     }
 
     /// @inheritdoc IStTBYBase
-    function transferSharesFrom(
-        address sender,
-        address recipient,
-        uint256 sharesAmount
-    ) external returns (uint256) {
+    function transferSharesFrom(address sender, address recipient, uint256 sharesAmount) external returns (uint256) {
         uint256 tokensAmount = getUsdByShares(sharesAmount);
         _spendAllowance(sender, msg.sender, tokensAmount);
         _transferShares(sender, recipient, sharesAmount);
@@ -291,11 +255,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * @dev Emits a `Transfer` event.
      * @dev Emits a `TransferShares` event.
      */
-    function _transfer(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) internal override {
+    function _transfer(address sender, address recipient, uint256 amount) internal override {
         uint256 sharesToTransfer = getSharesByUsd(amount);
         _transferShares(sender, recipient, sharesToTransfer);
         _emitTransferEvents(sender, recipient, amount, sharesToTransfer);
@@ -308,11 +268,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
-    function _approve(
-        address owner,
-        address spender,
-        uint256 amount
-    ) internal override {
+    function _approve(address owner, address spender, uint256 amount) internal override {
         require(owner != address(0), "APPROVE_FROM_ZERO_ADDR");
         require(spender != address(0), "APPROVE_TO_ZERO_ADDR");
 
@@ -326,11 +282,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * Revert if not enough allowance is available.
      * Might emit an {Approval} event.
      */
-    function _spendAllowance(
-        address owner,
-        address spender,
-        uint256 amount
-    ) internal override {
+    function _spendAllowance(address owner, address spender, uint256 amount) internal override {
         uint256 currentAllowance = _allowances[owner][spender];
         if (currentAllowance != Constants.MAX_UINT_256) {
             require(currentAllowance >= amount, "ALLOWANCE_EXCEEDED");
@@ -359,11 +311,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * @param recipient The recipient of stTBY tokens
      * @param sharesAmount Amount of shares to transfer
      */
-    function _transferShares(
-        address sender,
-        address recipient,
-        uint256 sharesAmount
-    ) internal {
+    function _transferShares(address sender, address recipient, uint256 sharesAmount) internal {
         require(sender != address(0), "TRANSFER_FROM_ZERO_ADDR");
         require(recipient != address(0), "TRANSFER_TO_ZERO_ADDR");
 
@@ -382,10 +330,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * @param recipient Destination where minted shares will be sent
      * @param sharesAmount Amount of shares to mint
      */
-    function _mintShares(
-        address recipient,
-        uint256 sharesAmount
-    ) internal virtual returns (uint256 newTotalShares) {
+    function _mintShares(address recipient, uint256 sharesAmount) internal virtual returns (uint256 newTotalShares) {
         require(recipient != address(0), "MINT_TO_ZERO_ADDR");
 
         newTotalShares = _getTotalShares() + sharesAmount;
@@ -410,10 +355,7 @@ contract StTBYBase is IStTBYBase, OFTController {
      * @param account Account to burn shares from
      * @param sharesAmount Amount of shares to burn
      */
-    function _burnShares(
-        address account,
-        uint256 sharesAmount
-    ) internal virtual returns (uint256 newTotalShares) {
+    function _burnShares(address account, uint256 sharesAmount) internal virtual returns (uint256 newTotalShares) {
         require(account != address(0), "BURN_FROM_ZERO_ADDR");
 
         uint256 accountShares = _shares[account];
@@ -428,12 +370,7 @@ contract StTBYBase is IStTBYBase, OFTController {
 
         uint256 postRebaseTokenAmount = getUsdByShares(sharesAmount);
 
-        emit SharesBurnt(
-            account,
-            preRebaseTokenAmount,
-            postRebaseTokenAmount,
-            sharesAmount
-        );
+        emit SharesBurnt(account, preRebaseTokenAmount, postRebaseTokenAmount, sharesAmount);
 
         // Notice: we're not emitting a Transfer event to the zero address here since shares burn
         // works by redistributing the amount of tokens corresponding to the burned shares between
@@ -445,12 +382,7 @@ contract StTBYBase is IStTBYBase, OFTController {
     }
 
     /// @dev Emits {Transfer} and {TransferShares} events
-    function _emitTransferEvents(
-        address from,
-        address to,
-        uint256 tokenAmount,
-        uint256 sharesAmount
-    ) internal {
+    function _emitTransferEvents(address from, address to, uint256 tokenAmount, uint256 sharesAmount) internal {
         emit Transfer(from, to, tokenAmount);
         emit TransferShares(from, to, sharesAmount);
     }
@@ -463,31 +395,23 @@ contract StTBYBase is IStTBYBase, OFTController {
         emit UpdatedYieldPerShare(yieldPerShare);
     }
 
-    function _debit(
-        uint256 _amountLD,
-        uint256 _minAmountLD,
-        uint32 _dstEid
-    )
+    function _debit(uint256 _amountLD, uint256 _minAmountLD, uint32 _dstEid)
         internal
         override
         returns (uint256 amountSentLD, uint256 amountReceivedLD)
     {
-        (amountSentLD, amountReceivedLD) = _debitView(
-            _amountLD,
-            _minAmountLD,
-            _dstEid
-        );
+        (amountSentLD, amountReceivedLD) = _debitView(_amountLD, _minAmountLD, _dstEid);
 
         uint256 shares = getSharesByUsd(amountSentLD);
         _burnShares(msg.sender, shares);
         _setTotalUsd(_getTotalUsd() - amountSentLD);
     }
 
-    function _credit(
-        address _to,
-        uint256 _amountToCreditLD,
-        uint32 /*_srcEid*/
-    ) internal override returns (uint256 amountReceivedLD) {
+    function _credit(address _to, uint256 _amountToCreditLD, uint32 /*_srcEid*/ )
+        internal
+        override
+        returns (uint256 amountReceivedLD)
+    {
         _mintShares(_to, getSharesByUsd(_amountToCreditLD));
         _setTotalUsd(_getTotalUsd() + _amountToCreditLD);
         return _amountToCreditLD;
