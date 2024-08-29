@@ -9,107 +9,107 @@ import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAp
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {WstTBYBase} from "../token/WstTBYBase.sol";
-import {StTBYBase} from "../token/StTBYBase.sol";
+import {WstUsdcLite} from "../token/WstUsdcLite.sol";
+import {StUsdcLite} from "../token/StUsdcLite.sol";
 
-import {IWstTBYBridge} from "../interfaces/IWstTBYBridge.sol";
+import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
 
 import {OAppController} from "./controllers/OAppController.sol";
 
 /**
- * @title WstTBYBridge
- * @notice Contract used for bridging wstTBY between chains
+ * @title WstUsdcBridge
+ * @notice Contract used for bridging wstUsdc between chains
  */
-contract WstTBYBridge is IWstTBYBridge, OAppController, IOAppComposer {
+contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
     using OFTComposeMsgCodec for address;
 
     // =================== Storage ===================
 
-    /// @notice Address of stTBY contract
-    address private immutable _stTBY;
+    /// @notice Address of stUsdc contract
+    address private immutable _stUsdc;
 
-    /// @notice Address of wstTBY contract
-    WstTBYBase private immutable _wstTBY;
+    /// @notice Address of wstUsdc contract
+    WstUsdcLite private immutable _wstUsdc;
 
-    /// @notice mapping of LayerZero Endpoint IDs to WstTBYBridge instances
-    mapping(uint32 => address) private _wstTBYBridges;
+    /// @notice mapping of LayerZero Endpoint IDs to WstUsdcBridge instances
+    mapping(uint32 => address) private _wstUsdcBridges;
 
     // ================= Constructor =================
 
-    constructor(address wstTBY, address layerZeroEndpoint, address bridgeOperator)
+    constructor(address wstUsdc, address layerZeroEndpoint, address bridgeOperator)
         OAppController(layerZeroEndpoint, bridgeOperator)
     {
-        _wstTBY = WstTBYBase(wstTBY);
-        _stTBY = address(WstTBYBase(wstTBY).getStTBY());
+        _wstUsdc = WstUsdcLite(wstUsdc);
+        _stUsdc = address(WstUsdcLite(wstUsdc).getStUsdc());
     }
 
     // =================== Functions ===================
 
-    /// @inheritdoc IWstTBYBridge
-    function bridgeWstTBY(address destinationAddress, uint256 wstTBYAmount, uint32 dstEid, LzSettings calldata settings)
+    /// @inheritdoc IWstUsdcBridge
+    function bridgeWstUsdc(address destinationAddress, uint256 wstUsdcAmount, uint32 dstEid, LzSettings calldata settings)
         external
         payable
         returns (LzBridgeReceipt memory bridgingReceipt)
     {
-        _wstTBY.transferFrom(msg.sender, address(this), wstTBYAmount);
-        uint256 stTBYAmount = _wstTBY.unwrap(wstTBYAmount);
+        _wstUsdc.transferFrom(msg.sender, address(this), wstUsdcAmount);
+        uint256 stUsdcAmount = _wstUsdc.unwrap(wstUsdcAmount);
 
-        bridgingReceipt = _bridgeStTBY(destinationAddress, stTBYAmount, dstEid, settings);
+        bridgingReceipt = _bridgeStUsdc(destinationAddress, stUsdcAmount, dstEid, settings);
 
-        emit WstTBYBridged(endpoint.eid(), dstEid, wstTBYAmount);
+        emit WstUsdcBridged(endpoint.eid(), dstEid, wstUsdcAmount);
     }
 
-    /// @inheritdoc IWstTBYBridge
-    function setWstTBYBridge(uint32 eid, address bridgeAddress) external override onlyBridgeOperator {
+    /// @inheritdoc IWstUsdcBridge
+    function setWstUsdcBridge(uint32 eid, address bridgeAddress) external override onlyBridgeOperator {
         if (eid == 0) revert Errors.InvalidPeerID();
         if (bridgeAddress == address(0)) revert Errors.ZeroAddress();
-        _wstTBYBridges[eid] = bridgeAddress;
+        _wstUsdcBridges[eid] = bridgeAddress;
     }
 
-    /// @inheritdoc IWstTBYBridge
-    function getStTBY() external view returns (address) {
-        return _stTBY;
+    /// @inheritdoc IWstUsdcBridge
+    function getStUsdc() external view returns (address) {
+        return _stUsdc;
     }
 
-    /// @inheritdoc IWstTBYBridge
-    function getWstTBY() external view returns (address) {
-        return address(_wstTBY);
+    /// @inheritdoc IWstUsdcBridge
+    function getWstUsdc() external view returns (address) {
+        return address(_wstUsdc);
     }
 
-    /// @inheritdoc IWstTBYBridge
+    /// @inheritdoc IWstUsdcBridge
     function getBridgeByEid(uint32 eid) external view returns (address) {
-        return _wstTBYBridges[eid];
+        return _wstUsdcBridges[eid];
     }
 
     /**
-     * @notice Bridges stTBY tokens to the destination wstTBY Bridge contract
-     * @param destinationAddress The address to send the bridged wstTBY to
-     * @param stTBYAmount The unwrapped amount of stTBY to bridge
+     * @notice Bridges stUsdc tokens to the destination wstUsdc Bridge contract
+     * @param destinationAddress The address to send the bridged wstUsdc to
+     * @param stUsdcAmount The unwrapped amount of stUsdc to bridge
      * @param dstEid The destination LayerZero Endpoint ID
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function _bridgeStTBY(address destinationAddress, uint256 stTBYAmount, uint32 dstEid, LzSettings calldata settings)
+    function _bridgeStUsdc(address destinationAddress, uint256 stUsdcAmount, uint32 dstEid, LzSettings calldata settings)
         internal
         returns (LzBridgeReceipt memory bridgingReceipt)
     {
-        SendParam memory sendParam = _setSendParam(destinationAddress, stTBYAmount, dstEid, settings.options);
+        SendParam memory sendParam = _setSendParam(destinationAddress, stUsdcAmount, dstEid, settings.options);
 
         (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt) =
-            IOFT(_stTBY).send{value: msg.value}(sendParam, settings.fee, settings.refundRecipient);
+            IOFT(_stUsdc).send{value: msg.value}(sendParam, settings.fee, settings.refundRecipient);
 
         bridgingReceipt = LzBridgeReceipt(msgReceipt, oftReceipt);
     }
 
     /**
-     * @notice Delivers wstTBY tokens to the destination address
-     * @param destinationAddress The address to send the bridged wstTBY to
-     * @param stTBYAmount The unwrapped amount of stTBY to be wrapped
+     * @notice Delivers wstUsdc tokens to the destination address
+     * @param destinationAddress The address to send the bridged wstUsdc to
+     * @param stUsdcAmount The unwrapped amount of stUsdc to be wrapped
      */
-    function _deliverWstTBY(address destinationAddress, uint256 stTBYAmount) internal returns (bool) {
-        IERC20(_stTBY).approve(address(_wstTBY), stTBYAmount);
-        uint256 wstTBYAmount = _wstTBY.wrap(stTBYAmount);
-        return _wstTBY.transfer(destinationAddress, wstTBYAmount);
+    function _deliverWstUsdc(address destinationAddress, uint256 stUsdcAmount) internal returns (bool) {
+        IERC20(_stUsdc).approve(address(_wstUsdc), stUsdcAmount);
+        uint256 wstUsdcAmount = _wstUsdc.wrap(stUsdcAmount);
+        return _wstUsdc.transfer(destinationAddress, wstUsdcAmount);
     }
 
     /**
@@ -126,7 +126,7 @@ contract WstTBYBridge is IWstTBYBridge, OAppController, IOAppComposer {
     {
         return SendParam({
             dstEid: dstEid,
-            to: _wstTBYBridges[dstEid].addressToBytes32(),
+            to: _wstUsdcBridges[dstEid].addressToBytes32(),
             amountLD: amount,
             minAmountLD: amount,
             extraOptions: options,
@@ -143,14 +143,14 @@ contract WstTBYBridge is IWstTBYBridge, OAppController, IOAppComposer {
         address, /*Executor*/
         bytes calldata /*Executor Data*/
     ) external payable override {
-        if (_oApp != _stTBY) revert Errors.InvalidOApp();
+        if (_oApp != _stUsdc) revert Errors.InvalidOApp();
         if (msg.sender != address(endpoint)) revert Errors.UnauthorizedCaller();
 
         bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(_message);
 
-        (address destinationAddress, uint256 stTBYAmount) = abi.decode(_composeMsgContent, (address, uint256));
+        (address destinationAddress, uint256 stUsdcAmount) = abi.decode(_composeMsgContent, (address, uint256));
 
-        bool success = _deliverWstTBY(destinationAddress, stTBYAmount);
+        bool success = _deliverWstUsdc(destinationAddress, stUsdcAmount);
         if (!success) revert Errors.LZComposeFailed();
     }
 

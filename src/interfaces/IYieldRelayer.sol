@@ -21,5 +21,5 @@ interface IYieldRelayer {
     function getKeeper() external view returns (address);
 
     /// @notice Get the address of the stTBY contract
-    function getStTBY() external view returns (address);
+    function getStUsdc() external view returns (address);
 }

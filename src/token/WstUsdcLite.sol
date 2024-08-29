@@ -5,18 +5,17 @@ import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {StTBYBase} from "./StTBYBase.sol";
-import {WstTBYBase} from "./WstTBYBase.sol";
+import {StUsdcLite} from "./StUsdcLite.sol";
 
-import {IStTBY} from "../interfaces/IStTBY.sol";
-import {IWstTBYBase} from "../interfaces/IWstTBYBase.sol";
+import {IStUsdc} from "../interfaces/IStUsdc.sol";
+import {IWstUsdcLite} from "../interfaces/IWstUsdcLite.sol";
 
 /**
  * @title Wrapped Staked TBY Base
  * @notice The non-rebasing, wrapped version of the stTBY token that accues yield from TBYs
  * @dev This contract is the minimal implementation of the WstTBY token
  */
-contract WstTBYBase is IWstTBYBase, ERC20 {
+contract WstUsdcLite is IWstUsdcLite, ERC20 {
     // =================== Constants ===================
 
     /// @notice Instance of the stTBY contract

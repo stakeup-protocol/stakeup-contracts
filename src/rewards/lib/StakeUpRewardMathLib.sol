@@ -8,7 +8,7 @@ import {StakeUpConstants as Constants} from "../../helpers/StakeUpConstants.sol"
 /**
  * @title StakeUpRewardMathLib
  * @notice Libraries that provides mint reward cutoffs for different chains as well as logic to set the
- *         mint reward allocation for a given stTBY deployment based on the chain ID.
+ *         mint reward allocation for a given stUsdc deployment based on the chain ID.
  * @dev This library contains the mint rewards for chains that support native minting and burning as well as
  *      testnets.
  */

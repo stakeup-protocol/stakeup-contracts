@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-interface IStTBYBase {
+interface IStUsdcLite {
     /**
      * @notice An executed shares transfer from `sender` to `recipient`.
      * @dev emitted in pair with an ERC20-defined `Transfer` event.
@@ -14,11 +14,11 @@ interface IStTBYBase {
     /**
      * @notice An executed `burnShares` request
      * @dev Reports simultaneously burnt shares amount
-     * and corresponding stTBY amount.
-     * The stTBY amount is calculated twice: before and after the burning incurred rebase.
+     * and corresponding stUsdc amount.
+     * The stUsdc amount is calculated twice: before and after the burning incurred rebase.
      * @param account holder of the burnt shares
-     * @param preRebaseTokenAmount amount of stTBY the burnt shares corresponded to before the burn
-     * @param postRebaseTokenAmount amount of stTBY the burnt shares corresponded to after the burn
+     * @param preRebaseTokenAmount amount of stUsdc the burnt shares corresponded to before the burn
+     * @param postRebaseTokenAmount amount of stUsdc the burnt shares corresponded to after the burn
      * @param sharesAmount amount of burnt shares
      */
     event SharesBurnt(
@@ -43,7 +43,7 @@ interface IStTBYBase {
      * Requirements:
      * - `recipient` cannot be the zero address.
      * - the caller must have at least `sharesAmount` shares.
-     * @param recipient recipient of stTBY tokens
+     * @param recipient recipient of stUsdc tokens
      * @param sharesAmount Amount of shares being transfered
      */
     function transferShares(address recipient, uint256 sharesAmount) external returns (uint256);
@@ -56,15 +56,15 @@ interface IStTBYBase {
      * - `sender` and `recipient` cannot be the zero addresses.
      * - `sender` must have at least `sharesAmount` shares.
      * - the caller must have allowance for `sender`'s tokens of at least `getUsdByShares(sharesAmount)`.
-     * @param sender Sender of stTBY tokens
-     * @param recipient Destination of stTBY tokens
+     * @param sender Sender of stUsdc tokens
+     * @param recipient Destination of stUsdc tokens
      * @param sharesAmount Amount of shares being transfered
      */
     function transferSharesFrom(address sender, address recipient, uint256 sharesAmount) external returns (uint256);
 
     /**
      * @return the entire amount of Usd controlled by the protocol.
-     * @dev The sum of all USD balances in the protocol, equals to the total supply of stTBY.
+     * @dev The sum of all USD balances in the protocol, equals to the total supply of stUsdc.
      */
     function getTotalUsd() external view returns (uint256);
 

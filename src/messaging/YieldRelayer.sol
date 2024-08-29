@@ -3,7 +3,7 @@ pragma solidity 0.8.23;
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {IStTBY} from "../interfaces/IStTBY.sol";
+import {IStUsdc} from "../interfaces/IStUsdc.sol";
 import {IYieldRelayer} from "../interfaces/IYieldRelayer.sol";
 
 /**
@@ -13,8 +13,8 @@ import {IYieldRelayer} from "../interfaces/IYieldRelayer.sol";
 contract YieldRelayer is IYieldRelayer {
     // =================== Storage ===================
 
-    /// @dev Address of stTBY contract
-    address private immutable _stTBY;
+    /// @dev Address of stUsdc contract
+    address private immutable _stUsdc;
 
     /// @dev Address of the bridge operator
     address private _bridgeOperator;
@@ -36,8 +36,8 @@ contract YieldRelayer is IYieldRelayer {
 
     // ================= Constructor =================
 
-    constructor(address stTBY, address bridgeOperator, address keeper) {
-        _stTBY = stTBY;
+    constructor(address stUsdc, address bridgeOperator, address keeper) {
+        _stUsdc = stUsdc;
         _bridgeOperator = bridgeOperator;
         _keeper = keeper;
     }
@@ -46,7 +46,7 @@ contract YieldRelayer is IYieldRelayer {
 
     /// @inheritdoc IYieldRelayer
     function updateYield(uint256 yieldPerShare) external override onlyKeeper {
-        IStTBY(_stTBY).accrueYield(yieldPerShare);
+        IStUsdc(_stUsdc).accrueYield(yieldPerShare);
         emit YieldUpdated(yieldPerShare);
     }
 
@@ -76,7 +76,7 @@ contract YieldRelayer is IYieldRelayer {
     }
 
     /// @inheritdoc IYieldRelayer
-    function getStTBY() external view returns (address) {
-        return _stTBY;
+    function getStUsdc() external view returns (address) {
+        return _stUsdc;
     }
 }

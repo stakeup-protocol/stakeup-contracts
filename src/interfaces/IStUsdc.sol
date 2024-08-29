@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
+import {IBloomPool} from "@bloom-v2/interfaces/IBloomPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC1155} from "@openzeppelin/contracts/interfaces/IERC1155.sol";
 
-import {IBloomFactory} from "./bloom/IBloomFactory.sol";
-import {IExchangeRateRegistry} from "./bloom/IExchangeRateRegistry.sol";
 import {IStakeUpStaking} from "./IStakeUpStaking.sol";
-import {IStTBYBase} from "./IStTBYBase.sol";
-import {IWstTBY} from "./IWstTBY.sol";
+import {IStUsdcLite} from "./IStUsdcLite.sol";
+import {IWstUsdc} from "./IWstUsdc.sol";
 
-interface IStTBY is IStTBYBase {
+interface IStUsdc is IStUsdcLite {
     // =================== Events ===================
 
     /**
@@ -36,50 +36,57 @@ interface IStTBY is IStTBYBase {
 
     /**
      * @notice Emitted when a fee is captured and sent to the StakeUp Staking
-     * @param shares Number of stTBY shares sent to the StakeUp Staking
+     * @param shares Number of stUsdc shares sent to the StakeUp Staking
      */
     event FeeCaptured(uint256 shares);
 
     /**
-     * @notice Emitted when user deposits
+     * @notice Emitted when user deposits underlying assets into stUSDC
      * @param account User address
-     * @param token Address of the token being deposited
      * @param amount Amount of tokens deposited
-     * @param shares Amount of shares minted to the user
      */
-    event Deposit(address indexed account, address token, uint256 amount, uint256 shares);
+    event AssetDeposited(address indexed account, uint256 amount);
 
     /**
-     * @notice Deposit TBY and get stTBY minted
-     * @param tby TBY address
+     * @notice Emitted when a TBY is deposited into stUSDC
+     * @param account User address
+     * @param tbyId The tokenID of a TBY
      * @param amount TBY amount to deposit
-     * @return amountMinted Amount of stTBY minted
+     * @param stUsdcAmount Amount of stUSDC minted
      */
-    function depositTby(address tby, uint256 amount) external returns (uint256 amountMinted);
+    event TbyDeposited(address indexed account, uint256 indexed tbyId, uint256 amount, uint256 stUsdcAmount);
 
     /**
-     * @notice Deposit underlying tokens and get stTBY minted
+     * @notice Deposit TBY and get stUsdc minted
+     * @param tbyId The tokenID of a TBY
+     * @param amount TBY amount to deposit
+     * @return amountMinted Amount of stUsdc minted
+     */
+    function depositTby(uint256 tbyId, uint256 amount) external returns (uint256 amountMinted);
+
+    /**
+     * @notice Deposit underlying assets to mint stUsdc
      * @param amount Amount of underlying tokens to deposit
-     * @return amountMinted Amount of stTBY minted
+     * @return amountMinted Amount of stUsdc minted
      */
-    function depositUnderlying(uint256 amount) external returns (uint256 amountMinted);
+    function depositAsset(uint256 amount) external returns (uint256 amountMinted);
 
     /**
-     * @notice Redeem stTBY in exchange for underlying tokens. Underlying
+     * @notice Redeem stUsdc in exchange for underlying tokens. Underlying
      * tokens.
      * @dev Emits a {Redeemed} event.
-     * @param amount Amount of stTBY to redeem
+     * @param amount Amount of stUsdc to redeem
      * @return underlyingAmount The Amount of underlying tokens redeemed
      */
-    function redeemStTBY(uint256 amount) external returns (uint256 underlyingAmount);
+    function redeemStUsdc(uint256 amount) external returns (uint256 underlyingAmount);
 
     /**
      * @notice Redeems the underlying token from a Bloom Pool in exchange for TBYs
-     * @dev Underlying tokens can only be redeemed if stTBY contains a TBY which is
+     * @dev Underlying tokens can only be redeemed if stUsdc contains a TBY which is
      *     in its FinalWithdrawal state.
-     * @param tby TBY address
+     * @param tbyId The tokenID of a TBY
      */
-    function harvestTBY(address tby) external;
+    function harvestTby(uint256 tbyId) external;
 
     /**
      * @notice Invokes the auto stake feature or adjusts the remaining balance
@@ -89,11 +96,11 @@ interface IStTBY is IStTBYBase {
      */
     function poke() external;
 
-    /// @notice Returns the WstTBY contract
-    function getWstTBY() external view returns (IWstTBY);
+    /// @notice Returns the WstUsdc contract
+    function getWstUsdc() external view returns (IWstUsdc);
 
     /// @notice Returns the underlying token
-    function getUnderlyingToken() external view returns (IERC20);
+    function asset() external view returns (IERC20);
 
     /// @notice Returns the Bloom Pool Factory
     function getBloomFactory() external view returns (IBloomFactory);
@@ -107,9 +114,9 @@ interface IStTBY is IStTBYBase {
     /// @notice Returns the performanceBps.
     function getPerformanceBps() external view returns (uint256);
 
-    /// @notice Returns if underlying tokens have been redeemed.
-    function isTbyRedeemed(address tby) external view returns (bool);
+    /// @notice Returns if underlying tokens from a TBY have been redeemed.
+    function isTbyRedeemed(uint256 tbyId) external view returns (bool);
 
-    /// @notice The total shares of stTBY tokens in circulation on all chains
+    /// @notice The total shares of stUsdc tokens in circulation on all chains
     function getGlobalShares() external view returns (uint256);
 }
