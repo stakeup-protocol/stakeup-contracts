@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -76,7 +76,7 @@ abstract contract SUPVesting is ISUPVesting {
 
         VestedAllocation storage allocation = _tokenAllocations[msg.sender];
 
-        uint256 amount = getAvailableTokens(msg.sender);
+        uint256 amount = availableTokens(msg.sender);
 
         _totalStakeUpVesting -= amount;
         allocation.currentBalance -= amount;
@@ -91,7 +91,7 @@ abstract contract SUPVesting is ISUPVesting {
     }
 
     /// @inheritdoc ISUPVesting
-    function getAvailableTokens(address account) public view returns (uint256) {
+    function availableTokens(address account) public view returns (uint256) {
         VestedAllocation memory allocation = _tokenAllocations[account];
         uint256 timeElapsed = _validateTimeElapsed(block.timestamp - allocation.vestingStartTime);
         uint256 claimedTokens = allocation.startingBalance - allocation.currentBalance;
@@ -104,7 +104,7 @@ abstract contract SUPVesting is ISUPVesting {
     }
 
     /// @inheritdoc ISUPVesting
-    function getCurrentBalance(address account) public view override returns (uint256) {
+    function currentBalance(address account) public view override returns (uint256) {
         return _tokenAllocations[account].currentBalance;
     }
 

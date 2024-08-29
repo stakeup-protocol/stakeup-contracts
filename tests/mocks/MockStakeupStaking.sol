@@ -1,61 +1,61 @@
-// SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.23;
+// // SPDX-License-Identifier: BUSL-1.1
+// pragma solidity 0.8.26;
 
-import {MessagingFee, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
+// import {MessagingFee, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
 
-import {IStakeUpStaking} from "src/interfaces/IStakeUpStaking.sol";
-import {IStakeUpToken} from "src/interfaces/IStakeUpToken.sol";
-import {IStTBY} from "src/interfaces/IStTBY.sol";
+// import {IStakeUpStaking} from "src/interfaces/IStakeUpStaking.sol";
+// import {IStakeUpToken} from "src/interfaces/IStakeUpToken.sol";
+// import {IStTBY} from "src/interfaces/IStTBY.sol";
 
-contract MockStakeUpStaking is IStakeUpStaking {
-    address private _stTBY;
-    bool private _feeProcessed;
+// contract MockStakeUpStaking is IStakeUpStaking {
+//     address private _stTBY;
+//     bool private _feeProcessed;
 
-    function stake(uint256 stakeupAmount) external override {}
+//     function stake(uint256 stakeupAmount) external override {}
 
-    function unstake(uint256 stakeupAmount, bool harvestRewards) external override {}
+//     function unstake(uint256 stakeupAmount, bool harvestRewards) external override {}
 
-    function harvest() external override {}
+//     function harvest() external override {}
 
-    function claimableRewards(address account) external view override returns (uint256) {}
+//     function claimableRewards(address account) external view override returns (uint256) {}
 
-    function getStakupToken() external view override returns (IStakeUpToken) {}
+//     function getStakupToken() external view override returns (IStakeUpToken) {}
 
-    function getStTBY() external view override returns (IStTBY) {
-        return IStTBY(_stTBY);
-    }
+//     function getStTBY() external view override returns (IStTBY) {
+//         return IStTBY(_stTBY);
+//     }
 
-    function setStTBY(address stTBY) external {
-        _stTBY = stTBY;
-    }
+//     function setStTBY(address stTBY) external {
+//         _stTBY = stTBY;
+//     }
 
-    function totalStakeUpStaked() external view override returns (uint256) {}
+//     function totalStakeUpStaked() external view override returns (uint256) {}
 
-    function getRewardData() external view override returns (RewardData memory) {}
+//     function getRewardData() external view override returns (RewardData memory) {}
 
-    function getUserStakingData(address user) external view override returns (StakingData memory) {}
+//     function getUserStakingData(address user) external view override returns (StakingData memory) {}
 
-    // This function is only used for unit testing
-    function setFeeProcessed(bool feeProcessed) external {
-        _feeProcessed = feeProcessed;
-    }
+//     // This function is only used for unit testing
+//     function setFeeProcessed(bool feeProcessed) external {
+//         _feeProcessed = feeProcessed;
+//     }
 
-    // This function is only used for unit testing
-    function isFeeProcessed() external view returns (bool) {
-        return _feeProcessed;
-    }
+//     // This function is only used for unit testing
+//     function isFeeProcessed() external view returns (bool) {
+//         return _feeProcessed;
+//     }
 
-    function getAvailableTokens(address account) external view override returns (uint256) {}
+//     function getAvailableTokens(address account) external view override returns (uint256) {}
 
-    function vestTokens(address account, uint256 amount) external override {}
+//     function vestTokens(address account, uint256 amount) external override {}
 
-    function claimAvailableTokens() external override returns (uint256) {}
+//     function claimAvailableTokens() external override returns (uint256) {}
 
-    function getCurrentBalance(address account) external view override returns (uint256) {}
+//     function getCurrentBalance(address account) external view override returns (uint256) {}
 
-    function getLastRewardBlock() external view override returns (uint256) {}
+//     function getLastRewardBlock() external view override returns (uint256) {}
 
-    function processFees() external payable override {
-        _feeProcessed = true;
-    }
-}
+//     function processFees() external payable override {
+//         _feeProcessed = true;
+//     }
+// }
