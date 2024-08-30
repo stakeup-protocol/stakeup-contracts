@@ -2,6 +2,8 @@
 pragma solidity 0.8.26;
 
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC1155} from "solady/tokens/ERC1155.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
@@ -13,55 +15,48 @@ import {IWstUsdc} from "../interfaces/IWstUsdc.sol";
 
 /**
  * @title Wrapped Staked TBY
- * @notice The non-rebasing, wrapped version of the stTBY token that accues yield from TBYs
+ * @notice The non-rebasing, wrapped version of the stUsdc token that accues yield from TBYs
  */
 contract WstUsdc is IWstUsdc, WstUsdcLite {
+    using SafeERC20 for IERC20;
     // =================== Constants ===================
 
-    /// @notice Instance of the stTBY underlying token
+    /// @notice Instance of the stUsdc underlying token
     IERC20 private immutable _stUsdcAsset;
+
+    /// @notice Instance of the TBY token
+    ERC1155 private immutable _tby;
 
     // ================== Constructor ==================
 
-    constructor(address stTBY) WstUsdcLite(stTBY) {
-        _stUsdcAsset = IStUsdc(_stTBY).asset();
+    constructor(address stUsdc_) WstUsdcLite(stUsdc_) {
+        _stUsdcAsset = IStUsdc(stUsdc_).asset();
+        _tby = IStUsdc(stUsdc_).tby();
     }
 
     // =================== Functions ===================
 
     /// @inheritdoc IWstUsdc
     function depositAsset(uint256 amount) external override returns (uint256 amountMinted) {
-        _stageDeposit(address(_stUsdcAsset), amount);
-
+        _stUsdcAsset.safeTransferFrom(msg.sender, address(this), amount);
+        _stUsdcAsset.safeApprove(address(_stUsdc), amount);
         amountMinted = _stUsdc.depositAsset(amount);
         amountMinted = _mintWstUsdc(amountMinted);
     }
 
     /// @inheritdoc IWstUsdc
-    function depositTby(address tby, uint256 amount) external override returns (uint256 amountMinted) {
-        _stageDeposit(tby, amount);
-
-        amountMinted = _stTBY.depositTby(tby, amount);
+    function depositTby(uint256 tbyId, uint256 amount) external override returns (uint256 amountMinted) {
+        _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
+        // _tby.approve(address(_stUsdc), amount); // TODO: Approval
+        amountMinted = _stUsdc.depositTby(tbyId, amount);
         amountMinted = _mintWstUsdc(amountMinted);
     }
 
     /// @inheritdoc IWstUsdc
-    function redeemWstUsdc(uint256 amount) external override returns (uint256 underlyingRedeemed) {
+    function redeemWstUsdc(uint256 amount) external override returns (uint256 assetsRedeemed) {
         _burn(msg.sender, amount);
-        uint256 stTBYAmount = _stTBY.getUsdByShares(amount);
-
-        underlyingRedeemed = _stTBY.redeemStUsdc(stTBYAmount);
-
-        _stTBYUnderlying.transfer(msg.sender, underlyingRedeemed);
-    }
-
-    /**
-     * @notice Transfers the token to the wrapper contracts and sets approvals
-     * @param token Address of the token being deposited into stTBY
-     * @param amount The amount of tokens to deposit
-     */
-    function _stageDeposit(address token, uint256 amount) internal {
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
-        IERC20(token).approve(address(_stTBY), amount);
+        uint256 stUsdcAmount = _stUsdc.usdByShares(amount);
+        assetsRedeemed = _stUsdc.redeemStUsdc(stUsdcAmount);
+        _stUsdcAsset.safeTransfer(msg.sender, assetsRedeemed);
     }
 }

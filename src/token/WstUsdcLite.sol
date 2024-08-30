@@ -32,41 +32,38 @@ contract WstUsdcLite is IWstUsdcLite, ERC20 {
     /// @inheritdoc IWstUsdcLite
     function wrap(uint256 stUsdcAmount) external returns (uint256 wstUsdcAmount) {
         wstUsdcAmount = _mintWstUsdc(stUsdcAmount);
-
         ERC20(address(_stUsdc)).transferFrom(msg.sender, address(this), stUsdcAmount);
-
         emit StUsdcWrapped(msg.sender, stUsdcAmount, wstUsdcAmount);
     }
 
     /// @inheritdoc IWstUsdcLite
     function unwrap(uint256 wstUsdcAmount) external returns (uint256 stUsdcAmount) {
-        stUsdcAmount = _stUsdc.getUsdByShares(wstUsdcAmount);
+        stUsdcAmount = _stUsdc.usdByShares(wstUsdcAmount);
         if (stUsdcAmount == 0) revert Errors.ZeroAmount();
 
         _burn(msg.sender, wstUsdcAmount);
         StUsdcLite(address(_stUsdc)).transferShares(msg.sender, wstUsdcAmount);
-
         emit WtTBYUnwrapped(msg.sender, wstUsdcAmount, stUsdcAmount);
     }
 
     /// @inheritdoc IWstUsdcLite
     function wstUsdcByStUsdc(uint256 stUsdcAmount) external view returns (uint256) {
-        return _stUsdc.getSharesByUsd(stUsdcAmount);
+        return _stUsdc.sharesByUsd(stUsdcAmount);
     }
 
     /// @inheritdoc IWstUsdcLite
     function stUsdcByWstUsdc(uint256 wstUsdcAmount) external view returns (uint256) {
-        return _stUsdc.getUsdByShares(wstUsdcAmount);
+        return _stUsdc.usdByShares(wstUsdcAmount);
     }
 
     /// @inheritdoc IWstUsdcLite
     function stUsdcPerToken() external view returns (uint256) {
-        return _stUsdc.getUsdByShares(1 ether);
+        return _stUsdc.usdByShares(1 ether);
     }
 
     /// @inheritdoc IWstUsdcLite
     function tokensPerStUsdc() external view returns (uint256) {
-        return _stUsdc.getSharesByUsd(1 ether);
+        return _stUsdc.sharesByUsd(1 ether);
     }
 
     /// @inheritdoc IWstUsdcLite
@@ -79,7 +76,7 @@ contract WstUsdcLite is IWstUsdcLite, ERC20 {
      * @param amount The amount of stUsdc to wrap
      */
     function _mintWstUsdc(uint256 amount) internal returns (uint256 wstUsdcAmount) {
-        wstUsdcAmount = _stUsdc.getSharesByUsd(amount);
+        wstUsdcAmount = _stUsdc.sharesByUsd(amount);
         if (wstUsdcAmount == 0) revert Errors.ZeroAmount();
         _mint(msg.sender, wstUsdcAmount);
     }

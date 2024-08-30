@@ -21,11 +21,10 @@ interface IStUsdc is IStUsdcLite {
     event Redeemed(address indexed account, uint256 shares, uint256 amount);
 
     /**
-     * @notice Emitted when USDC is deposited into a Bloom Pool
-     * @param tby TBY address
-     * @param amount Amount of TBY deposited
+     * @notice Emitted when the underlying asset is auto lent into a Bloom Pool
+     * @param amount Amount of USDC lent
      */
-    event TBYAutoMinted(address indexed tby, uint256 amount);
+    event AssetAutoLent(uint256 amount);
 
     /**
      * @notice Emitted when someone corrects the remaining balance
@@ -81,12 +80,10 @@ interface IStUsdc is IStUsdcLite {
     function redeemStUsdc(uint256 amount) external returns (uint256 underlyingAmount);
 
     /**
-     * @notice Redeems the underlying token from a Bloom Pool in exchange for TBYs
-     * @dev Underlying tokens can only be redeemed if stUsdc contains a TBY which is
-     *     in its FinalWithdrawal state.
-     * @param tbyId The tokenID of a TBY
+     * @notice Harvests the next TbyId that is ready for redemption.
+     * @return assetsWithdrawn The amount of underlying assets withdrawn from Bloom.
      */
-    function harvestTby(uint256 tbyId) external;
+    function harvest() external returns (uint256 assetsWithdrawn);
 
     /**
      * @notice Invokes the auto stake feature or adjusts the remaining balance
@@ -114,8 +111,8 @@ interface IStUsdc is IStUsdcLite {
     /// @notice Returns the performanceBps.
     function performanceBps() external view returns (uint256);
 
-    /// @notice Returns if underlying tokens from a TBY have been redeemed.
-    function isTbyRedeemed(uint256 tbyId) external view returns (bool);
+    /// @notice Returns the last redeemed TbyId.
+    function lastRedeemedTbyId() external view returns (uint256);
 
     /// @notice The total shares of stUsdc tokens in circulation on all chains
     function globalShares() external view returns (uint256);

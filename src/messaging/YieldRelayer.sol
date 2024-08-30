@@ -46,7 +46,7 @@ contract YieldRelayer is IYieldRelayer {
 
     /// @inheritdoc IYieldRelayer
     function updateYield(uint256 yieldPerShare) external override onlyKeeper {
-        IStUsdc(_stUsdc).accrueYield(yieldPerShare);
+        IStUsdc(_stUsdc).setUsdPerShare(yieldPerShare);
         emit YieldUpdated(yieldPerShare);
     }
 
