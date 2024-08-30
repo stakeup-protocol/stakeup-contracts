@@ -33,7 +33,7 @@ interface IStUsdcLite {
      *         implementations on other chains.
      * @param yieldPerShares The additional yield per share to be distributed.
      */
-    function accrueYield(uint256 yieldPerShares) external;
+    function setUsdPerShare(uint256 yieldPerShares) external;
 
     /**
      * @notice Transfer shares from caller to recipient

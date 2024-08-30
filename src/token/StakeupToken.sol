@@ -40,7 +40,7 @@ contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
         _stakeupStaking = stakeupStaking;
 
         _authorizedMinters[_stakeupStaking] = true;
-        _authorizedMinters[address(IStakeUpStaking(stakeupStaking).getStTBY())] = true;
+        _authorizedMinters[address(IStakeUpStaking(stakeupStaking).stUsdc())] = true;
 
         if (gaugeDistributor != address(0)) {
             _authorizedMinters[gaugeDistributor] = true;

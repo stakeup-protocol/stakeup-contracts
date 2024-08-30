@@ -57,8 +57,8 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     // =================== Functions ==================
 
     /// @inheritdoc IStUsdcLite
-    function accrueYield(uint256 yieldPerShares) external onlyRelayer {
-        _accrueYield(yieldPerShares);
+    function setUsdPerShare(uint256 yieldPerShare) external onlyRelayer {
+        _setUsdPerShare(yieldPerShare);
     }
 
     /**
@@ -388,10 +388,10 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @dev This is called on the base chain before distributing yield to other chains
-    function _accrueYield(uint256 yieldPerShare) internal {
-        uint256 yieldAccrued = _getTotalShares().mulWad(yieldPerShare);
+    function _setUsdPerShare(uint256 yieldPerShare) internal {
         _lastRateUpdate = block.timestamp;
-        _setTotalUsd(_getTotalUsd() + yieldAccrued);
+        uint256 usdValue = _getTotalShares().mulWad(yieldPerShare);
+        _setTotalUsd(usdValue);
         emit UpdatedYieldPerShare(yieldPerShare);
     }
 

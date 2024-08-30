@@ -96,7 +96,7 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
     }
 
     /// @inheritdoc ICurveGaugeDistributor
-    function getCurvePoolData() external view override returns (CurvePoolData[] memory) {
+    function curvePoolData() external view override returns (CurvePoolData[] memory) {
         return _curvePools;
     }
 

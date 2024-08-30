@@ -69,8 +69,8 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
 
     // ================= Constructor =================
 
-    constructor(address stakeupToken, address stUsdc) SUPVesting(stakeupToken) {
-        _stUsdc = IStUsdc(stUsdc);
+    constructor(address stakeupToken_, address stUsdc_) SUPVesting(stakeupToken_) {
+        _stUsdc = IStUsdc(stUsdc_);
         _lastRewardBlock = block.number;
     }
 
@@ -89,22 +89,22 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         updateIndex
         distributeRewards
     {
-        StakingData storage userStakingData = _stakingData[msg.sender];
+        StakingData storage data = _stakingData[msg.sender];
 
-        if (userStakingData.amountStaked == 0) revert Errors.UserHasNoStake();
+        if (data.amountStaked == 0) revert Errors.UserHasNoStake();
 
-        if (stakeupAmount > userStakingData.amountStaked) {
-            stakeupAmount = userStakingData.amountStaked;
+        if (stakeupAmount > data.amountStaked) {
+            stakeupAmount = data.amountStaked;
         }
 
         if (harvestRewards) {
-            uint256 rewardAmount = userStakingData.rewardsAccrued;
+            uint256 rewardAmount = data.rewardsAccrued;
             if (rewardAmount > 0) {
                 _transferRewards(msg.sender);
             }
         }
 
-        userStakingData.amountStaked -= uint128(stakeupAmount);
+        data.amountStaked -= uint128(stakeupAmount);
         _totalStakeUpStaked -= stakeupAmount;
 
         IERC20(address(_stakeupToken)).safeTransfer(msg.sender, stakeupAmount);
@@ -132,12 +132,12 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getStakupToken() external view returns (IStakeUpToken) {
+    function stakupToken() external view returns (IStakeUpToken) {
         return _stakeupToken;
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getStUsdc() external view returns (IStUsdc) {
+    function stUsdc() external view returns (IStUsdc) {
         return _stUsdc;
     }
 
@@ -147,29 +147,29 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getRewardData() external view returns (RewardData memory) {
+    function rewardData() external view returns (RewardData memory) {
         return _rewardData;
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getUserStakingData(address user) external view returns (StakingData memory) {
+    function userStakingData(address user) external view returns (StakingData memory) {
         return _stakingData[user];
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getLastRewardBlock() external view returns (uint256) {
+    function lastRewardBlock() external view returns (uint256) {
         return _lastRewardBlock;
     }
 
     /// @dev Transfers the staked tokens to the staking contract and updates the user's total staked amount
     function _stake(address user, uint256 amount) internal nonReentrant {
-        StakingData storage userStakingData = _stakingData[user];
+        StakingData storage data = _stakingData[user];
 
         if (amount == 0) revert Errors.ZeroTokensStaked();
 
         IERC20(address(_stakeupToken)).safeTransferFrom(msg.sender, address(this), amount);
 
-        userStakingData.amountStaked += uint128(amount);
+        data.amountStaked += uint128(amount);
         _totalStakeUpStaked += amount;
 
         emit StakeUpStaked(user, amount);
@@ -217,21 +217,21 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     function _distributeRewards(address user) internal returns (uint256) {
         if (user == address(0)) revert Errors.ZeroAddress();
 
-        StakingData storage userStakingData = _stakingData[user];
+        StakingData storage data = _stakingData[user];
 
-        if (userStakingData.index == 0) {
-            userStakingData.index = uint128(Constants.INITIAL_REWARD_INDEX);
+        if (data.index == 0) {
+            data.index = uint128(Constants.INITIAL_REWARD_INDEX);
         }
 
         uint256 rewardIndex = _rewardData.index;
-        if (rewardIndex == userStakingData.index) return 0;
+        if (rewardIndex == data.index) return 0;
 
-        uint256 rewardDelta = _calculateRewardDelta(userStakingData, user, rewardIndex);
+        uint256 rewardDelta = _calculateRewardDelta(data, user, rewardIndex);
 
-        userStakingData.index = uint128(rewardIndex);
-        userStakingData.rewardsAccrued += uint128(rewardDelta);
+        data.index = uint128(rewardIndex);
+        data.rewardsAccrued += uint128(rewardDelta);
 
-        return userStakingData.rewardsAccrued;
+        return data.rewardsAccrued;
     }
 
     /**
@@ -269,11 +269,11 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
      */
     function _transferRewards(address user) internal {
         RewardData storage rewards = _rewardData;
-        StakingData storage userStakingData = _stakingData[user];
+        StakingData storage data = _stakingData[user];
 
-        uint128 rewardsEarned = userStakingData.rewardsAccrued;
+        uint128 rewardsEarned = data.rewardsAccrued;
         if (rewardsEarned > 0) {
-            userStakingData.rewardsAccrued = 0;
+            data.rewardsAccrued = 0;
             rewards.lastShares -= rewardsEarned;
             _stUsdc.transferShares(user, rewardsEarned);
         }

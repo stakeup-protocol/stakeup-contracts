@@ -40,17 +40,18 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
         OAppController(layerZeroEndpoint, bridgeOperator)
     {
         _wstUsdc = WstUsdcLite(wstUsdc_);
-        _stUsdc = address(WstUsdcLite(wstUsdc_).getStUsdc());
+        _stUsdc = address(WstUsdcLite(wstUsdc_).stUsdc());
     }
 
     // =================== Functions ===================
 
     /// @inheritdoc IWstUsdcBridge
-    function bridgeWstUsdc(address destinationAddress, uint256 wstUsdcAmount, uint32 dstEid, LzSettings calldata settings)
-        external
-        payable
-        returns (LzBridgeReceipt memory bridgingReceipt)
-    {
+    function bridgeWstUsdc(
+        address destinationAddress,
+        uint256 wstUsdcAmount,
+        uint32 dstEid,
+        LzSettings calldata settings
+    ) external payable returns (LzBridgeReceipt memory bridgingReceipt) {
         _wstUsdc.transferFrom(msg.sender, address(this), wstUsdcAmount);
         uint256 stUsdcAmount = _wstUsdc.unwrap(wstUsdcAmount);
 
@@ -60,7 +61,7 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
     }
 
     /// @inheritdoc IWstUsdcBridge
-    function wstUsdcBridge(uint32 eid, address bridge) external override onlyBridgeOperator {
+    function setWstUsdcBridge(uint32 eid, address bridge) external override onlyBridgeOperator {
         if (eid == 0) revert Errors.InvalidPeerID();
         if (bridge == address(0)) revert Errors.ZeroAddress();
         _wstUsdcBridges[eid] = bridge;
@@ -89,10 +90,12 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function _bridgeStUsdc(address destinationAddress, uint256 stUsdcAmount, uint32 dstEid, LzSettings calldata settings)
-        internal
-        returns (LzBridgeReceipt memory bridgingReceipt)
-    {
+    function _bridgeStUsdc(
+        address destinationAddress,
+        uint256 stUsdcAmount,
+        uint32 dstEid,
+        LzSettings calldata settings
+    ) internal returns (LzBridgeReceipt memory bridgingReceipt) {
         SendParam memory sendParam = _setSendParam(destinationAddress, stUsdcAmount, dstEid, settings.options);
 
         (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt) =

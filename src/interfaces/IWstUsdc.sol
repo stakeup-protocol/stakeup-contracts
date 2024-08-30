@@ -23,10 +23,10 @@ interface IWstUsdc is IWstUsdcLite {
     function depositTby(uint256 tbyId, uint256 amount) external returns (uint256 amountMinted);
 
     /**
-     * @notice Redeem wstUsdc in exchange for underlying tokens.
+     * @notice Redeem wstUsdc in exchange for underlying assets.
      * @dev Emits a {Redeemed} event.
      * @param wstUsdcAmount Amount of wstUsdc
-     * @return underlyingRedeemed The Amount of underlying tokens redeemed
+     * @return assetsRedeemed The Amount of underlying assets redeemed
      */
-    function redeemWstUsdc(uint256 wstUsdcAmount) external returns (uint256 underlyingRedeemed);
+    function redeemWstUsdc(uint256 wstUsdcAmount) external returns (uint256 assetsRedeemed);
 }

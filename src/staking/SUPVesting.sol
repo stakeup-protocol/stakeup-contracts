@@ -44,8 +44,8 @@ abstract contract SUPVesting is ISUPVesting {
 
     // ================= Constructor =================
 
-    constructor(address stakeupToken) {
-        _stakeupToken = IStakeUpToken(stakeupToken);
+    constructor(address stakeupToken_) {
+        _stakeupToken = IStakeUpToken(stakeupToken_);
     }
 
     // =================== Functions ===================

@@ -19,10 +19,12 @@ interface IWstUsdcBridge is ILayerZeroSettings {
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
-    function bridgeWstUsdc(address destinationAddress, uint256 wstUsdcAmount, uint32 dstEid, LzSettings calldata settings)
-        external
-        payable
-        returns (LzBridgeReceipt memory bridgingReceipt);
+    function bridgeWstUsdc(
+        address destinationAddress,
+        uint256 wstUsdcAmount,
+        uint32 dstEid,
+        LzSettings calldata settings
+    ) external payable returns (LzBridgeReceipt memory bridgingReceipt);
 
     /**
      * @notice Sets the wstUsdc bridge address for the given endpoint ID
