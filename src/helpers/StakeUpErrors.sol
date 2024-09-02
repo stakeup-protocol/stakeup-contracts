@@ -73,6 +73,9 @@ library StakeUpErrors {
     /// @notice Too long between rate updates
     error RateUpdateNeeded();
 
+    /// @notice Redemptions are not allowed, while mint rewards are still available
+    error RedemptionsNotAllowed();
+
     // ========================= General ===========================
     /// @notice Zero amount
     error ZeroAmount();
