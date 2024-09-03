@@ -30,9 +30,6 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
 
     // =================== Storage ===================
 
-    /// @notice The stUsdc token
-    IStUsdc private immutable _stUsdc;
-
     /// @dev Global reward data
     RewardData private _rewardData;
 
@@ -44,6 +41,11 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
 
     /// @dev Mapping of users to their staking data
     mapping(address => StakingData) private _stakingData;
+
+    // =================== Immutables ===================
+
+    /// @notice The stUsdc token
+    IStUsdc private immutable _stUsdc;
 
     // =================== Modifiers ===================
 

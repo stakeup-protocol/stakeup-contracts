@@ -25,14 +25,16 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
 
     // =================== Storage ===================
 
+    /// @notice mapping of LayerZero Endpoint IDs to WstUsdcBridge instances
+    mapping(uint32 => address) private _wstUsdcBridges;
+
+    // =================== Immutables ===================
+
     /// @notice Address of stUsdc contract
     address private immutable _stUsdc;
 
     /// @notice Address of wstUsdc contract
     WstUsdcLite private immutable _wstUsdc;
-
-    /// @notice mapping of LayerZero Endpoint IDs to WstUsdcBridge instances
-    mapping(uint32 => address) private _wstUsdcBridges;
 
     // ================= Constructor =================
 

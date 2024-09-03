@@ -19,7 +19,7 @@ import {IWstUsdc} from "../interfaces/IWstUsdc.sol";
  */
 contract WstUsdc is IWstUsdc, WstUsdcLite {
     using SafeERC20 for IERC20;
-    // =================== Constants ===================
+    // =================== Immutables ===================
 
     /// @notice Instance of the stUsdc underlying token
     IERC20 private immutable _stUsdcAsset;

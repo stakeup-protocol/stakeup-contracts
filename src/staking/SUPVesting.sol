@@ -24,15 +24,17 @@ abstract contract SUPVesting is ISUPVesting {
 
     // =================== Storage ===================
 
-    /// @notice The STAKEUP token
-    IStakeUpToken internal immutable _stakeupToken;
-
     /// @notice Total amount of STAKEUP locked in vesting
     uint256 internal _totalStakeUpVesting;
 
     /// @notice A mapping of user addresses to their vested token allocations
     mapping(address => VestedAllocation) internal _tokenAllocations;
 
+    // =================== Immutables ===================
+    
+    /// @notice The STAKEUP token
+    IStakeUpToken internal immutable _stakeupToken;
+    
     // =================== Modifiers ===================
 
     modifier onlySUP() {

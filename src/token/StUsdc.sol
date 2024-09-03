@@ -18,7 +18,6 @@ import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 import {IStUsdc} from "../interfaces/IStUsdc.sol";
 import {IWstUsdc} from "../interfaces/IWstUsdc.sol";
-import "forge-std/console2.sol";
 
 /// @title Staked TBY Contract
 contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
@@ -27,6 +26,20 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
     using SafeERC20 for IWstUsdc;
 
     // =================== Storage ===================
+
+    /// @dev The total amount of stUsdc shares in circulation on all chains
+    uint256 internal _globalShares;
+
+    /// @dev Mint rewards remaining
+    uint256 internal _mintRewardsRemaining;
+
+    /// @notice Amount of rewards remaining to be distributed to users for poking the contract
+    uint256 private _pokeRewardsRemaining;
+
+    /// @dev Last redeemed tbyId
+    uint256 internal _lastRedeemedTbyId;
+
+    // ================== Immutables ===================
 
     /// @dev Underlying token
     IERC20 private immutable _asset;
@@ -46,26 +59,14 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
     /// @dev SUP Token Contract
     IStakeUpToken private immutable _stakeupToken;
 
-    /// @dev The total amount of stUsdc shares in circulation on all chains
-    uint256 internal _globalShares;
-
-    /// @dev Mint rewards remaining
-    uint256 internal _mintRewardsRemaining;
-
-    /// @notice Amount of rewards remaining to be distributed to users for poking the contract
-    uint256 private _pokeRewardsRemaining;
-
     /// @dev Deployment timestamp
-    uint256 internal immutable _startTimestamp;
+    uint256 private immutable _startTimestamp;
 
     /// @dev Scaling factor for underlying token
     uint256 private immutable _scalingFactor;
 
     /// @dev Underlying token decimals
-    uint8 internal immutable _assetDecimals;
-
-    /// @dev Last redeemed tbyId
-    uint256 internal _lastRedeemedTbyId;
+    uint8 private immutable _assetDecimals;
 
     // ================== Constructor ==================
 
@@ -122,15 +123,15 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
 
     /// @inheritdoc IStUsdc
     function depositAsset(uint256 amount) external nonReentrant returns (uint256 amountMinted) {
-        IBloomPool pool = _bloomPool;
         require(amount > 0, Errors.ZeroAmount());
+
         _asset.safeTransferFrom(msg.sender, address(this), amount);
         amountMinted = amount * _scalingFactor;
+
         _deposit(amountMinted);
         emit AssetDeposited(msg.sender, amount);
-        IERC20(_asset).safeTransferFrom(msg.sender, address(this), amount);
-        _asset.safeApprove(address(pool), amount);
-        pool.lendOrder(amount);
+
+        _openLendOrder(amount);
     }
 
     /// @inheritdoc IStUsdc
@@ -242,6 +243,13 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
         return _lastRedeemedTbyId;
     }
 
+    function _openLendOrder(uint256 amount) internal {
+        IBloomPool pool = _bloomPool;
+        IERC20(_asset).safeTransferFrom(msg.sender, address(this), amount);
+        _asset.safeApprove(address(pool), amount);
+        pool.lendOrder(amount);
+    }
+
     /**
      * @notice Accounting logic for handling underlying asset and tby deposits.
      * @param amount The amount stUsdc being minted.
@@ -300,7 +308,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
             }
         }
     }
-
 
     /**
      * @notice Auto lend USDC by opening a lend order in the Bloom Pool

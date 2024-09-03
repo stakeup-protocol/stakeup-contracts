@@ -13,14 +13,16 @@ import {IYieldRelayer} from "../interfaces/IYieldRelayer.sol";
 contract YieldRelayer is IYieldRelayer {
     // =================== Storage ===================
 
-    /// @dev Address of stUsdc contract
-    address private immutable _stUsdc;
-
     /// @dev Address of the bridge operator
     address private _bridgeOperator;
 
     /// @dev Address of the keeper
     address private _keeper;
+
+    // =================== Immutables ===================
+
+    /// @dev Address of stUsdc contract
+    address private immutable _stUsdc;
 
     // =================== Modifiers ===================
 

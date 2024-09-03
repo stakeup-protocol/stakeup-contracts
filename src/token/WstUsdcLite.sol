@@ -16,7 +16,7 @@ import {IWstUsdcLite} from "../interfaces/IWstUsdcLite.sol";
  * @dev This contract is the minimal implementation of the WstUsdc token
  */
 contract WstUsdcLite is IWstUsdcLite, ERC20 {
-    // =================== Constants ===================
+    // =================== Immutables ===================
 
     /// @notice Instance of the stUsdc contract
     IStUsdc internal immutable _stUsdc;
