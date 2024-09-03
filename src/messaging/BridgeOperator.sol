@@ -17,6 +17,8 @@ import {OFTController} from "./controllers/OFTController.sol";
  */
 contract BridgeOperator is Ownable2Step {
     // =================== Storage ===================
+
+    /// @notice Bytes encoded with the addresses of various contracts in the StakeUp ecosystem
     bytes private _stakeUpContracts;
 
     // ================== Constructor ================

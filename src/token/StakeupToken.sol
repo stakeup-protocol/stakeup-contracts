@@ -13,11 +13,13 @@ import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
     // =================== Storage ===================
 
-    /// @notice Address of the StakeUp Staking contract
-    address private immutable _stakeupStaking;
-
     /// @notice Mapping of authorized minters status'
     mapping(address => bool) private _authorizedMinters;
+
+    // ================== Immutables ===================
+
+    /// @notice Address of the StakeUp Staking contract
+    address private immutable _stakeupStaking;
 
     // =================== Modifiers ===================
 
