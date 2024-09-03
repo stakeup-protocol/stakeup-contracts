@@ -140,9 +140,12 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
         require(_mintRewardsRemaining == 0, Errors.RedemptionsNotAllowed());
 
         uint256 shares = sharesByUsd(amount);
-
         assetAmount = amount / _scalingFactor;
-        require(_asset.balanceOf(address(this)) >= assetAmount, Errors.InsufficientBalance());
+
+        if (_asset.balanceOf(address(this)) < assetAmount) {
+            _tryOrderCancellation(assetAmount);
+            require(_asset.balanceOf(address(this)) >= assetAmount, Errors.InsufficientBalance());
+        }
 
         _burnShares(msg.sender, shares);
         _setTotalUsd(_getTotalUsd() - amount);
@@ -275,6 +278,29 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
         }
         _stakeupStaking.processFees();
     }
+
+    function _tryOrderCancellation(uint256 amount) internal {
+        IBloomPool pool = _bloomPool;
+        uint256 amountOpen = pool.amountOpen(address(this));
+
+        // Cancel open lend orders if there are any
+        if (amountOpen > 0) {
+            uint256 killAmount = Math.min(amountOpen, amount);
+            pool.killOpenOrder(killAmount);
+            amount -= killAmount;
+        }
+
+        // If more liquidity is needed, cancel matched orders
+        if (amount > 0) {
+            uint256 amountMatched = pool.amountMatched(address(this));
+            if (amountMatched > 0) {
+                uint256 killAmount = Math.min(amountMatched, amount);
+                pool.killMatchOrder(killAmount);
+                amount -= killAmount;
+            }
+        }
+    }
+
 
     /**
      * @notice Auto lend USDC by opening a lend order in the Bloom Pool
