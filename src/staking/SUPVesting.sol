@@ -31,10 +31,10 @@ abstract contract SUPVesting is ISUPVesting {
     mapping(address => VestedAllocation) internal _tokenAllocations;
 
     // =================== Immutables ===================
-    
+
     /// @notice The STAKEUP token
     IStakeUpToken internal immutable _stakeupToken;
-    
+
     // =================== Modifiers ===================
 
     modifier onlySUP() {
