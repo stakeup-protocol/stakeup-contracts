@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
 
 // Bloom Dependencies
-import {BloomPool} from "@bloom-v2/BloomPool.sol";
+import {IBloomPoolExt} from "../mocks/IBloomPoolExt.sol";
 import {Tby} from "@bloom-v2/token/Tby.sol";
 
 // StakeUp Dependencies
@@ -31,7 +31,7 @@ abstract contract StUsdcSetup is Test {
     // Bloom Pool Contracts
     MockERC20 internal stableToken;
     MockERC20 internal billyToken;
-    BloomPool internal bloomPool;
+    IBloomPoolExt internal bloomPool;
     Tby internal tby;
 
     // Bloom Pool Settings
@@ -59,13 +59,17 @@ abstract contract StUsdcSetup is Test {
         billyToken = new MockERC20(18);
         vm.label(address(billyToken), "BillyToken");
 
+        skip(1 weeks);
+
         vm.startPrank(owner);
         MockPriceFeed priceFeed = new MockPriceFeed(8); // bib01 token price feed has 8 decimals
         vm.label(address(priceFeed), "BillyToken PriceFeed");
-        priceFeed.setLatestRoundData(1, 110e8, 0, block.timestamp, 1);
+        priceFeed.setLatestRoundData(1, 110e8, block.timestamp, block.timestamp, 1);
 
-        bloomPool = new BloomPool(
-            address(stableToken), address(billyToken), address(priceFeed), initialLeverage, initialSpread, owner
+        /// Because of openzeppelin versioning collisions, we need to deploy the bloom pool using
+        ///     the artifact instead of the source repo.
+        bloomPool = IBloomPoolExt(
+            deployCode("lib/bloom-v2/out/BloomPool.sol/BloomPool.json", abi.encode(address(stableToken), address(billyToken), priceFeed, initialLeverage, initialSpread, owner))
         );
         vm.label(address(bloomPool), "Bloom Pool");
 
@@ -77,22 +81,20 @@ abstract contract StUsdcSetup is Test {
         vm.label(address(layerZeroEndpointA), "LayerZero Endpoint A");
 
         // Deploy StakeUp Contracts
-        address expectedStakingAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
-        address expectedBridgeOperatorAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 6);
+        address expectedSupAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
+        address expectedStUsdcAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 2);
+        address expectedBridgeOperatorAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 5);
+
+        staking = new StakeUpStaking(address(expectedSupAddress), expectedStUsdcAddress);
 
         supToken = new StakeUpToken(
-            expectedStakingAddress,
+            address(staking),
             address(0), // gaugeDistributor
             owner,
             address(layerZeroEndpointA),
             expectedBridgeOperatorAddress
         );
-
-        address expectedStUsdcAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
-
-        staking = new StakeUpStaking(address(supToken), expectedStUsdcAddress);
-        vm.label(address(staking), "StakeUp Staking");
-        require(address(staking) == expectedStakingAddress, "Staking address mismatch");
+        require(address(supToken) == expectedSupAddress, "SUP address mismatch");
 
         address expectedWstUsdcAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
 

@@ -14,7 +14,6 @@ solc = "0.8.26"
 remappings = [
     "solmate/=lib/solmate/src/",
     '@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/',
-    '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
     "solady/=lib/solady/src/",
     "@LayerZero/=lib/LayerZero-v2/oapp/contracts/",
     "@LayerZero-Protocol/=lib/LayerZero-v2/protocol/contracts/",
@@ -23,6 +22,8 @@ remappings = [
     "solidity-bytes-utils/=lib/LayerZero-v2/oapp/node_modules/solidity-bytes-utils/",
     "@bloom-v2/=lib/bloom-v2/src/",
 ]
+
+fs_permissions = [{ access = "read", path = "./lib/bloom-v2/out/BloomPool.sol/BloomPool.json"}]
 
 [rpc_endpoints]
 sepolia = "${SEPOLIA_RPC_URL}"
