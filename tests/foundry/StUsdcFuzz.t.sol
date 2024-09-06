@@ -145,6 +145,64 @@ contract StUsdcFuzzTest is StUsdcSetup {
         assertEq(bloomPool.amountMatched(address(stUsdc)), 0);
     }
 
+    function testYieldAccrual(uint256 amount) public {
+        amount = bound(amount, 10e6, 100_000_000_000e6);
+
+        _depositAsset(alice, amount);
+
+        // Run through the bloom lifecycle
+        uint256 totalCollateral = _matchBloomOrder(address(stUsdc), amount);
+        uint256 id = _bloomStartNewTby(totalCollateral);
+
+        // Skip to a new price
+        _skipAndUpdatePrice(30 days, 111e8, 2); 
+        uint256 tbyRate = bloomPool.getRate(id);
+
+        uint256 accruedValue = amount.mulWad(tbyRate) * SCALER;
+
+        // Poke the contract to rebase and accrue value
+        stUsdc.poke();
+
+        // Validate that the accrued value is correct
+        assertApproxEqRel(stUsdc.balanceOf(alice), accruedValue, .9999999e18);
+        assertApproxEqRel(stUsdc.balanceOf(alice), stUsdc.totalUsd(), .9999999e18);
+    }
+
+    function testHarvest(uint256 amount) public {
+        amount = bound(amount, 10e6, 100_000_000_000e6);
+
+        _depositAsset(alice, amount);
+
+        // Run through the bloom lifecycle
+        uint256 totalCollateral = _matchBloomOrder(address(stUsdc), amount);
+        uint256 id = _bloomStartNewTby(totalCollateral);
+
+        // Skip to a new price
+        _skipAndUpdatePrice(180 days, 115e8, 2); 
+
+        uint256 tbyRate = bloomPool.getRate(id);
+        uint256 accruedValue = amount.mulWad(tbyRate);
+        uint256 yield = accruedValue - amount;
+        uint256 performanceFee = yield.divWad(10e18);
+        uint256 performanceFeeScaled = performanceFee * SCALER;
+
+        // Poke the contract to rebase and accrue value
+        stUsdc.poke();
+        uint256 sharesFeeAmount = stUsdc.sharesByUsd(performanceFeeScaled);
+
+        // Market maker should complete the swap
+        _bloomEndTby(id, (totalCollateral * tbyRate).mulWad(SCALER));
+
+        // Harvest the matured TBY
+        vm.startPrank(marketMaker);
+        stUsdc.harvest();
+
+        // Validate that the performance fee was correctly captured.
+        assertApproxEqRel(stUsdc.sharesOf(address(staking)), sharesFeeAmount, .9999999e18);
+        assertApproxEqRel(stUsdc.totalUsd(), stableToken.balanceOf(address(stUsdc)) * SCALER, .9999999e18);
+        assertGe(stUsdc.totalUsd(), stableToken.balanceOf(address(stUsdc)));
+    }
+
     function _depositAsset(address user, uint256 amount) internal returns (uint256) {
         vm.startPrank(user);
         // Mint and approve stableToken
@@ -155,16 +213,46 @@ contract StUsdcFuzzTest is StUsdcSetup {
         return stUsdc.depositAsset(amount);
     }
 
-    function _matchBloomOrder(address user, uint256 amount) internal {
+    function _matchBloomOrder(address user, uint256 amount) internal returns (uint256) {
         vm.startPrank(borrower);
         uint256 neededAmount = amount.divWad(bloomPool.leverage());
         stableToken.mint(borrower, neededAmount);
         stableToken.approve(address(bloomPool), neededAmount);
         bloomPool.fillOrder(user, amount);
+        return amount + neededAmount;
+    }
+
+    function _bloomStartNewTby(uint256 stableAmount) internal returns (uint256 id) {
+        (, int256 answer,,,) = priceFeed.latestRoundData();
+        uint256 answerScaled = uint256(answer) * (10 ** (18 - priceFeed.decimals()));
+        uint256 rwaAmount = (stableAmount * (10 ** (18 - stableToken.decimals()))).divWadUp(answerScaled);
+
+        vm.startPrank(marketMaker);
+        billToken.mint(marketMaker, rwaAmount);
+        billToken.approve(address(bloomPool), rwaAmount);
+        (id,) = bloomPool.swapIn(bloomLenders, stableAmount);
+    }
+
+    function _bloomEndTby(uint256 id, uint256 stableAmount) internal {
+        (, int256 answer,,,) = priceFeed.latestRoundData();
+        uint256 answerScaled = uint256(answer) * (10 ** (18 - priceFeed.decimals()));
+        uint256 rwaAmount = (stableAmount * (10 ** (18 - stableToken.decimals()))).divWadUp(answerScaled);
+
+        vm.startPrank(marketMaker);
+        stableToken.mint(marketMaker, stableAmount);
+        stableToken.approve(address(bloomPool), stableAmount);
+        bloomPool.swapOut(id, rwaAmount);
     }
 
     function _redeemStUsdc(address user, uint256 amount) internal returns (uint256) {
         vm.startPrank(user);
         return stUsdc.redeemStUsdc(amount);
+    }
+
+    function _skipAndUpdatePrice(uint256 time, uint256 price, uint80 roundId) internal {
+        vm.startPrank(owner);
+        skip(time);
+        priceFeed.setLatestRoundData(roundId, int256(price), block.timestamp, block.timestamp, roundId);
+        vm.stopPrank();
     }
 }

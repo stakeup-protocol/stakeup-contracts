@@ -30,9 +30,10 @@ abstract contract StUsdcSetup is Test {
     BridgeOperator internal bridgeOperator;
     // Bloom Pool Contracts
     MockERC20 internal stableToken;
-    MockERC20 internal billyToken;
+    MockERC20 internal billToken;
     IBloomPoolExt internal bloomPool;
     Tby internal tby;
+    MockPriceFeed internal priceFeed;
 
     // Bloom Pool Settings
     uint256 internal initialLeverage = 50e18;
@@ -57,17 +58,19 @@ abstract contract StUsdcSetup is Test {
 
     bytes internal constant NOT_OWNER_ERROR = bytes("Ownable: caller is not the owner");
 
+    address[] internal bloomLenders;
+
     function setUp() public virtual {
         // Deploy Bloom Dependencies
         stableToken = new MockERC20(6);
         vm.label(address(stableToken), "StableToken");
-        billyToken = new MockERC20(18);
-        vm.label(address(billyToken), "BillyToken");
+        billToken = new MockERC20(18);
+        vm.label(address(billToken), "BillyToken");
 
         skip(1 weeks);
 
         vm.startPrank(owner);
-        MockPriceFeed priceFeed = new MockPriceFeed(8); // bib01 token price feed has 8 decimals
+        priceFeed = new MockPriceFeed(8); // bib01 token price feed has 8 decimals
         vm.label(address(priceFeed), "BillyToken PriceFeed");
         priceFeed.setLatestRoundData(1, 110e8, block.timestamp, block.timestamp, 1);
 
@@ -76,7 +79,7 @@ abstract contract StUsdcSetup is Test {
         bloomPool = IBloomPoolExt(
             deployCode(
                 "lib/bloom-v2/out/BloomPool.sol/BloomPool.json",
-                abi.encode(address(stableToken), address(billyToken), priceFeed, initialLeverage, initialSpread, owner)
+                abi.encode(address(stableToken), address(billToken), priceFeed, initialLeverage, initialSpread, owner)
             )
         );
         vm.label(address(bloomPool), "Bloom Pool");
@@ -133,5 +136,7 @@ abstract contract StUsdcSetup is Test {
 
         // Deploy Bloom Pool Contracts
         vm.stopPrank();
+
+        bloomLenders.push(address(stUsdc));
     }
 }
