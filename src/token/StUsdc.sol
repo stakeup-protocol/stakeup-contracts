@@ -124,8 +124,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
     /// @inheritdoc IStUsdc
     function depositAsset(uint256 amount) external nonReentrant returns (uint256 amountMinted) {
         require(amount > 0, Errors.ZeroAmount());
-
-        _asset.safeTransferFrom(msg.sender, address(this), amount);
         amountMinted = amount * _scalingFactor;
 
         _deposit(amountMinted);
