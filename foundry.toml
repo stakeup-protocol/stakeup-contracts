@@ -25,6 +25,21 @@ remappings = [
 
 fs_permissions = [{ access = "read", path = "./lib/bloom-v2/out/BloomPool.sol/BloomPool.json"}]
 
+gas_reports = ["*"]
+gas_reports_ignore = [
+    "MockERC20",
+    "MockCurveFactory",
+    "MockCurveGauge",
+    "MockEndpoint",
+    "MockDripRewarder",
+    "MockERC20",
+    "MockPriceFeed", 
+    "StUsdcSetup"
+]
+
+[fuzz]
+runs = 10000
+
 [rpc_endpoints]
 sepolia = "${SEPOLIA_RPC_URL}"
 

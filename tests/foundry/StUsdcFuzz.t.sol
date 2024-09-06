@@ -8,7 +8,7 @@ import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
 import {StUsdcSetup} from "./StUsdcSetup.t.sol";
 import {IStUsdc} from "src/interfaces/IStUsdc.sol";
 
-contract StUsdcTest is StUsdcSetup {
+contract StUsdcFuzzTest is StUsdcSetup {
     using FpMath for uint256;
 
     function setUp() public override {
