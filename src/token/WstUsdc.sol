@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import {ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
+import {ERC1155TokenReceiver} from "solmate/tokens/ERC1155.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
@@ -17,7 +18,7 @@ import {IWstUsdc} from "../interfaces/IWstUsdc.sol";
  * @title Wrapped Staked TBY
  * @notice The non-rebasing, wrapped version of the stUsdc token that accues yield from TBYs
  */
-contract WstUsdc is IWstUsdc, WstUsdcLite {
+contract WstUsdc is IWstUsdc, WstUsdcLite, ERC1155TokenReceiver {
     using SafeERC20 for IERC20;
     // =================== Immutables ===================
 

@@ -3,6 +3,7 @@ pragma solidity 0.8.26;
 
 import {IBloomPool} from "@bloom-v2/interfaces/IBloomPool.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
+import {ERC1155TokenReceiver} from "solmate/tokens/ERC1155.sol";
 import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -20,7 +21,7 @@ import {IStUsdc} from "../interfaces/IStUsdc.sol";
 import {IWstUsdc} from "../interfaces/IWstUsdc.sol";
 
 /// @title Staked TBY Contract
-contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
+contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     using Math for uint256;
     using SafeERC20 for IERC20;
     using SafeERC20 for IWstUsdc;
@@ -338,7 +339,10 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard {
      * @return value The value of live TBYs in USD in terms of the underlying asset.
      */
     function _liveTbyValue(IBloomPool pool) internal view returns (uint256 value) {
-        uint256 startingId = lastRedeemedTbyId() + 1;
+        uint256 startingId = lastRedeemedTbyId();
+        unchecked {
+            startingId++;
+        }
         uint256 lastMintedId = pool.lastMintedId();
         for (uint256 i = startingId; i <= lastMintedId; ++i) {
             value += pool.getRate(i).mulWad(_tby.balanceOf(address(this), i));
