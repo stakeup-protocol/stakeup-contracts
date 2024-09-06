@@ -45,6 +45,11 @@ abstract contract StUsdcSetup is Test {
     address internal owner = makeAddr("owner");
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
+    address internal rando = makeAddr("rando");
+
+    // Bloom Users
+    address internal borrower = makeAddr("borrower");
+    address internal marketMaker = makeAddr("marketMaker");
 
     // Constants
     uint256 internal constant SCALER = 1e12;
@@ -69,9 +74,15 @@ abstract contract StUsdcSetup is Test {
         /// Because of openzeppelin versioning collisions, we need to deploy the bloom pool using
         ///     the artifact instead of the source repo.
         bloomPool = IBloomPoolExt(
-            deployCode("lib/bloom-v2/out/BloomPool.sol/BloomPool.json", abi.encode(address(stableToken), address(billyToken), priceFeed, initialLeverage, initialSpread, owner))
+            deployCode(
+                "lib/bloom-v2/out/BloomPool.sol/BloomPool.json",
+                abi.encode(address(stableToken), address(billyToken), priceFeed, initialLeverage, initialSpread, owner)
+            )
         );
         vm.label(address(bloomPool), "Bloom Pool");
+
+        bloomPool.whitelistBorrower(borrower, true);
+        bloomPool.whitelistMarketMaker(marketMaker, true);
 
         tby = Tby(bloomPool.tby());
         vm.label(address(tby), "Tby");
