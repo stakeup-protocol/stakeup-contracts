@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
+import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
 
 // Bloom Dependencies
@@ -21,6 +22,8 @@ import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockPriceFeed} from "../mocks/MockPriceFeed.sol";
 
 abstract contract StUsdcSetup is Test {
+    using FpMath for uint256;
+
     // StakeUp Contracts
     StUsdc internal stUsdc;
     WstUsdc internal wstUsdc;
@@ -138,5 +141,58 @@ abstract contract StUsdcSetup is Test {
         vm.stopPrank();
 
         bloomLenders.push(address(stUsdc));
+    }
+
+    function _depositAsset(address user, uint256 amount) internal returns (uint256) {
+        vm.startPrank(user);
+        // Mint and approve stableToken
+        stableToken.mint(user, amount);
+        stableToken.approve(address(stUsdc), amount);
+
+        // Deposit asset into stUsdc
+        return stUsdc.depositAsset(amount);
+    }
+
+    function _matchBloomOrder(address user, uint256 amount) internal returns (uint256) {
+        vm.startPrank(borrower);
+        uint256 neededAmount = amount.divWad(bloomPool.leverage());
+        stableToken.mint(borrower, neededAmount);
+        stableToken.approve(address(bloomPool), neededAmount);
+        bloomPool.fillOrder(user, amount);
+        return amount + neededAmount;
+    }
+
+    function _bloomStartNewTby(uint256 stableAmount) internal returns (uint256 id) {
+        (, int256 answer,,,) = priceFeed.latestRoundData();
+        uint256 answerScaled = uint256(answer) * (10 ** (18 - priceFeed.decimals()));
+        uint256 rwaAmount = (stableAmount * (10 ** (18 - stableToken.decimals()))).divWadUp(answerScaled);
+
+        vm.startPrank(marketMaker);
+        billToken.mint(marketMaker, rwaAmount);
+        billToken.approve(address(bloomPool), rwaAmount);
+        (id,) = bloomPool.swapIn(bloomLenders, stableAmount);
+    }
+
+    function _bloomEndTby(uint256 id, uint256 stableAmount) internal {
+        (, int256 answer,,,) = priceFeed.latestRoundData();
+        uint256 answerScaled = uint256(answer) * (10 ** (18 - priceFeed.decimals()));
+        uint256 rwaAmount = (stableAmount * (10 ** (18 - stableToken.decimals()))).divWadUp(answerScaled);
+
+        vm.startPrank(marketMaker);
+        stableToken.mint(marketMaker, stableAmount);
+        stableToken.approve(address(bloomPool), stableAmount);
+        bloomPool.swapOut(id, rwaAmount);
+    }
+
+    function _redeemStUsdc(address user, uint256 amount) internal returns (uint256) {
+        vm.startPrank(user);
+        return stUsdc.redeemStUsdc(amount);
+    }
+
+    function _skipAndUpdatePrice(uint256 time, uint256 price, uint80 roundId) internal {
+        vm.startPrank(owner);
+        skip(time);
+        priceFeed.setLatestRoundData(roundId, int256(price), block.timestamp, block.timestamp, roundId);
+        vm.stopPrank();
     }
 }

@@ -213,7 +213,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
         if (totalShares_ == 0) {
             return sharesAmount;
         }
-        return sharesAmount.mulWad(_getTotalUsd()).divWad(totalShares_);
+        return sharesAmount.mulWadUp(_getTotalUsd()).divWadUp(totalShares_);
     }
 
     /// @inheritdoc IStUsdcLite
