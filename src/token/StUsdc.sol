@@ -156,32 +156,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     }
 
     /// @inheritdoc IStUsdc
-    function harvest() external override nonReentrant returns (uint256 assetsWithdrawn) {
-        IBloomPool pool = _bloomPool;
-        uint256 lastRateUpdate = _lastRateUpdate;
-        require(block.timestamp - lastRateUpdate < 24 hours, Errors.RateUpdateNeeded());
-
-        uint256 tbyId = lastRedeemedTbyId();
-        // Because we start at type(uint256).max, we need to increment and overflow to 0.
-        unchecked {
-            tbyId++;
-        }
-        bool isRedeemable = pool.isTbyRedeemable(tbyId);
-        uint256 amount = _tby.balanceOf(address(this), tbyId);
-
-        if (!isRedeemable) return 0;
-        if (isRedeemable && amount == 0) {
-            _lastRedeemedTbyId = tbyId;
-            return 0;
-        }
-
-        assetsWithdrawn = pool.redeemLender(tbyId, amount);
-        uint256 yieldScaled = (assetsWithdrawn - amount) * _scalingFactor;
-        _processYield(yieldScaled);
-        _distributePokeRewards();
-    }
-
-    /// @inheritdoc IStUsdc
     function poke() external nonReentrant {
         IBloomPool pool = _bloomPool;
         uint256 lastUpdate = _lastRateUpdate;
@@ -197,6 +171,8 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
             uint256 usdPerShare = protocolValue.divWad(_globalShares);
             _setUsdPerShare(usdPerShare);
 
+            // Harvest matured TBYs if necessary
+            _harvest();
             // Distribute rewards to the user who poked the contract
             _distributePokeRewards();
         }
@@ -347,6 +323,28 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         for (uint256 i = startingId; i <= lastMintedId; ++i) {
             value += pool.getRate(i).mulWad(_tby.balanceOf(address(this), i));
         }
+    }
+
+    /// @notice Harvests the next TbyId that is ready for redemption.
+    function _harvest() internal {
+        IBloomPool pool = _bloomPool;
+        uint256 tbyId = lastRedeemedTbyId();
+        // Because we start at type(uint256).max, we need to increment and overflow to 0.
+        unchecked {
+            tbyId++;
+        }
+        bool isRedeemable = pool.isTbyRedeemable(tbyId);
+        if (!isRedeemable) return;
+
+        uint256 amount = _tby.balanceOf(address(this), tbyId);
+        if (isRedeemable && amount == 0) {
+            _lastRedeemedTbyId = tbyId;
+            return;
+        }
+
+        uint256 assetsWithdrawn = pool.redeemLender(tbyId, amount);
+        uint256 yieldScaled = (assetsWithdrawn - amount) * _scalingFactor;
+        _processYield(yieldScaled);
     }
 
     /// @notice Calulates and mints SUP rewards to users who have poked the contract

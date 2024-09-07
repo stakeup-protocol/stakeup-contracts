@@ -80,12 +80,6 @@ interface IStUsdc is IStUsdcLite {
     function redeemStUsdc(uint256 amount) external returns (uint256 underlyingAmount);
 
     /**
-     * @notice Harvests the next TbyId that is ready for redemption.
-     * @return assetsWithdrawn The amount of underlying assets withdrawn from Bloom.
-     */
-    function harvest() external returns (uint256 assetsWithdrawn);
-
-    /**
      * @notice Invokes the auto stake feature or adjusts the remaining balance
      * if the most recent deposit did not get fully staked
      * @dev autoMint feature is invoked if the last created pool is in

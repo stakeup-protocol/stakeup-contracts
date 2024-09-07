@@ -41,7 +41,10 @@ gas_reports_ignore = [
 runs = 10000
 
 [rpc_endpoints]
-sepolia = "${SEPOLIA_RPC_URL}"
+arbitrum = "${ARBITRUM_RPC_URL}"
+sepolia_sepolia = "${SEPOLIA_RPC_URL}"
 
 [etherscan]
-sepolia = { key = "${ETHERSCAN_API_KEY}"}
+sepolia_sepolia = { key = "${ETHERSCAN_API_KEY}"}
+unknown_chain = { key = "${TENDERLY_ACCESS_KEY}", chain = 84537357, url = "${VERIFIER_URL}" }
+
