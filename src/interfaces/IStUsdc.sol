@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 
 import {IStakeUpStaking} from "./IStakeUpStaking.sol";
+import {IStakeUpToken} from "./IStakeUpToken.sol";
 import {IStUsdcLite} from "./IStUsdcLite.sol";
 import {IWstUsdc} from "./IWstUsdc.sol";
 
@@ -102,6 +103,9 @@ interface IStUsdc is IStUsdcLite {
     /// @notice Returns the StakeUpStaking contract.
     function stakeUpStaking() external view returns (IStakeUpStaking);
 
+    /// @notice Returns the StakeUpToken contract.
+    function stakeUpToken() external view returns (IStakeUpToken);
+
     /// @notice Returns the performanceBps.
     function performanceBps() external view returns (uint256);
 
@@ -110,4 +114,7 @@ interface IStUsdc is IStUsdcLite {
 
     /// @notice The total shares of stUsdc tokens in circulation on all chains
     function globalShares() external view returns (uint256);
+
+    /// @notice The last time the rate was updated
+    function lastRateUpdate() external view returns (uint256);
 }
