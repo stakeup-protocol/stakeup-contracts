@@ -108,21 +108,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     // =================== Functions ==================
 
     /// @inheritdoc IStUsdc
-    function depositTby(uint256 tbyId, uint256 amount) external nonReentrant returns (uint256 amountMinted) {
-        IBloomPool pool = _bloomPool;
-        require(amount > 0, Errors.ZeroAmount());
-        require(!pool.isTbyRedeemable(tbyId), "TBY is redeemable");
-        require(tbyId > lastRedeemedTbyId(), "TBY has already been redeemed");
-
-        // If the token is a TBY, we need to get the current exchange rate of the token
-        //     to accurately calculate the amount of stUsdc to mint.
-        amountMinted = pool.getRate(tbyId).mulWad(amount);
-        _deposit(amountMinted);
-        emit TbyDeposited(msg.sender, tbyId, amount, amountMinted);
-        _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
-    }
-
-    /// @inheritdoc IStUsdc
     function depositAsset(uint256 amount) external nonReentrant returns (uint256 amountMinted) {
         require(amount > 0, Errors.ZeroAmount());
         amountMinted = amount * _scalingFactor;
@@ -131,6 +116,19 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         emit AssetDeposited(msg.sender, amount);
 
         _openLendOrder(amount);
+    }
+
+    /// @inheritdoc IStUsdc
+    function depositTby(uint256 tbyId, uint256 amount) external nonReentrant returns (uint256 amountMinted) {
+        IBloomPool pool = _bloomPool;
+        require(amount > 0, Errors.ZeroAmount());
+        require(!pool.isTbyRedeemable(tbyId), Errors.RedeemableTbyNotAllowed());
+        // If the token is a TBY, we need to get the current exchange rate of the token
+        //     to accurately calculate the amount of stUsdc to mint.
+        amountMinted = pool.getRate(tbyId).mulWad(amount) * _scalingFactor;
+        _deposit(amountMinted);
+        emit TbyDeposited(msg.sender, tbyId, amount, amountMinted);
+        _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
     }
 
     /// @inheritdoc IStUsdc
@@ -158,7 +156,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     /// @inheritdoc IStUsdc
     function poke() external nonReentrant {
         IBloomPool pool = _bloomPool;
-        uint256 lastUpdate = _lastRateUpdate;
+        uint256 lastUpdate = lastRateUpdate();
         uint256 currentTimestamp = block.timestamp;
         if (currentTimestamp - lastUpdate >= 24 hours) {
             _lastRateUpdate = currentTimestamp;
@@ -178,46 +176,10 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         }
     }
 
-    /// @inheritdoc IStUsdc
-    function asset() external view returns (IERC20) {
-        return _asset;
-    }
-
-    /// @inheritdoc IStUsdc
-    function tby() external view returns (ERC1155) {
-        return _tby;
-    }
-
-    /// @inheritdoc IStUsdc
-    function wstUsdc() external view returns (IWstUsdc) {
-        return _wstUsdc;
-    }
-
-    /// @inheritdoc IStUsdc
-    function bloomPool() external view returns (IBloomPool) {
-        return _bloomPool;
-    }
-
-    /// @inheritdoc IStUsdc
-    function stakeUpStaking() external view returns (IStakeUpStaking) {
-        return _stakeupStaking;
-    }
-
-    /// @inheritdoc IStUsdc
-    function performanceBps() external pure returns (uint256) {
-        return Constants.PERFORMANCE_BPS;
-    }
-
-    /// @inheritdoc IStUsdc
-    function globalShares() external view override returns (uint256) {
-        return _globalShares;
-    }
-
-    /// @inheritdoc IStUsdc
-    function lastRedeemedTbyId() public view returns (uint256) {
-        return _lastRedeemedTbyId;
-    }
-
+    /**
+     * @notice Open a lend order in the Bloom Pool.
+     * @param amount The amount of liquidity to lend.
+     */
     function _openLendOrder(uint256 amount) internal {
         IBloomPool pool = _bloomPool;
         IERC20(_asset).safeTransferFrom(msg.sender, address(this), amount);
@@ -262,6 +224,10 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         _stakeupStaking.processFees();
     }
 
+    /**
+     * @notice Attempt to cancel an open lend order and/or matched orders to free access liquidity.
+     * @param amount The amount of liquidity needed.
+     */
     function _tryOrderCancellation(uint256 amount) internal {
         IBloomPool pool = _bloomPool;
         uint256 amountOpen = pool.amountOpen(address(this));
@@ -320,6 +286,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
             startingId++;
         }
         uint256 lastMintedId = pool.lastMintedId();
+        if (lastMintedId == type(uint256).max) return 0;
         for (uint256 i = startingId; i <= lastMintedId; ++i) {
             value += pool.getRate(i).mulWad(_tby.balanceOf(address(this), i));
         }
@@ -336,12 +303,13 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         bool isRedeemable = pool.isTbyRedeemable(tbyId);
         if (!isRedeemable) return;
 
-        uint256 amount = _tby.balanceOf(address(this), tbyId);
-        if (isRedeemable && amount == 0) {
-            _lastRedeemedTbyId = tbyId;
-            return;
-        }
+        // Since users can't deposit TBYs that are redeemable, we can update the last redeemed TBY ID.
+        _lastRedeemedTbyId = tbyId;
 
+        uint256 amount = _tby.balanceOf(address(this), tbyId);
+        if (amount == 0) return;
+
+        // Redeem TBYs and calculate the yield
         uint256 assetsWithdrawn = pool.redeemLender(tbyId, amount);
         uint256 yieldScaled = (assetsWithdrawn - amount) * _scalingFactor;
         _processYield(yieldScaled);
@@ -360,5 +328,55 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
                 IStakeUpToken(_stakeupToken).mintRewards(msg.sender, amount);
             }
         }
+    }
+
+    /// @inheritdoc IStUsdc
+    function asset() external view returns (IERC20) {
+        return _asset;
+    }
+
+    /// @inheritdoc IStUsdc
+    function tby() external view returns (ERC1155) {
+        return _tby;
+    }
+
+    /// @inheritdoc IStUsdc
+    function wstUsdc() external view returns (IWstUsdc) {
+        return _wstUsdc;
+    }
+
+    /// @inheritdoc IStUsdc
+    function bloomPool() external view returns (IBloomPool) {
+        return _bloomPool;
+    }
+
+    /// @inheritdoc IStUsdc
+    function stakeUpStaking() external view returns (IStakeUpStaking) {
+        return _stakeupStaking;
+    }
+
+    /// @inheritdoc IStUsdc
+    function stakeUpToken() external view returns (IStakeUpToken) {
+        return _stakeupToken;
+    }
+
+    /// @inheritdoc IStUsdc
+    function performanceBps() external pure returns (uint256) {
+        return Constants.PERFORMANCE_BPS;
+    }
+
+    /// @inheritdoc IStUsdc
+    function globalShares() external view override returns (uint256) {
+        return _globalShares;
+    }
+
+    /// @inheritdoc IStUsdc
+    function lastRedeemedTbyId() public view returns (uint256) {
+        return _lastRedeemedTbyId;
+    }
+
+    /// @inheritdoc IStUsdc
+    function lastRateUpdate() public view returns (uint256) {
+        return _lastRateUpdate;
     }
 }

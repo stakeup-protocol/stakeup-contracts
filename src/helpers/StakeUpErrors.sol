@@ -55,23 +55,11 @@ library StakeUpErrors {
     error SharesNotFullyAllocated();
 
     // ========================= StUsdc Token ===========================
-    /// @notice Parameter out of bounds
-    error ParameterOutOfBounds();
-
     /// @notice Insufficient balance
     error InsufficientBalance();
 
-    /// @notice Invalid Redemption of Underlying Tokens
-    error InvalidRedemption();
-
-    /// @notice Invalid Underlying Token
-    error InvalidUnderlyingToken();
-
-    /// @notice TBY not active
-    error TBYNotActive();
-
-    /// @notice Too long between rate updates
-    error RateUpdateNeeded();
+    /// @notice TBY redeemable
+    error RedeemableTbyNotAllowed();
 
     /// @notice Redemptions are not allowed, while mint rewards are still available
     error RedemptionsNotAllowed();

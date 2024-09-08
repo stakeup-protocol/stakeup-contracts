@@ -5,8 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
 
 import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
-import {StUsdcSetup} from "./StUsdcSetup.t.sol";
 import {IStUsdc} from "src/interfaces/IStUsdc.sol";
+import {StUsdcSetup} from "../StUsdcSetup.t.sol";
 
 contract StUsdcFuzzTest is StUsdcSetup {
     using FpMath for uint256;
@@ -44,6 +44,52 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
         // Validate that stUsdc created a lend order in the bloomPool
         assertEq(bloomPool.amountOpen(address(stUsdc)), amount);
+    }
+
+    function testFuzzDepositTby(uint256 amount) public {
+        amount = bound(amount, 10e6, 100_000_000_000e6);
+
+        vm.startPrank(alice);
+        // Mint and approve stableToken
+        stableToken.mint(alice, amount);
+        stableToken.approve(address(bloomPool), amount);
+
+        // Open a lend order directly in the bloomPool
+        bloomPool.lendOrder(amount);
+        
+        // Run through the bloom lifecycle
+        uint256 totalCollateral = _matchBloomOrder(alice, amount);
+        
+        // Market maker swap for alice's matched order
+        (, int256 answer,,,) = priceFeed.latestRoundData();
+        uint256 answerScaled = uint256(answer) * (10 ** (18 - priceFeed.decimals()));
+        uint256 rwaAmount = (totalCollateral * (10 ** (18 - stableToken.decimals()))).divWadUp(answerScaled);
+
+        vm.startPrank(marketMaker);
+        billToken.mint(marketMaker, rwaAmount);
+        billToken.approve(address(bloomPool), rwaAmount);
+
+        // Edit the lenders array to only include alice
+        bloomLenders[0] = alice;
+        // mint TBY to alice
+        (uint256 id,) = bloomPool.swapIn(bloomLenders, totalCollateral);
+        // Skip to a new price
+        _skipAndUpdatePrice(30 days, 115e8, 2);
+
+        assertEq(tby.balanceOf(alice, id), amount);
+
+        vm.startPrank(alice);
+        tby.setApprovalForAll(address(stUsdc), true);
+        // Use TBYs to mint stUsdc
+        stUsdc.depositTby(id, amount);
+
+        // The TBY has accrued value so the user should have received more stUSDC than their amount of TBYs
+        uint256 expectedStUsdc = amount.mulWad(bloomPool.getRate(id)) * SCALER;
+        assertEq(stUsdc.balanceOf(alice), expectedStUsdc);
+
+        // Validate that the user received mint rewards if they deposited 200M or less
+        uint256 expectedSup = (expectedStUsdc < 200_000_000e18) ? expectedStUsdc : 200_000_000e18;
+        assertEq(supToken.balanceOf(alice), expectedSup);
     }
 
     function testFuzzRedeemOpenOrder(uint256 amount) public {
@@ -166,6 +212,11 @@ contract StUsdcFuzzTest is StUsdcSetup {
         // Validate that the accrued value is correct
         assertApproxEqRel(stUsdc.balanceOf(alice), accruedValue, 0.9999999e18);
         assertApproxEqRel(stUsdc.balanceOf(alice), stUsdc.totalUsd(), 0.9999999e18);
+
+        // Validate that the last rate update state variable updated properly
+        assertEq(stUsdc.lastRateUpdate(), block.timestamp);
+        // Validate that the last redeemed TBY ID state variable is still max uint256 since no TBYs have been redeemed  
+        assertEq(stUsdc.lastRedeemedTbyId(), type(uint256).max);
     }
 
     function testHarvest(uint256 amount) public {
@@ -197,6 +248,9 @@ contract StUsdcFuzzTest is StUsdcSetup {
         assertApproxEqRel(stUsdc.sharesOf(address(staking)), sharesFeeAmount, 0.9999999e18);
         assertApproxEqRel(stUsdc.totalUsd(), stableToken.balanceOf(address(stUsdc)) * SCALER, 0.9999999e18);
         assertGe(stUsdc.totalUsd(), stableToken.balanceOf(address(stUsdc)));
+
+        // Validate that the last redeemed TBY ID state variable is updated
+        assertEq(stUsdc.lastRedeemedTbyId(), id);
     }
 
     function testFullFlow(uint256 amount) public {
@@ -229,5 +283,28 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
         assertEq(stUsdc.balanceOf(alice), 0);
         assertEq(stableToken.balanceOf(alice), stUsdcAmount / SCALER);
+    }
+
+    function testFuzzAutoLend(uint256 amount) public {
+        amount = bound(amount, 10e6, 100_000_000_000e6);
+
+        _depositAsset(alice, 1e6);
+        // Donate some USDC to the stUSDC contract
+        stableToken.mint(address(stUsdc), amount);
+        uint256 totalDeposits = amount + 1e6;
+
+        // Fast forward to end of TBY maturity
+        _skipAndUpdatePrice(2 days, 110e8, 2);
+
+        // Poke the contract to trigger the auto-lend feature.
+        stUsdc.poke();
+
+        // Validate that the accrued value is correct
+        assertEq(stableToken.balanceOf(address(stUsdc)), 0);
+        assertEq(bloomPool.amountOpen(address(stUsdc)), totalDeposits);
+        assertEq(stUsdc.totalUsd(), totalDeposits * SCALER);
+
+        // Validate that the last rate update state variable updated properly
+        assertEq(stUsdc.lastRateUpdate(), block.timestamp);
     }
 }
