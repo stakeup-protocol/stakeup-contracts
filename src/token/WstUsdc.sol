@@ -33,6 +33,9 @@ contract WstUsdc is IWstUsdc, WstUsdcLite, ERC1155TokenReceiver {
     constructor(address stUsdc_) WstUsdcLite(stUsdc_) {
         _stUsdcAsset = IStUsdc(stUsdc_).asset();
         _tby = IStUsdc(stUsdc_).tby();
+
+        // Set approval for stUsdc to be able to transfer TBYs on behalf of the WstUsdc contract
+        _tby.setApprovalForAll(address(stUsdc_), true);
     }
 
     // =================== Functions ===================
@@ -48,7 +51,6 @@ contract WstUsdc is IWstUsdc, WstUsdcLite, ERC1155TokenReceiver {
     /// @inheritdoc IWstUsdc
     function depositTby(uint256 tbyId, uint256 amount) external override returns (uint256 amountMinted) {
         _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
-        // _tby.approve(address(_stUsdc), amount); // TODO: Approval
         amountMinted = _stUsdc.depositTby(tbyId, amount);
         amountMinted = _mintWstUsdc(amountMinted);
     }
