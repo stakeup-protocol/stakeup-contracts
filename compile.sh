@@ -1,6 +1,8 @@
 #! /bin/bash
 
+cd lib/bloom-v2
 forge build
-
-wake init pytypes
-wake compile 
+cd ../../
+forge build
+# wake init pytypes
+# wake compile 

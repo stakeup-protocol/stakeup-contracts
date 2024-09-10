@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.26;
 
 import {OFT, ERC20} from "@LayerZero/oft/OFT.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
@@ -13,11 +13,16 @@ import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
     // =================== Storage ===================
 
-    /// @notice Address of the StakeUp Staking contract
-    address private immutable _stakeupStaking;
+    /// @notice The global supply of the token
+    uint256 private _globalSupply;
 
     /// @notice Mapping of authorized minters status'
     mapping(address => bool) private _authorizedMinters;
+
+    // ================== Immutables ===================
+
+    /// @notice Address of the StakeUp Staking contract
+    address private immutable _stakeupStaking;
 
     // =================== Modifiers ===================
 
@@ -36,16 +41,11 @@ contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
         address owner,
         address layerZeroEndpoint,
         address layerZeroDelegate
-    )
-        OFT("StakeUp Token", "SUP", layerZeroEndpoint, layerZeroDelegate)
-        Ownable2Step()
-    {
+    ) OFT("StakeUp Token", "SUP", layerZeroEndpoint, layerZeroDelegate) Ownable2Step() {
         _stakeupStaking = stakeupStaking;
 
         _authorizedMinters[_stakeupStaking] = true;
-        _authorizedMinters[
-            address(IStakeUpStaking(stakeupStaking).getStTBY())
-        ] = true;
+        _authorizedMinters[address(IStakeUpStaking(stakeupStaking).stUsdc())] = true;
 
         if (gaugeDistributor != address(0)) {
             _authorizedMinters[gaugeDistributor] = true;
@@ -54,114 +54,65 @@ contract StakeUpToken is IStakeUpToken, OFT, Ownable2Step {
         _transferOwnership(owner);
     }
 
-    /// @inheritdoc IStakeUpToken
-    function mintLpSupply(Allocation[] memory allocations) external onlyOwner {
-        uint256 length = allocations.length;
-        for (uint256 i = 0; i < length; ++i) {
-            _mintAndVest(allocations[i], _stakeupStaking);
-        }
+    /**
+     * @notice Mints SUP tokens
+     * @dev This function is callable by the owner only
+     * @param to The address that will receive the tokens
+     * @param amount The amount of tokens to mint
+     */
+    function mint(address to, uint256 amount) external onlyOwner {
+        _mint(to, amount);
+    }
+
+    /**
+     * @notice Mints SUP tokens and starts vesting within the StakeUp Staking contract
+     * @dev This function is callable by the owner only
+     * @param to The address that will mint and stake SUP tokens.
+     * @param amount The amount of tokens to mint
+     */
+    function mintAndStartVest(address to, uint256 amount) external onlyOwner {
+        _mintAndStartVest(to, amount);
     }
 
     /// @inheritdoc IStakeUpToken
-    function airdropTokens(
-        TokenRecipient[] memory recipients,
-        uint256 percentOfTotalSupply
-    ) external onlyOwner {
-        uint256 length = recipients.length;
-        uint256 tokenAllocation = (Constants.MAX_SUPPLY *
-            percentOfTotalSupply) / Constants.FIXED_POINT_ONE;
-        uint256 tokensRemaining = tokenAllocation;
-
-        for (uint256 i = 0; i < length; ++i) {
-            address recipient = recipients[i].recipient;
-            uint256 amount = (recipients[i].percentOfAllocation *
-                tokenAllocation) / Constants.FIXED_POINT_ONE;
-
-            if (amount > tokensRemaining) {
-                revert Errors.ExceedsAvailableTokens();
-            }
-
-            tokensRemaining -= amount;
-            _mint(recipient, amount);
-        }
-        if (tokensRemaining > 0) revert Errors.SharesNotFullyAllocated();
-    }
-
-    /// @inheritdoc IStakeUpToken
-    function mintRewards(
-        address recipient,
-        uint256 amount
-    ) external override onlyAuthorized {
+    function mintRewards(address recipient, uint256 amount) external override onlyAuthorized {
         _mint(recipient, amount);
     }
 
     /// @inheritdoc IStakeUpToken
-    function mintInitialSupply(
-        Allocation[] memory allocations,
-        uint256 initialMintPercentage
-    ) external override onlyOwner {
-        uint256 sharesRemaining = initialMintPercentage;
-        uint256 length = allocations.length;
-
-        for (uint256 i = 0; i < length; ++i) {
-            if (sharesRemaining < allocations[i].percentOfSupply) {
-                revert Errors.ExceedsAvailableTokens();
-            }
-            sharesRemaining -= allocations[i].percentOfSupply;
-            _mintAndVest(allocations[i], _stakeupStaking);
-        }
-        if (totalSupply() > Constants.MAX_SUPPLY)
-            revert Errors.ExceedsMaxAllocationLimit();
-
-        if (sharesRemaining > 0) revert Errors.SharesNotFullyAllocated();
+    function globalSupply() public view returns (uint256) {
+        return _globalSupply;
     }
 
-    function _mintAndVest(
-        Allocation memory allocation,
-        address stakeupStaking
-    ) internal {
-        TokenRecipient[] memory recipients = allocation.recipients;
-        uint256 tokensReserved = (Constants.MAX_SUPPLY *
-            allocation.percentOfSupply) / Constants.FIXED_POINT_ONE;
-        uint256 allocationRemaining = tokensReserved;
-        uint256 length = recipients.length;
-
-        for (uint256 i = 0; i < length; ++i) {
-            address recipient = recipients[i].recipient;
-            uint256 amount = (tokensReserved *
-                recipients[i].percentOfAllocation) / Constants.FIXED_POINT_ONE;
-
-            if (recipient == address(0)) revert Errors.InvalidRecipient();
-            if (amount > allocationRemaining) {
-                revert Errors.ExceedsAvailableTokens();
-            }
-            allocationRemaining -= amount;
-
-            // Set the vesting state for this recipient in the vesting contract
-            IStakeUpStaking(stakeupStaking).vestTokens(recipient, amount);
-
-            // Mint the tokens to the vesting contract
-            _mint(stakeupStaking, amount);
-        }
-        if (allocationRemaining > 0) revert Errors.SharesNotFullyAllocated();
+    /**
+     * @notice Mints SUP tokens and starts vesting within the StakeUp Staking contract
+     * @dev This function is callable by the owner only
+     * @param to The address that will mint and stake SUP tokens.
+     * @param amount The amount of tokens to mint
+     */
+    function _mintAndStartVest(address to, uint256 amount) internal {
+        require(to != address(0), Errors.InvalidRecipient());
+        // require(amount > 0, Errors.ZeroAmount);
+        address stakeupStaking = _stakeupStaking;
+        // Set the vesting state for this recipient in the vesting contract
+        IStakeUpStaking(stakeupStaking).vestTokens(to, amount);
+        // Mint the tokens to the vesting contract
+        _mint(stakeupStaking, amount);
     }
 
-    function transferOwnership(
-        address newOwner
-    ) public override(Ownable, Ownable2Step) {
+    function transferOwnership(address newOwner) public override(Ownable, Ownable2Step) {
         super.transferOwnership(newOwner);
     }
 
-    function _transferOwnership(
-        address newOwner
-    ) internal override(Ownable, Ownable2Step) {
+    function _transferOwnership(address newOwner) internal override(Ownable, Ownable2Step) {
         super._transferOwnership(newOwner);
     }
 
     function _mint(address account, uint256 amount) internal override(ERC20) {
-        if (totalSupply() + amount > Constants.MAX_SUPPLY) {
+        if (globalSupply() + amount > Constants.MAX_SUPPLY) {
             revert Errors.ExceedsMaxSupply();
         }
+        _globalSupply += amount;
         super._mint(account, amount);
     }
 }

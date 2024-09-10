@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.26;
 
 import {IStakeUpToken} from "./IStakeUpToken.sol";
-import {IStTBY} from "./IStTBY.sol";
+import {IStUsdc} from "./IStUsdc.sol";
 import {ISUPVesting} from "./ISUPVesting.sol";
 
 interface IStakeUpStaking is ISUPVesting {
@@ -78,31 +78,29 @@ interface IStakeUpStaking is ISUPVesting {
     function processFees() external payable;
 
     /// @notice Returns the StakeUp Token
-    function getStakupToken() external view returns (IStakeUpToken);
+    function stakupToken() external view returns (IStakeUpToken);
 
     /// @notice Returns the stTBY token
-    function getStTBY() external view returns (IStTBY);
+    function stUsdc() external view returns (IStUsdc);
 
     /**
-     * @notice Adds stTBY rewards to the next period's reward pool
-     * @param shares Amount of shares of stTBY to add to the reward pool
+     * @notice Returns the amount of claimable rewards for a user
+     * @param account The address of the user to check claimable rewards for.
      */
-    function claimableRewards(address shares) external view returns (uint256);
+    function claimableRewards(address account) external view returns (uint256);
 
     /// @notice Returns the total amount of STAKEUP staked within the contract
     function totalStakeUpStaked() external view returns (uint256);
 
     /// @notice Gets the information for the current rewards period
-    function getRewardData() external view returns (RewardData memory);
+    function rewardData() external view returns (RewardData memory);
 
     /**
      * @notice Gets the staking data for a user
      * @param user Address of the user to get the staking data for
      */
-    function getUserStakingData(
-        address user
-    ) external view returns (StakingData memory);
+    function userStakingData(address user) external view returns (StakingData memory);
 
     /// @notice Returns the last block that global reward data was updated
-    function getLastRewardBlock() external view returns (uint256);
+    function lastRewardBlock() external view returns (uint256);
 }

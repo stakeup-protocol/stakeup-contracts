@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.26;
 
 import {OFT} from "@LayerZero/oft/OFT.sol";
 import {OAppCore} from "@LayerZero/oapp/OApp.sol";
@@ -7,6 +7,7 @@ import {OAppCore} from "@LayerZero/oapp/OApp.sol";
 import {StakeUpErrors as Errors} from "../../helpers/StakeUpErrors.sol";
 
 import {ControllerBase} from "./ControllerBase.sol";
+import {IYieldRelayer} from "../../interfaces/IYieldRelayer.sol";
 
 /**
  * @title OFTController
@@ -14,26 +15,31 @@ import {ControllerBase} from "./ControllerBase.sol";
  *        OFTs within the StakeUp ecosystem
  */
 abstract contract OFTController is ControllerBase, OFT {
+    IYieldRelayer internal _yieldRelayer;
+
     // ================= Constructor =================
-    constructor(
-        string memory tokenName,
-        string memory tokenSymbol,
-        address layerZeroEndpoint,
-        address bridgeOperator
-    )
-        OFT(tokenName, tokenSymbol, layerZeroEndpoint, bridgeOperator)
-        ControllerBase(bridgeOperator)
+    constructor(string memory tokenName, string memory tokenSymbol, address layerZeroEndpoint, address bridgeOperator_)
+        OFT(tokenName, tokenSymbol, layerZeroEndpoint, bridgeOperator_)
+        ControllerBase(bridgeOperator_)
     {
         // Solhint-disable-previous-line no-empty-blocks
     }
 
     // =================== Functions ===================
 
+    /**
+     * @notice Sets the yield relayer the network
+     * @param yieldRelayer The address of the new yield relayer
+     */
+    function setYieldRelayer(address yieldRelayer) external onlyBridgeOperator {
+        if (yieldRelayer == address(0)) {
+            revert Errors.ZeroAddress();
+        }
+        _yieldRelayer = IYieldRelayer(yieldRelayer);
+    }
+
     /// @inheritdoc ControllerBase
-    function setPeer(
-        uint32 eid,
-        bytes32 peer
-    ) public virtual override(ControllerBase, OAppCore) onlyBridgeOperator {
+    function setPeer(uint32 eid, bytes32 peer) public virtual override(ControllerBase, OAppCore) onlyBridgeOperator {
         if (eid == 0) {
             revert Errors.InvalidPeerID();
         }
@@ -45,9 +51,7 @@ abstract contract OFTController is ControllerBase, OFT {
     }
 
     /// @inheritdoc ControllerBase
-    function forceSetDelegate(
-        address newDelegate
-    ) external override onlyBridgeOperator {
+    function forceSetDelegate(address newDelegate) external override onlyBridgeOperator {
         if (newDelegate == address(0)) {
             revert Errors.ZeroAddress();
         }
