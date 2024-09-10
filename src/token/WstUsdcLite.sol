@@ -23,7 +23,7 @@ contract WstUsdcLite is IWstUsdcLite, ERC20 {
 
     // ================== Constructor ==================
 
-    constructor(address stUsdc_) ERC20("wrapped staked USDC", "wstUsdc") {
+    constructor(address stUsdc_) ERC20("wrapped staked USDC", "wstUSDC") {
         _stUsdc = IStUsdc(stUsdc_);
     }
 

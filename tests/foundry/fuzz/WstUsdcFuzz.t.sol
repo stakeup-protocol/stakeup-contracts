@@ -12,7 +12,7 @@ contract WstUsdcFuzzTest is StUsdcSetup {
 
     function testFuzzDepositAsset(uint256 amount) public {
         amount = bound(amount, 1, 100_000_000_000e6);
-        
+
         vm.startPrank(alice);
         stableToken.mint(alice, amount);
         stableToken.approve(address(wstUsdc), amount);

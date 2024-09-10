@@ -33,7 +33,14 @@ contract StUsdcUnitTest is StUsdcSetup {
 
     function test_deployWithInvalidAsset() public {
         vm.expectRevert(Errors.InvalidAddress.selector);
-        new StUsdc(address(0), address(bloomPool), address(staking), address(wstUsdc), address(layerZeroEndpointA), address(owner));
+        new StUsdc(
+            address(0),
+            address(bloomPool),
+            address(staking),
+            address(wstUsdc),
+            address(layerZeroEndpointA),
+            address(owner)
+        );
     }
 
     function test_depositOfAlreadyRedeemedTby() public {
@@ -89,7 +96,7 @@ contract StUsdcUnitTest is StUsdcSetup {
         vm.startPrank(alice);
         vm.expectEmit(true, true, true, true);
         emit IERC20.Transfer(alice, bob, 50e18);
-        stUsdc.transfer(bob, 50e18);  
+        stUsdc.transfer(bob, 50e18);
 
         assertEq(stUsdc.balanceOf(bob), 50e18);
         assertEq(stUsdc.balanceOf(alice), 50e18);

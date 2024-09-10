@@ -103,6 +103,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         // On the first redemption we will increment this value, so we start at 0.
         _lastRedeemedTbyId = type(uint256).max;
+        _lastUsdPerShare = Math.WAD;
     }
 
     // =================== Functions ==================
@@ -155,25 +156,44 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
     /// @inheritdoc IStUsdc
     function poke() external nonReentrant {
-        IBloomPool pool = _bloomPool;
-        uint256 lastUpdate = lastRateUpdate();
         uint256 currentTimestamp = block.timestamp;
-        if (currentTimestamp - lastUpdate >= 24 hours) {
-            _lastRateUpdate = currentTimestamp;
-            // Open a lend order in the Bloom Pool to auto-compound USDC
-            _autoLendAsset(pool);
+        uint256 lastUpdate = _lastRateUpdate;
+        if (currentTimestamp - lastUpdate < 24 hours) return;
 
-            // Calculate the value of USDC and TBYs backed by the contract
-            //    and update the yield per share.
-            uint256 protocolValue = _protocolValue(pool);
-            uint256 usdPerShare = protocolValue.divWad(_globalShares);
-            _setUsdPerShare(usdPerShare);
+        _lastRateUpdate = currentTimestamp;
+        IBloomPool pool = _bloomPool;
 
-            // Harvest matured TBYs if necessary
-            _harvest();
-            // Distribute rewards to the user who poked the contract
-            _distributePokeRewards();
+        // Open a lend order in the Bloom Pool to auto-compound USDC
+        _autoLendAsset(pool);
+
+        // Calculate the value of USDC and TBYs backed by the contract
+        uint256 globalShares_ = _globalShares;
+        uint256 protocolValue = _protocolValue(pool);
+        uint256 newUsdPerShare = protocolValue.divWad(globalShares_);
+        uint256 lastUsdPerShare = _lastUsdPerShare;
+
+        if (newUsdPerShare > lastUsdPerShare) {
+            uint256 yieldPerShare = newUsdPerShare - lastUsdPerShare;
+            // Calculate yield for users and performance fee
+            (uint256 userYield, uint256 fee) = _calculateYieldAndFee(yieldPerShare, globalShares_);
+            newUsdPerShare = (_totalUsd + userYield).divWad(globalShares_);
+            _setUsdPerShare(newUsdPerShare);
+            _processFee(fee);
         }
+
+        // Harvest matured TBYs and distribute rewards
+        _harvest();
+        _distributePokeRewards();
+    }
+
+    function _calculateYieldAndFee(uint256 yieldPerShare, uint256 globalShares_)
+        private
+        pure
+        returns (uint256 userYield, uint256 fee)
+    {
+        uint256 totalYield = yieldPerShare.mulWad(globalShares_);
+        fee = (totalYield * Constants.PERFORMANCE_BPS) / Constants.BPS_DENOMINATOR;
+        userYield = totalYield - fee;
     }
 
     /**
@@ -208,20 +228,19 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     }
 
     /**
-     * @notice Process the proceeds of TBYs and pay fees to StakeUp
-     *   Staking
-     * @param yield The amount of yield accrued scaled to 1e18
+     * @notice Distributes fees to StakeUp Staking
+     * @param fee The fee amount in USD scaled to 1e18.
      */
-    function _processYield(uint256 yield) internal {
-        uint256 performanceFee = (yield * Constants.PERFORMANCE_BPS) / Constants.BPS_DENOMINATOR;
-
-        if (performanceFee > 0) {
-            uint256 sharesFeeAmount = sharesByUsd(performanceFee);
+    function _processFee(uint256 fee) internal {
+        if (fee > 0) {
+            uint256 sharesFeeAmount = sharesByUsd(fee);
             _mintShares(address(_stakeupStaking), sharesFeeAmount);
+            _setTotalUsd(_getTotalUsd() + fee);
+
             _globalShares += sharesFeeAmount;
             emit FeeCaptured(sharesFeeAmount);
+            _stakeupStaking.processFees();
         }
-        _stakeupStaking.processFees();
     }
 
     /**
@@ -309,10 +328,8 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         uint256 amount = _tby.balanceOf(address(this), tbyId);
         if (amount == 0) return;
 
-        // Redeem TBYs and calculate the yield
-        uint256 assetsWithdrawn = pool.redeemLender(tbyId, amount);
-        uint256 yieldScaled = (assetsWithdrawn - amount) * _scalingFactor;
-        _processYield(yieldScaled);
+        // Redeem TBYs
+        pool.redeemLender(tbyId, amount);
     }
 
     /// @notice Calulates and mints SUP rewards to users who have poked the contract

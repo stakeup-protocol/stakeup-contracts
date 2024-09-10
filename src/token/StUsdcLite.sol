@@ -37,6 +37,9 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     /// @dev Last rate update timestamp
     uint256 internal _lastRateUpdate;
 
+    /// @dev The usdPerShare value at the time of the last rate update.
+    uint256 internal _lastUsdPerShare;
+
     // =================== Modifiers ===================
 
     modifier onlyRelayer() {
@@ -49,7 +52,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     // ================== Constructor ==================
 
     constructor(address layerZeroEndpoint, address bridgeOperator)
-        OFTController("Staked TBY", "stTBY", layerZeroEndpoint, bridgeOperator)
+        OFTController("staked USDC", "stUSDC", layerZeroEndpoint, bridgeOperator)
     {
         _lastRateUpdate = block.timestamp;
     }
@@ -213,7 +216,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
         if (totalShares_ == 0) {
             return sharesAmount;
         }
-        return sharesAmount.mulWadUp(_getTotalUsd()).divWadUp(totalShares_);
+        return sharesAmount.mulWad(_getTotalUsd()).divWad(totalShares_);
     }
 
     /// @inheritdoc IStUsdcLite

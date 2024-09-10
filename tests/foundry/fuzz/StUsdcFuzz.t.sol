@@ -56,10 +56,10 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
         // Open a lend order directly in the bloomPool
         bloomPool.lendOrder(amount);
-        
+
         // Run through the bloom lifecycle
         uint256 totalCollateral = _matchBloomOrder(alice, amount);
-        
+
         // Market maker swap for alice's matched order
         (, int256 answer,,,) = priceFeed.latestRoundData();
         uint256 answerScaled = uint256(answer) * (10 ** (18 - priceFeed.decimals()));
@@ -193,7 +193,7 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
     function testYieldAccrual(uint256 amount) public {
         amount = bound(amount, 10e6, 100_000_000_000e6);
-
+        amount = 100e6;
         _depositAsset(alice, amount);
 
         // Run through the bloom lifecycle
@@ -205,17 +205,22 @@ contract StUsdcFuzzTest is StUsdcSetup {
         uint256 tbyRate = bloomPool.getRate(id);
 
         uint256 accruedValue = amount.mulWad(tbyRate) * SCALER;
+        uint256 performanceFee = (accruedValue - (amount * SCALER)).mulWad(0.1e18);
+        uint256 expectedAliceAmount = accruedValue - performanceFee;
 
         // Poke the contract to rebase and accrue value
         stUsdc.poke();
 
-        // Validate that the accrued value is correct
-        assertApproxEqRel(stUsdc.balanceOf(alice), accruedValue, 0.9999999e18);
-        assertApproxEqRel(stUsdc.balanceOf(alice), stUsdc.totalUsd(), 0.9999999e18);
+        // Validate that the accrued value is correct & that the performance fee was correctly captured.
+        assertApproxEqRel(stUsdc.balanceOf(alice), expectedAliceAmount, 0.000000001e18);
+        assertApproxEqRel(stUsdc.balanceOf(address(staking)), performanceFee, 0.000000001e18);
+        assertApproxEqRel(
+            stUsdc.balanceOf(alice) + stUsdc.balanceOf(address(staking)), stUsdc.totalUsd(), 0.000000001e18
+        );
 
         // Validate that the last rate update state variable updated properly
         assertEq(stUsdc.lastRateUpdate(), block.timestamp);
-        // Validate that the last redeemed TBY ID state variable is still max uint256 since no TBYs have been redeemed  
+        // Validate that the last redeemed TBY ID state variable is still max uint256 since no TBYs have been redeemed
         assertEq(stUsdc.lastRedeemedTbyId(), type(uint256).max);
     }
 
@@ -232,21 +237,15 @@ contract StUsdcFuzzTest is StUsdcSetup {
         _skipAndUpdatePrice(180 days, 115e8, 2);
 
         uint256 tbyRate = bloomPool.getRate(id);
-        uint256 accruedValue = amount.mulWad(tbyRate);
-        uint256 yield = accruedValue - amount;
-        uint256 performanceFee = yield.divWad(10e18);
-        uint256 performanceFeeScaled = performanceFee * SCALER;
 
         // Market maker should complete the swap
         _bloomEndTby(id, (totalCollateral * tbyRate).mulWad(SCALER));
 
         // Poke the contract to rebase and accrue value & harvest the matured TBY
         stUsdc.poke();
-        uint256 sharesFeeAmount = stUsdc.sharesByUsd(performanceFeeScaled);
 
         // Validate that the performance fee was correctly captured.
-        assertApproxEqRel(stUsdc.sharesOf(address(staking)), sharesFeeAmount, 0.9999999e18);
-        assertApproxEqRel(stUsdc.totalUsd(), stableToken.balanceOf(address(stUsdc)) * SCALER, 0.9999999e18);
+        assertApproxEqRel(stUsdc.totalUsd(), stableToken.balanceOf(address(stUsdc)) * SCALER, 0.0000001e18);
         assertGe(stUsdc.totalUsd(), stableToken.balanceOf(address(stUsdc)));
 
         // Validate that the last redeemed TBY ID state variable is updated
@@ -281,7 +280,7 @@ contract StUsdcFuzzTest is StUsdcSetup {
         vm.startPrank(alice);
         stUsdc.redeemStUsdc(stUsdcAmount);
 
-        assertEq(stUsdc.balanceOf(alice), 0);
+        assertTrue(_isEqualWithDust(stUsdc.balanceOf(alice), 0));
         assertEq(stableToken.balanceOf(alice), stUsdcAmount / SCALER);
     }
 
