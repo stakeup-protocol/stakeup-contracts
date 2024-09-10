@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.26;
 
 import {OApp, OAppCore} from "@LayerZero/oapp/OApp.sol";
 
@@ -14,19 +14,16 @@ import {ControllerBase} from "./ControllerBase.sol";
  */
 abstract contract OAppController is ControllerBase, OApp {
     // ================= Constructor =================
-    constructor(
-        address layerZeroEndpoint,
-        address bridgeOperator
-    ) OApp(layerZeroEndpoint, bridgeOperator) ControllerBase(bridgeOperator) {
+    constructor(address layerZeroEndpoint, address bridgeOperator_)
+        OApp(layerZeroEndpoint, bridgeOperator_)
+        ControllerBase(bridgeOperator_)
+    {
         // Solhint-disable-previous-line no-empty-blocks
     }
 
     // =================== Functions ===================
     /// @inheritdoc ControllerBase
-    function setPeer(
-        uint32 eid,
-        bytes32 peer
-    ) public virtual override(ControllerBase, OAppCore) onlyBridgeOperator {
+    function setPeer(uint32 eid, bytes32 peer) public virtual override(ControllerBase, OAppCore) onlyBridgeOperator {
         if (eid == 0) {
             revert Errors.InvalidPeerID();
         }
@@ -38,9 +35,7 @@ abstract contract OAppController is ControllerBase, OApp {
     }
 
     /// @inheritdoc ControllerBase
-    function forceSetDelegate(
-        address newDelegate
-    ) external override onlyBridgeOperator {
+    function forceSetDelegate(address newDelegate) external override onlyBridgeOperator {
         if (newDelegate == address(0)) {
             revert Errors.ZeroAddress();
         }

@@ -1,3 +1,6 @@
+# Broadcast files
+broadcast/
+
 # Compiler files
 cache/
 out/

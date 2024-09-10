@@ -8,23 +8,43 @@ optimizer = true
 optimizer-runs = 150
 evm_version = "paris"
 
-solc = "0.8.22"
+solc = "0.8.26"
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
 
 remappings = [
     "solmate/=lib/solmate/src/",
     '@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/',
-    '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
     "solady/=lib/solady/src/",
     "@LayerZero/=lib/LayerZero-v2/oapp/contracts/",
     "@LayerZero-Protocol/=lib/LayerZero-v2/protocol/contracts/",
     "@layerzerolabs/=lib/LayerZero-v2/oapp/node_modules/@layerzerolabs/",
     "@LayerZeroTesting/=lib/LayerZero-v2/oapp/test/",
     "solidity-bytes-utils/=lib/LayerZero-v2/oapp/node_modules/solidity-bytes-utils/",
+    "@bloom-v2/=lib/bloom-v2/src/",
 ]
 
+fs_permissions = [{ access = "read", path = "./lib/bloom-v2/out/BloomPool.sol/BloomPool.json"}]
+
+gas_reports = ["*"]
+gas_reports_ignore = [
+    "MockERC20",
+    "MockCurveFactory",
+    "MockCurveGauge",
+    "MockEndpoint",
+    "MockDripRewarder",
+    "MockERC20",
+    "MockPriceFeed", 
+    "StUsdcSetup"
+]
+
+[fuzz]
+runs = 10000
+
 [rpc_endpoints]
-sepolia = "${SEPOLIA_RPC_URL}"
+arbitrum = "${ARBITRUM_RPC_URL}"
+sepolia_sepolia = "${SEPOLIA_RPC_URL}"
 
 [etherscan]
-sepolia = { key = "${ETHERSCAN_API_KEY}"}
+sepolia_sepolia = { key = "${ETHERSCAN_API_KEY}"}
+unknown_chain = { key = "${TENDERLY_ACCESS_KEY}", chain = 84537357, url = "${VERIFIER_URL}" }
+

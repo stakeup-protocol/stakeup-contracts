@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.26;
 
 interface ICurvePoolGauge {
     /**
@@ -24,10 +24,7 @@ interface ICurvePoolGauge {
      * @param reward_token The address of the reward token to deposit
      * @param amount Amount of reward tokens to deposit
      */
-    function deposit_reward_token(
-        address reward_token,
-        uint256 amount
-    ) external;
+    function deposit_reward_token(address reward_token, uint256 amount) external;
 
     /**
      * @notice Sets the gauge manager

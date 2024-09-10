@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.26;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -11,27 +11,24 @@ import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 import {SUPVesting} from "./SUPVesting.sol";
 
-import {IStTBY} from "../interfaces/IStTBY.sol";
+import {IStUsdc} from "../interfaces/IStUsdc.sol";
 import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 
 /**
  * @title StakeUpStaking
- * @notice Allows users to stake their STAKEUP tokens to earn stTBY rewards.
+ * @notice Allows users to stake their STAKEUP tokens to earn stUsdc rewards.
  *         Tokens can be staked for any amount of time and can be unstaked at any time.
  *         The rewards tracking system is based on the methods similar to those used by
  *         Pendle Finance for rewarding Liquidity Providers.
  * @dev Rewards will be streamed to the staking contract anytime fees are collected and
- *      are immediately claimable by the user. The rewards are denominated in stTBY shares.
+ *      are immediately claimable by the user. The rewards are denominated in stUsdc shares.
  */
 contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using FixedPointMathLib for uint256;
 
     // =================== Storage ===================
-
-    /// @notice The stTBY token
-    IStTBY private immutable _stTBY;
 
     /// @dev Global reward data
     RewardData private _rewardData;
@@ -44,6 +41,11 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
 
     /// @dev Mapping of users to their staking data
     mapping(address => StakingData) private _stakingData;
+
+    // =================== Immutables ===================
+
+    /// @notice The stUsdc token
+    IStUsdc private immutable _stUsdc;
 
     // =================== Modifiers ===================
 
@@ -60,8 +62,8 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @notice Only the reward token or the contract itself can call this function
-    modifier onlyStTBY() {
-        if (msg.sender != address(_stTBY)) {
+    modifier onlyStUsdc() {
+        if (msg.sender != address(_stUsdc)) {
             revert Errors.UnauthorizedCaller();
         }
         _;
@@ -69,41 +71,42 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
 
     // ================= Constructor =================
 
-    constructor(address stakeupToken, address stTBY) SUPVesting(stakeupToken) {
-        _stTBY = IStTBY(stTBY);
+    constructor(address stakeupToken_, address stUsdc_) SUPVesting(stakeupToken_) {
+        _stUsdc = IStUsdc(stUsdc_);
         _lastRewardBlock = block.number;
     }
 
     // ================== functions ==================
 
     /// @inheritdoc IStakeUpStaking
-    function stake(
-        uint256 stakeupAmount
-    ) external override updateIndex distributeRewards {
+    function stake(uint256 stakeupAmount) external override updateIndex distributeRewards {
         _stake(msg.sender, stakeupAmount);
     }
 
     /// @inheritdoc IStakeUpStaking
-    function unstake(
-        uint256 stakeupAmount,
-        bool harvestRewards
-    ) external override nonReentrant updateIndex distributeRewards {
-        StakingData storage userStakingData = _stakingData[msg.sender];
+    function unstake(uint256 stakeupAmount, bool harvestRewards)
+        external
+        override
+        nonReentrant
+        updateIndex
+        distributeRewards
+    {
+        StakingData storage data = _stakingData[msg.sender];
 
-        if (userStakingData.amountStaked == 0) revert Errors.UserHasNoStake();
+        if (data.amountStaked == 0) revert Errors.UserHasNoStake();
 
-        if (stakeupAmount > userStakingData.amountStaked) {
-            stakeupAmount = userStakingData.amountStaked;
+        if (stakeupAmount > data.amountStaked) {
+            stakeupAmount = data.amountStaked;
         }
 
         if (harvestRewards) {
-            uint256 rewardAmount = userStakingData.rewardsAccrued;
+            uint256 rewardAmount = data.rewardsAccrued;
             if (rewardAmount > 0) {
                 _transferRewards(msg.sender);
             }
         }
 
-        userStakingData.amountStaked -= uint128(stakeupAmount);
+        data.amountStaked -= uint128(stakeupAmount);
         _totalStakeUpStaked -= stakeupAmount;
 
         IERC20(address(_stakeupToken)).safeTransfer(msg.sender, stakeupAmount);
@@ -120,38 +123,24 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeUpStaking
-    function processFees()
-        public
-        payable
-        override
-        onlyStTBY
-        nonReentrant
-        updateIndex
-    {
+    function processFees() public payable override onlyStUsdc nonReentrant updateIndex {
         // solhint-ignore-previous-line no-empty-blocks
     }
 
     /// @inheritdoc IStakeUpStaking
-    function claimableRewards(
-        address account
-    ) external view override returns (uint256) {
-        return
-            _stakingData[account].rewardsAccrued +
-            _calculateRewardDelta(
-                _stakingData[account],
-                account,
-                _rewardData.index
-            );
+    function claimableRewards(address account) external view override returns (uint256) {
+        return _stakingData[account].rewardsAccrued
+            + _calculateRewardDelta(_stakingData[account], account, _rewardData.index);
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getStakupToken() external view returns (IStakeUpToken) {
+    function stakupToken() external view returns (IStakeUpToken) {
         return _stakeupToken;
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getStTBY() external view returns (IStTBY) {
-        return _stTBY;
+    function stUsdc() external view returns (IStUsdc) {
+        return _stUsdc;
     }
 
     /// @inheritdoc IStakeUpStaking
@@ -160,35 +149,29 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getRewardData() external view returns (RewardData memory) {
+    function rewardData() external view returns (RewardData memory) {
         return _rewardData;
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getUserStakingData(
-        address user
-    ) external view returns (StakingData memory) {
+    function userStakingData(address user) external view returns (StakingData memory) {
         return _stakingData[user];
     }
 
     /// @inheritdoc IStakeUpStaking
-    function getLastRewardBlock() external view returns (uint256) {
+    function lastRewardBlock() external view returns (uint256) {
         return _lastRewardBlock;
     }
 
     /// @dev Transfers the staked tokens to the staking contract and updates the user's total staked amount
     function _stake(address user, uint256 amount) internal nonReentrant {
-        StakingData storage userStakingData = _stakingData[user];
+        StakingData storage data = _stakingData[user];
 
         if (amount == 0) revert Errors.ZeroTokensStaked();
 
-        IERC20(address(_stakeupToken)).safeTransferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
+        IERC20(address(_stakeupToken)).safeTransferFrom(msg.sender, address(this), amount);
 
-        userStakingData.amountStaked += uint128(amount);
+        data.amountStaked += uint128(amount);
         _totalStakeUpStaked += amount;
 
         emit StakeUpStaked(user, amount);
@@ -204,12 +187,10 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         if (_lastRewardBlock != block.number) {
             _lastRewardBlock = block.number;
 
-            uint256 totalStakeUpLocked = _totalStakeUpStaked +
-                _totalStakeUpVesting;
+            uint256 totalStakeUpLocked = _totalStakeUpStaked + _totalStakeUpVesting;
             RewardData storage rewards = _rewardData;
 
-            uint256 accrued = _stTBY.sharesOf(address(this)) -
-                rewards.lastShares;
+            uint256 accrued = _stUsdc.sharesOf(address(this)) - rewards.lastShares;
 
             if (rewards.index == 0) {
                 rewards.index = uint128(Constants.INITIAL_REWARD_INDEX);
@@ -238,25 +219,21 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     function _distributeRewards(address user) internal returns (uint256) {
         if (user == address(0)) revert Errors.ZeroAddress();
 
-        StakingData storage userStakingData = _stakingData[user];
+        StakingData storage data = _stakingData[user];
 
-        if (userStakingData.index == 0) {
-            userStakingData.index = uint128(Constants.INITIAL_REWARD_INDEX);
+        if (data.index == 0) {
+            data.index = uint128(Constants.INITIAL_REWARD_INDEX);
         }
 
         uint256 rewardIndex = _rewardData.index;
-        if (rewardIndex == userStakingData.index) return 0;
+        if (rewardIndex == data.index) return 0;
 
-        uint256 rewardDelta = _calculateRewardDelta(
-            userStakingData,
-            user,
-            rewardIndex
-        );
+        uint256 rewardDelta = _calculateRewardDelta(data, user, rewardIndex);
 
-        userStakingData.index = uint128(rewardIndex);
-        userStakingData.rewardsAccrued += uint128(rewardDelta);
+        data.index = uint128(rewardIndex);
+        data.rewardsAccrued += uint128(rewardDelta);
 
-        return userStakingData.rewardsAccrued;
+        return data.rewardsAccrued;
     }
 
     /**
@@ -267,11 +244,11 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
      * @param user The users address who's reward delta is being calculated
      * @param globalIndex The global reward index the calculation is occurring at
      */
-    function _calculateRewardDelta(
-        StakingData memory userData,
-        address user,
-        uint256 globalIndex
-    ) internal view returns (uint256) {
+    function _calculateRewardDelta(StakingData memory userData, address user, uint256 globalIndex)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 userIndex = userData.index;
 
         if (userIndex == 0) {
@@ -282,7 +259,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
             return 0;
         }
 
-        uint256 amountStaked = userData.amountStaked + getCurrentBalance(user);
+        uint256 amountStaked = userData.amountStaked + currentBalance(user);
         uint256 delta = globalIndex - userIndex;
 
         return amountStaked.mulWad(delta);
@@ -294,13 +271,13 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
      */
     function _transferRewards(address user) internal {
         RewardData storage rewards = _rewardData;
-        StakingData storage userStakingData = _stakingData[user];
+        StakingData storage data = _stakingData[user];
 
-        uint128 rewardsEarned = userStakingData.rewardsAccrued;
+        uint128 rewardsEarned = data.rewardsAccrued;
         if (rewardsEarned > 0) {
-            userStakingData.rewardsAccrued = 0;
+            data.rewardsAccrued = 0;
             rewards.lastShares -= rewardsEarned;
-            _stTBY.transferShares(user, rewardsEarned);
+            _stUsdc.transferShares(user, rewardsEarned);
         }
     }
 

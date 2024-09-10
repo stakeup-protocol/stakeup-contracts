@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.26;
 
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -24,14 +24,16 @@ abstract contract SUPVesting is ISUPVesting {
 
     // =================== Storage ===================
 
-    /// @notice The STAKEUP token
-    IStakeUpToken internal immutable _stakeupToken;
-
     /// @notice Total amount of STAKEUP locked in vesting
     uint256 internal _totalStakeUpVesting;
 
     /// @notice A mapping of user addresses to their vested token allocations
     mapping(address => VestedAllocation) internal _tokenAllocations;
+
+    // =================== Immutables ===================
+
+    /// @notice The STAKEUP token
+    IStakeUpToken internal immutable _stakeupToken;
 
     // =================== Modifiers ===================
 
@@ -44,8 +46,8 @@ abstract contract SUPVesting is ISUPVesting {
 
     // ================= Constructor =================
 
-    constructor(address stakeupToken) {
-        _stakeupToken = IStakeUpToken(stakeupToken);
+    constructor(address stakeupToken_) {
+        _stakeupToken = IStakeUpToken(stakeupToken_);
     }
 
     // =================== Functions ===================
@@ -65,12 +67,8 @@ abstract contract SUPVesting is ISUPVesting {
             _tokenAllocations[account].startingBalance = amount;
             _tokenAllocations[account].currentBalance = amount;
         } else {
-            _tokenAllocations[account].startingBalance =
-                allocation.startingBalance +
-                amount;
-            _tokenAllocations[account].currentBalance =
-                allocation.currentBalance +
-                amount;
+            _tokenAllocations[account].startingBalance = allocation.startingBalance + amount;
+            _tokenAllocations[account].currentBalance = allocation.currentBalance + amount;
         }
     }
 
@@ -80,7 +78,7 @@ abstract contract SUPVesting is ISUPVesting {
 
         VestedAllocation storage allocation = _tokenAllocations[msg.sender];
 
-        uint256 amount = getAvailableTokens(msg.sender);
+        uint256 amount = availableTokens(msg.sender);
 
         _totalStakeUpVesting -= amount;
         allocation.currentBalance -= amount;
@@ -95,28 +93,20 @@ abstract contract SUPVesting is ISUPVesting {
     }
 
     /// @inheritdoc ISUPVesting
-    function getAvailableTokens(address account) public view returns (uint256) {
+    function availableTokens(address account) public view returns (uint256) {
         VestedAllocation memory allocation = _tokenAllocations[account];
-        uint256 timeElapsed = _validateTimeElapsed(
-            block.timestamp - allocation.vestingStartTime
-        );
-        uint256 claimedTokens = allocation.startingBalance -
-            allocation.currentBalance;
+        uint256 timeElapsed = _validateTimeElapsed(block.timestamp - allocation.vestingStartTime);
+        uint256 claimedTokens = allocation.startingBalance - allocation.currentBalance;
 
         if (timeElapsed < Constants.CLIFF_DURATION) {
             return 0;
         } else {
-            return
-                (allocation.startingBalance * timeElapsed) /
-                Constants.VESTING_DURATION -
-                claimedTokens;
+            return (allocation.startingBalance * timeElapsed) / Constants.VESTING_DURATION - claimedTokens;
         }
     }
 
     /// @inheritdoc ISUPVesting
-    function getCurrentBalance(
-        address account
-    ) public view override returns (uint256) {
+    function currentBalance(address account) public view override returns (uint256) {
         return _tokenAllocations[account].currentBalance;
     }
 
@@ -124,9 +114,7 @@ abstract contract SUPVesting is ISUPVesting {
      * @notice Returns the time that has elapsed that is valid for vesting purposes
      * @param timeUnderVesting The time that has elapsed since the vesting start time
      */
-    function _validateTimeElapsed(
-        uint256 timeUnderVesting
-    ) internal pure returns (uint256) {
+    function _validateTimeElapsed(uint256 timeUnderVesting) internal pure returns (uint256) {
         return Math.min(timeUnderVesting, Constants.VESTING_DURATION);
     }
 

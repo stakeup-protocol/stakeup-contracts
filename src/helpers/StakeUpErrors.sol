@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.26;
 
 library StakeUpErrors {
     // =================== Curve Gauge Distributor ===================
@@ -54,21 +54,15 @@ library StakeUpErrors {
     /// @notice The total number of shares have not been fully allocated
     error SharesNotFullyAllocated();
 
-    // ========================= StTBY Token ===========================
-    /// @notice Parameter out of bounds
-    error ParameterOutOfBounds();
-
+    // ========================= StUsdc Token ===========================
     /// @notice Insufficient balance
     error InsufficientBalance();
 
-    /// @notice Invalid Redemption of Underlying Tokens
-    error InvalidRedemption();
+    /// @notice TBY redeemable
+    error RedeemableTbyNotAllowed();
 
-    /// @notice Invalid Underlying Token
-    error InvalidUnderlyingToken();
-
-    /// @notice TBY not active
-    error TBYNotActive();
+    /// @notice Redemptions are not allowed, while mint rewards are still available
+    error RedemptionsNotAllowed();
 
     // ========================= General ===========================
     /// @notice Zero amount
@@ -80,7 +74,7 @@ library StakeUpErrors {
     /// @dev Error emitted when caller is not allowed to execute a function
     error UnauthorizedCaller();
 
-    /// @notice WstTBY already initialized
+    /// @notice WstUsdc already initialized
     error AlreadyInitialized();
 
     /// @notice Emitted if the caller passes an invalid address

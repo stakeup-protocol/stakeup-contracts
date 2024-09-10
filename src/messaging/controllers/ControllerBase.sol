@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.22;
+pragma solidity 0.8.26;
 
 import {OFT} from "@LayerZero/oft/OFT.sol";
 import {OApp, OAppCore} from "@LayerZero/oapp/OApp.sol";
@@ -23,25 +23,23 @@ abstract contract ControllerBase {
     }
 
     // ================= Constructor =================
-    constructor(address bridgeOperator) {
-        if (bridgeOperator == address(0)) revert Errors.ZeroAddress();
-        _bridgeOperator = bridgeOperator;
+    constructor(address bridgeOperator_) {
+        if (bridgeOperator_ == address(0)) revert Errors.ZeroAddress();
+        _bridgeOperator = bridgeOperator_;
     }
 
     // =================== Functions ==================
     /**
      * @notice Sets the bridge operator address
-     * @param newBridgeOperator The new bridge operator address
+     * @param bridgeOperator_ The new bridge operator address
      */
-    function setBridgeOperator(
-        address newBridgeOperator
-    ) external onlyBridgeOperator {
-        if (newBridgeOperator == address(0)) revert Errors.ZeroAddress();
-        _bridgeOperator = newBridgeOperator;
+    function setBridgeOperator(address bridgeOperator_) external onlyBridgeOperator {
+        if (bridgeOperator_ == address(0)) revert Errors.ZeroAddress();
+        _bridgeOperator = bridgeOperator_;
     }
 
     /// @notice Get the Bridge Operator address
-    function getBridgeOperator() external view returns (address) {
+    function bridgeOperator() external view returns (address) {
         return _bridgeOperator;
     }
 
