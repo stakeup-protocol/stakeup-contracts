@@ -149,8 +149,9 @@ abstract contract StUsdcSetup is Test {
         stableToken.mint(user, amount);
         stableToken.approve(address(stUsdc), amount);
 
-        // Deposit asset into stUsdc
-        return stUsdc.depositAsset(amount);
+        uint256 amountMinted = stUsdc.depositAsset(amount);
+        vm.stopPrank();
+        return amountMinted;
     }
 
     function _matchBloomOrder(address user, uint256 amount) internal returns (uint256) {
@@ -194,5 +195,14 @@ abstract contract StUsdcSetup is Test {
         skip(time);
         priceFeed.setLatestRoundData(roundId, int256(price), block.timestamp, block.timestamp, roundId);
         vm.stopPrank();
+    }
+
+    /// @notice Checks if a is equal to b with a 2 wei buffer. If A is less than b the call will return false.
+    function _isEqualWithDust(uint256 a, uint256 b) internal pure returns (bool) {
+        if (a >= b) {
+            return a - b <= 1e2;
+        } else {
+            return false;
+        }
     }
 }

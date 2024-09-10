@@ -57,7 +57,7 @@ contract SupFuzzTest is StUsdcSetup {
 
         // Check that the tokens were minted to the staking contract
         assertEq(supToken.balanceOf(address(staking)), initialStakingBalance + amount);
-        
+
         // Check that the global supply increased
         assertEq(supToken.globalSupply(), initialSupply + amount);
 
