@@ -1,0 +1,11 @@
+{
+  "name": "StakeUp",
+  "version": "1.0.0",
+  "repository": "https://github.com/Blueberryfi/StakeUp.git",
+  "author": "0xSpraggins <0xSpraggins@proton.me>",
+  "license": "MIT",
+  "scripts": {
+    "build": "bash compile.sh",
+    "test": "bash test.sh"
+  }
+}
