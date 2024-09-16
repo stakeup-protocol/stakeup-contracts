@@ -12,7 +12,7 @@ interface IWstUsdcLite {
     event StUsdcWrapped(address indexed user, uint256 stUsdcAmount, uint256 wstUsdcAmount);
 
     /// @notice Emitted when wstUsdc is unwrapped to stUsdc
-    event WtTBYUnwrapped(address indexed user, uint256 wstUsdcAmount, uint256 stUsdcAmount);
+    event WstUsdcUnwrapped(address indexed user, uint256 wstUsdcAmount, uint256 stUsdcAmount);
 
     // =================== Functions ===================
 
