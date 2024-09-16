@@ -43,7 +43,7 @@ contract WstUsdcLite is IWstUsdcLite, ERC20 {
 
         _burn(msg.sender, wstUsdcAmount);
         StUsdcLite(address(_stUsdc)).transferShares(msg.sender, wstUsdcAmount);
-        emit WtTBYUnwrapped(msg.sender, wstUsdcAmount, stUsdcAmount);
+        emit WstUsdcUnwrapped(msg.sender, wstUsdcAmount, stUsdcAmount);
     }
 
     /// @inheritdoc IWstUsdcLite
