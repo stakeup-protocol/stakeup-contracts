@@ -5,7 +5,7 @@ on: [push]
 env:
   FOUNDRY_PROFILE: ci
   ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
-  PHALCON_RPC_URL: ${{ secrets.PHALCON_RPC_URL }}
+  ARBITRUM_RPC_URL: ${{ secrets.ARBITRUM_RPC_URL }}
 
 jobs:
   check:
@@ -26,22 +26,15 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install -r requirements.txt
-          forge install
-          cd lib/LayerZero-v2/
-          yarn install
-          yarn build
-          cd ../..
+          yarn
         id: install
 
       - name: Build
         run: |
-          forge --version
-          forge build --sizes
-          bash compile.sh
+          yarn build
         id: build
 
       - name: Tests
         run: |
-          bash test.sh
+          yarn test
         id: test
