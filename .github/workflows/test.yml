@@ -5,7 +5,7 @@ on: [push]
 env:
   FOUNDRY_PROFILE: ci
   ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
-  PHALCON_RPC_URL: ${{ secrets.PHALCON_RPC_URL }}
+  ARBITRUM_RPC_URL: ${{ secrets.ARBITRUM_RPC_URL }}
 
 jobs:
   check:
