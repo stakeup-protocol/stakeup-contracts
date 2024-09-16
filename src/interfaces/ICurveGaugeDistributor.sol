@@ -6,14 +6,14 @@ interface ICurveGaugeDistributor {
      * @notice Data for a Curve pool
      * @param curvePool Address of the Curve pool
      * @param curveGauge Address of the Curve gauge
-     * @param curveFactory Address of the Curve factory
+     * @param gaugeFactory Address of the Curve gauge factory
      * @param rewardsRemaining Amount of rewards remaining to be distributed
      * @param maxRewards Maximum amount of rewards to distribute
      */
     struct CurvePoolData {
         address curvePool;
         address curveGauge;
-        address curveFactory;
+        address gaugeFactory;
         uint256 rewardsRemaining;
         uint256 maxRewards;
     }

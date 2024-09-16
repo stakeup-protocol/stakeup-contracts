@@ -16,6 +16,7 @@ import {StakeUpToken} from "src/token/StakeUpToken.sol";
 import {WstUsdc} from "src/token/WstUsdc.sol";
 import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
 import {WstUsdcBridge} from "src/messaging/WstUsdcBridge.sol";
+import {CurveGaugeDistributor} from "src/rewards/CurveGaugeDistributor.sol";
 
 import {MockEndpoint} from "../mocks/MockEndpoint.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
@@ -31,6 +32,8 @@ abstract contract StUsdcSetup is Test {
     StakeUpStaking internal staking;
     StakeUpToken internal supToken;
     BridgeOperator internal bridgeOperator;
+    CurveGaugeDistributor internal curveGaugeDistributor;
+
     // Bloom Pool Contracts
     MockERC20 internal stableToken;
     MockERC20 internal billToken;
@@ -98,6 +101,8 @@ abstract contract StUsdcSetup is Test {
         vm.label(address(layerZeroEndpointA), "LayerZero Endpoint A");
 
         // Deploy StakeUp Contracts
+        curveGaugeDistributor = new CurveGaugeDistributor(owner);
+
         address expectedSupAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
         address expectedStUsdcAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 2);
         address expectedBridgeOperatorAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 5);
@@ -106,7 +111,7 @@ abstract contract StUsdcSetup is Test {
 
         supToken = new StakeUpToken(
             address(staking),
-            address(0), // gaugeDistributor
+            address(curveGaugeDistributor),
             owner,
             address(layerZeroEndpointA),
             expectedBridgeOperatorAddress
