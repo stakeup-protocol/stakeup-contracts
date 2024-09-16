@@ -3,6 +3,6 @@
 cd lib/bloom-v2
 forge build
 cd ../../
-forge build
+forge build --sizes
 # wake init pytypes
 # wake compile 
