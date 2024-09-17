@@ -16,6 +16,9 @@ docs/
 # Dotenv file
 .env
 
+# Coverage files
+coverage/
+
 # Python virtual environment
 venv/
 
@@ -27,5 +30,6 @@ __pycache__/
 .hypothesis/
 wake-coverage.cov
 
-# vs code
+# IDE files
 .vscode/
+.idea/

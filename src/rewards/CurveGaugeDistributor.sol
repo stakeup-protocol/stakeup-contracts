@@ -11,7 +11,7 @@ import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 import {StakeUpRewardMathLib} from "./lib/StakeUpRewardMathLib.sol";
 
 import {ICurveGaugeDistributor} from "../interfaces/ICurveGaugeDistributor.sol";
-import {ICurvePoolFactory} from "../interfaces/curve/ICurvePoolFactory.sol";
+import {IChildLiquidityGaugeFactory} from "../interfaces/curve/IChildLiquidityGaugeFactory.sol";
 import {ICurvePoolGauge} from "../interfaces//curve/ICurvePoolGauge.sol";
 import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
 
@@ -107,7 +107,7 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
 
         for (uint256 i = 0; i < length; ++i) {
             // Deploy the Curve guage and register SUP as the reward token
-            address gauge = ICurvePoolFactory(curvePools[i].curveFactory).deploy_gauge(curvePools[i].curvePool);
+            address gauge = IChildLiquidityGaugeFactory(curvePools[i].gaugeFactory).deploy_gauge(curvePools[i].curvePool, bytes32("STAKEUP | Global Savings"));
             curvePools[i].curveGauge = gauge;
 
             totalRewards -= curvePools[i].maxRewards;
@@ -125,7 +125,7 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
         uint256 length = curvePools.length;
 
         for (uint256 i = 0; i < length; ++i) {
-            if (curvePools[i].curveFactory == address(0)) {
+            if (curvePools[i].gaugeFactory == address(0)) {
                 revert Errors.ZeroAddress();
             }
 

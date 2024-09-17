@@ -75,7 +75,7 @@ contract SupFuzzTest is StUsdcSetup {
     }
 
     function testFuzz_MintRewardsUnauthorized(address caller, address recipient, uint256 amount) public {
-        vm.assume(caller != address(staking) && caller != address(stUsdc));
+        vm.assume(caller != address(staking) && caller != address(stUsdc) && caller != address(curveGaugeDistributor));
         vm.assume(recipient != address(0));
         vm.assume(amount > 0);
 
