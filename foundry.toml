@@ -41,7 +41,7 @@ gas_reports_ignore = [
 runs = 10000
 
 [rpc_endpoints]
-arbitrum = "${ARBITRUM_RPC_URL}"
+arbitrum = "${ARB_RPC_URL}"
 sepolia_sepolia = "${SEPOLIA_RPC_URL}"
 
 [etherscan]
