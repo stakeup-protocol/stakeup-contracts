@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import {Test} from "forge-std/Test.sol";
 import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
+import {TestHelper} from "@LayerZeroTesting/TestHelper.sol";
 
 // Bloom Dependencies
 import {IBloomPoolExt} from "../mocks/IBloomPoolExt.sol";
@@ -22,7 +23,7 @@ import {MockEndpoint} from "../mocks/MockEndpoint.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockPriceFeed} from "../mocks/MockPriceFeed.sol";
 
-abstract contract StUsdcSetup is Test {
+abstract contract StUsdcSetup is TestHelper {
     using FpMath for uint256;
 
     // StakeUp Contracts
@@ -45,9 +46,6 @@ abstract contract StUsdcSetup is Test {
     uint256 internal initialLeverage = 50e18;
     uint256 internal initialSpread = 0.995e18;
 
-    // LayerZero Contracts
-    MockEndpoint internal layerZeroEndpointA;
-
     // Users
     address internal owner = makeAddr("owner");
     address internal alice = makeAddr("alice");
@@ -60,13 +58,14 @@ abstract contract StUsdcSetup is Test {
 
     // Constants
     uint256 internal constant SCALER = 1e12;
-    uint32 internal constant EID_A = 1;
 
     bytes internal constant NOT_OWNER_ERROR = bytes("Ownable: caller is not the owner");
 
     address[] internal bloomLenders;
 
-    function setUp() public virtual {
+    uint256 internal numberOfEndpoints = 1;
+
+    function setUp() public virtual override {
         // Deploy Bloom Dependencies
         stableToken = new MockERC20(6);
         vm.label(address(stableToken), "StableToken");
@@ -74,6 +73,9 @@ abstract contract StUsdcSetup is Test {
         vm.label(address(billToken), "BillyToken");
 
         skip(1 weeks);
+
+        // Deploy LayerZero Contracts
+        setUpEndpoints(uint8(numberOfEndpoints), LibraryType.UltraLightNode);
 
         vm.startPrank(owner);
         priceFeed = new MockPriceFeed(8); // bib01 token price feed has 8 decimals
@@ -96,10 +98,6 @@ abstract contract StUsdcSetup is Test {
         tby = Tby(bloomPool.tby());
         vm.label(address(tby), "Tby");
 
-        // Deploy LayerZero Contracts
-        layerZeroEndpointA = new MockEndpoint();
-        vm.label(address(layerZeroEndpointA), "LayerZero Endpoint A");
-
         // Deploy StakeUp Contracts
         curveGaugeDistributor = new CurveGaugeDistributor(owner);
 
@@ -110,11 +108,7 @@ abstract contract StUsdcSetup is Test {
         staking = new StakeUpStaking(address(expectedSupAddress), expectedStUsdcAddress);
 
         supToken = new StakeUpToken(
-            address(staking),
-            address(curveGaugeDistributor),
-            owner,
-            address(layerZeroEndpointA),
-            expectedBridgeOperatorAddress
+            address(staking), address(curveGaugeDistributor), owner, endpoints[1], expectedBridgeOperatorAddress
         );
         require(address(supToken) == expectedSupAddress, "SUP address mismatch");
 
@@ -125,7 +119,7 @@ abstract contract StUsdcSetup is Test {
             address(bloomPool),
             address(staking),
             expectedWstUsdcAddress,
-            address(layerZeroEndpointA),
+            endpoints[1],
             expectedBridgeOperatorAddress
         );
         vm.label(address(stUsdc), "StUsdc");
@@ -135,10 +129,10 @@ abstract contract StUsdcSetup is Test {
         vm.label(address(wstUsdc), "WstUsdc");
         require(address(wstUsdc) == expectedWstUsdcAddress, "WstUsdc address mismatch");
 
-        wstUsdcBridge = new WstUsdcBridge(address(wstUsdc), address(layerZeroEndpointA), expectedBridgeOperatorAddress);
+        wstUsdcBridge = new WstUsdcBridge(address(wstUsdc), endpoints[1], expectedBridgeOperatorAddress);
         vm.label(address(wstUsdcBridge), "WstUsdc Bridge");
 
-        bridgeOperator = new BridgeOperator(address(wstUsdc), address(wstUsdcBridge), owner);
+        bridgeOperator = new BridgeOperator(address(stUsdc), address(supToken), address(wstUsdcBridge), owner);
         vm.label(address(bridgeOperator), "Bridge Operator");
         require(address(bridgeOperator) == expectedBridgeOperatorAddress, "Bridge Operator address mismatch");
 
@@ -209,5 +203,9 @@ abstract contract StUsdcSetup is Test {
         } else {
             return false;
         }
+    }
+
+    function _setNumberOfEndpoints(uint256 _numberOfEndpoints) internal {
+        numberOfEndpoints = _numberOfEndpoints;
     }
 }

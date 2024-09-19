@@ -9,8 +9,9 @@ import {IChildLiquidityGaugeFactory} from "src/interfaces/curve/IChildLiquidityG
 
 contract CurveGaugeDistributorUnitTest is StUsdcSetup {
     ICurvePoolFactory public constant ARB_CURVE_FACTORY = ICurvePoolFactory(0x9AF14D26075f142eb3F292D5065EB3faa646167b);
-    IChildLiquidityGaugeFactory public constant ARB_CURVE_GAUGE_FACTORY = IChildLiquidityGaugeFactory(0xabC000d88f23Bb45525E447528DBF656A9D55bf5);
-    
+    IChildLiquidityGaugeFactory public constant ARB_CURVE_GAUGE_FACTORY =
+        IChildLiquidityGaugeFactory(0xabC000d88f23Bb45525E447528DBF656A9D55bf5);
+
     ICurveGaugeDistributor.CurvePoolData[] public curvePools;
     address public stUsdcStablePool;
     address public stUsdcStableGauge;
@@ -22,12 +23,7 @@ contract CurveGaugeDistributorUnitTest is StUsdcSetup {
         super.setUp();
         assertEq(block.chainid, 42161);
 
-        stUsdcStablePool = _deployCurvePool(
-            "stUSDC/USDC Pool",
-            "stUsdc-Lp",
-            address(stUsdc),
-            address(stableToken)
-        );
+        stUsdcStablePool = _deployCurvePool("stUSDC/USDC Pool", "stUsdc-Lp", address(stUsdc), address(stableToken));
 
         curvePools.push(
             ICurveGaugeDistributor.CurvePoolData({
@@ -42,7 +38,7 @@ contract CurveGaugeDistributorUnitTest is StUsdcSetup {
         vm.startPrank(owner);
         initializationTimestamp = block.timestamp;
         curveGaugeDistributor.initialize(curvePools, address(supToken));
-        vm.stopPrank(); 
+        vm.stopPrank();
     }
 
     function testGaugeDeployment() public {
@@ -71,7 +67,10 @@ contract CurveGaugeDistributorUnitTest is StUsdcSetup {
         }
     }
 
-    function _deployCurvePool(string memory _name, string memory _symbol, address _stUsdc, address _stableToken) internal returns (address) {
+    function _deployCurvePool(string memory _name, string memory _symbol, address _stUsdc, address _stableToken)
+        internal
+        returns (address)
+    {
         address[] memory coins = new address[](2);
         coins[0] = _stUsdc; // asset type 2 b/c of rebasing
         coins[1] = _stableToken; // asset type 0
@@ -93,7 +92,7 @@ contract CurveGaugeDistributorUnitTest is StUsdcSetup {
             _symbol,
             coins,
             100, // Amplification coefficient
-            10000000, // Fee 0.04%   
+            10000000, // Fee 0.04%
             2, // Off-peg fee multiplier
             866, // ma_ex_time
             0, // impl
