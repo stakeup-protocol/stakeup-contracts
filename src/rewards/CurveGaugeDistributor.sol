@@ -107,7 +107,9 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
 
         for (uint256 i = 0; i < length; ++i) {
             // Deploy the Curve guage and register SUP as the reward token
-            address gauge = IChildLiquidityGaugeFactory(curvePools[i].gaugeFactory).deploy_gauge(curvePools[i].curvePool, bytes32("STAKEUP | Global Savings"));
+            address gauge = IChildLiquidityGaugeFactory(curvePools[i].gaugeFactory).deploy_gauge(
+                curvePools[i].curvePool, bytes32("STAKEUP | Global Savings")
+            );
             curvePools[i].curveGauge = gauge;
 
             totalRewards -= curvePools[i].maxRewards;
