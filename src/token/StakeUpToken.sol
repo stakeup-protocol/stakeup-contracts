@@ -105,6 +105,11 @@ contract StakeUpToken is IStakeUpToken, StakeUpTokenLite, Ownable2Step {
         _mint(stakeupStaking, amount);
     }
 
+    /**
+     * @notice Updates the global supply of the token
+     * @dev Makes sure the the total supply of all tokens on all chains does not exceed the maximum supply
+     * @param amount The amount of tokens to increment the global supply by
+     */
     function _updateGlobalSupply(uint256 amount) internal {
         if (globalSupply() + amount > Constants.MAX_SUPPLY) {
             revert Errors.ExceedsMaxSupply();
