@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
+import {MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 interface IWstUsdcBridge is ILayerZeroSettings {
     // =================== Events ===================
@@ -32,6 +33,21 @@ interface IWstUsdcBridge is ILayerZeroSettings {
      * @param bridgeAddress The address of the wstUsdc bridge contract
      */
     function setWstUsdcBridge(uint32 eid, address bridgeAddress) external;
+
+    /**
+     * @notice Quotes the fee for bridging wstUsdc
+     * @param dstEid The destination LayerZero Endpoint ID
+     * @param destinationAddress The address to send the bridged wstUsdc to
+     * @param wstUsdcAmount The amount of wstUsdc being bridged
+     * @param options The executor options for calling `bridgeWstUsdc`
+     * @return fee The messaging fee for bridging wstUsdc
+     */
+    function quoteBridgeWstUsdc(
+        uint32 dstEid,
+        address destinationAddress,
+        uint256 wstUsdcAmount,
+        bytes calldata options
+    ) external view returns (MessagingFee memory fee);
 
     /// @notice Returns the address of the stUsdc contract
     function stUsdc() external view returns (address);
