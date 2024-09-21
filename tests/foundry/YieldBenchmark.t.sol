@@ -8,10 +8,10 @@ contract YieldBenchmarkTest is StUsdcSetup {
     uint256 tbyCount = 0;
 
     function setUp() public override {
-        // Import the Arbitrum RPC URL from foundry.toml
-        string memory ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
-        // Fork Arbitrum
-        vm.createSelectFork(ARBITRUM_RPC_URL);
+        // Import the Base RPC URL from foundry.toml
+        string memory BASE_RPC_URL = vm.envString("BASE_RPC_URL");
+        // Fork Base
+        vm.createSelectFork(BASE_RPC_URL);
         super.setUp();
 
         uint256 currentPrice = 110e8;
@@ -29,9 +29,9 @@ contract YieldBenchmarkTest is StUsdcSetup {
         assertGt(tby.balanceOf(address(stUsdc), tbyCount - 1), 0);
     }
 
-    function testArbitrumForkSetup() public {
+    function testBaseForkSetup() public {
         // This is a basic test to ensure the fork is set up correctly
-        assertEq(block.chainid, 42161); // Arbitrum's chain ID
+        assertEq(block.chainid, 8453); // Base's chain ID
     }
 
     function testYieldBenchmark() public {
