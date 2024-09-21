@@ -8,8 +8,8 @@ import {ICurvePoolFactory} from "src/interfaces/curve/ICurvePoolFactory.sol";
 import {IChildLiquidityGaugeFactory} from "src/interfaces/curve/IChildLiquidityGaugeFactory.sol";
 
 contract CurveGaugeDistributorUnitTest is StUsdcSetup {
-    ICurvePoolFactory public constant ARB_CURVE_FACTORY = ICurvePoolFactory(0x9AF14D26075f142eb3F292D5065EB3faa646167b);
-    IChildLiquidityGaugeFactory public constant ARB_CURVE_GAUGE_FACTORY =
+    ICurvePoolFactory public constant BASE_CURVE_FACTORY = ICurvePoolFactory(0xd2002373543Ce3527023C75e7518C274A51ce712);
+    IChildLiquidityGaugeFactory public constant BASE_CURVE_GAUGE_FACTORY =
         IChildLiquidityGaugeFactory(0xabC000d88f23Bb45525E447528DBF656A9D55bf5);
 
     ICurveGaugeDistributor.CurvePoolData[] public curvePools;
@@ -18,10 +18,10 @@ contract CurveGaugeDistributorUnitTest is StUsdcSetup {
     uint256 public initializationTimestamp;
 
     function setUp() public override {
-        string memory rpcUrl = vm.envString("ARBITRUM_RPC_URL");
+        string memory rpcUrl = vm.envString("BASE_RPC_URL");
         vm.createSelectFork(rpcUrl);
         super.setUp();
-        assertEq(block.chainid, 42161);
+        assertEq(block.chainid, 8453);
 
         stUsdcStablePool = _deployCurvePool("stUSDC/USDC Pool", "stUsdc-Lp", address(stUsdc), address(stableToken));
 
@@ -29,7 +29,7 @@ contract CurveGaugeDistributorUnitTest is StUsdcSetup {
             ICurveGaugeDistributor.CurvePoolData({
                 curvePool: stUsdcStablePool,
                 curveGauge: address(0),
-                gaugeFactory: address(ARB_CURVE_GAUGE_FACTORY),
+                gaugeFactory: address(BASE_CURVE_GAUGE_FACTORY),
                 rewardsRemaining: 350_000_000e18,
                 maxRewards: 350_000_000e18
             })
@@ -87,7 +87,7 @@ contract CurveGaugeDistributorUnitTest is StUsdcSetup {
         oracles[0] = address(0);
         oracles[1] = address(0);
 
-        return ARB_CURVE_FACTORY.deploy_plain_pool(
+        return BASE_CURVE_FACTORY.deploy_plain_pool(
             _name,
             _symbol,
             coins,
@@ -104,6 +104,6 @@ contract CurveGaugeDistributorUnitTest is StUsdcSetup {
 
     // Arbitrum/any L2s must use the Curve.fi ChildLiquidityGaugeFactory to deploy gauges. Mainnet can use the pool factory directly.
     function _deployCurveGauge(address _pool) internal returns (address) {
-        return ARB_CURVE_GAUGE_FACTORY.deploy_gauge(_pool, bytes32("StakeUp | Global Savings"));
+        return BASE_CURVE_GAUGE_FACTORY.deploy_gauge(_pool, bytes32("StakeUp | Global Savings"));
     }
 }
