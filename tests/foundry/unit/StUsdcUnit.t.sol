@@ -33,14 +33,7 @@ contract StUsdcUnitTest is StUsdcSetup {
 
     function test_deployWithInvalidAsset() public {
         vm.expectRevert(Errors.InvalidAddress.selector);
-        new StUsdc(
-            address(0),
-            address(bloomPool),
-            address(staking),
-            address(wstUsdc),
-            address(layerZeroEndpointA),
-            address(owner)
-        );
+        new StUsdc(address(0), address(bloomPool), address(staking), address(wstUsdc), endpoints[1], address(owner));
     }
 
     function test_depositOfAlreadyRedeemedTby() public {

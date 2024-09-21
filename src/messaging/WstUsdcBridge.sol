@@ -3,7 +3,7 @@ pragma solidity 0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OApp, Origin} from "@LayerZero/oapp/OApp.sol";
-import {IOFT, SendParam, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {IOFT, SendParam, MessagingReceipt, OFTReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 
@@ -67,6 +67,17 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
         if (eid == 0) revert Errors.InvalidPeerID();
         if (bridge == address(0)) revert Errors.ZeroAddress();
         _wstUsdcBridges[eid] = bridge;
+    }
+
+    /// @inheritdoc IWstUsdcBridge
+    function quoteBridgeWstUsdc(
+        uint32 dstEid,
+        address destinationAddress,
+        uint256 wstUsdcAmount,
+        bytes calldata options
+    ) external view returns (MessagingFee memory fee) {
+        SendParam memory sendParam = _setSendParam(destinationAddress, wstUsdcAmount, dstEid, options);
+        return IOFT(_stUsdc).quoteSend(sendParam, false);
     }
 
     /// @inheritdoc IWstUsdcBridge

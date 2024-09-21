@@ -42,9 +42,9 @@ runs = 10000
 
 [rpc_endpoints]
 arbitrum = "${ARBITRUM_RPC_URL}"
-sepolia_sepolia = "${SEPOLIA_RPC_URL}"
+base = "${BASE_RPC_URL}"
+arbitrum_sepolia = "${SEPOLIA_RPC_URL}"
 
 [etherscan]
-sepolia_sepolia = { key = "${ETHERSCAN_API_KEY}"}
-unknown_chain = { key = "${TENDERLY_ACCESS_KEY}", chain = 84537357, url = "${VERIFIER_URL}" }
-
+arbitrum_sepolia = { key = "${ARBISCAN_API_KEY}"}
+base_sepolia = { key = "${BASESCAN_API_KEY}"}

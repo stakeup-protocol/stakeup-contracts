@@ -78,7 +78,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         address wstUsdc_,
         address layerZeroEndpoint,
         address bridgeOperator
-    ) StUsdcLite(layerZeroEndpoint, bridgeOperator) {
+    ) StUsdcLite(layerZeroEndpoint, bridgeOperator, false) {
         if (asset_ == address(0) || stakeupStaking_ == address(0) || wstUsdc_ == address(0)) {
             revert Errors.InvalidAddress();
         }
@@ -174,11 +174,18 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         if (newUsdPerShare > lastUsdPerShare) {
             uint256 yieldPerShare = newUsdPerShare - lastUsdPerShare;
-            // Calculate yield for users and performance fee
-            (uint256 userYield, uint256 fee) = _calculateYieldAndFee(yieldPerShare, globalShares_);
-            newUsdPerShare = (_totalUsd + userYield).divWad(globalShares_);
+            // Calculate performance fee
+            uint256 fee = _calculateFee(yieldPerShare, globalShares_);
+            // Calculate the new total value of the protocol for users
+            uint256 userValue = protocolValue - fee;
+            newUsdPerShare = userValue.divWad(globalShares_);
+            // Update state to distribute yield to users
             _setUsdPerShare(newUsdPerShare);
+            // Process fee to StakeUpStaking
             _processFee(fee);
+        } else if (newUsdPerShare < lastUsdPerShare) {
+            // If the protocol has lost value, we need to update the USD per share to reflect the loss.
+            _setUsdPerShare(newUsdPerShare);
         }
 
         // Harvest matured TBYs and distribute rewards
@@ -186,14 +193,15 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         _distributePokeRewards();
     }
 
-    function _calculateYieldAndFee(uint256 yieldPerShare, uint256 globalShares_)
-        private
-        pure
-        returns (uint256 userYield, uint256 fee)
-    {
+    /**
+     * @notice Calculate the performance fee for the protocol
+     * @param yieldPerShare The yield per share
+     * @param globalShares_ The total number of shares
+     * @return The performance fee that will be distributed to StakeUpStaking
+     */
+    function _calculateFee(uint256 yieldPerShare, uint256 globalShares_) private pure returns (uint256) {
         uint256 totalYield = yieldPerShare.mulWad(globalShares_);
-        fee = (totalYield * Constants.PERFORMANCE_BPS) / Constants.BPS_DENOMINATOR;
-        userYield = totalYield - fee;
+        return (totalYield * Constants.PERFORMANCE_BPS) / Constants.BPS_DENOMINATOR;
     }
 
     /**
