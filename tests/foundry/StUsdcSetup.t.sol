@@ -35,6 +35,9 @@ abstract contract StUsdcSetup is TestHelper {
     BridgeOperator internal bridgeOperator;
     CurveGaugeDistributor internal curveGaugeDistributor;
 
+    // StakeUp Keeper
+    address internal keeper = makeAddr("keeper");
+
     // Bloom Pool Contracts
     MockERC20 internal stableToken;
     MockERC20 internal billToken;
@@ -87,7 +90,9 @@ abstract contract StUsdcSetup is TestHelper {
         bloomPool = IBloomPoolExt(
             deployCode(
                 "lib/bloom-v2/out/BloomPool.sol/BloomPool.json",
-                abi.encode(address(stableToken), address(billToken), priceFeed, initialLeverage, initialSpread, owner)
+                abi.encode(
+                    address(stableToken), address(billToken), priceFeed, 1 days, initialLeverage, initialSpread, owner
+                )
             )
         );
         vm.label(address(bloomPool), "Bloom Pool");

@@ -64,6 +64,9 @@ library StakeUpErrors {
     /// @notice Redemptions are not allowed, while mint rewards are still available
     error RedemptionsNotAllowed();
 
+    /// @notice Keepers are not allowed for this deployment of stUsdc
+    error KeepersNotAllowed();
+
     // ========================= General ===========================
     /// @notice Zero amount
     error ZeroAmount();

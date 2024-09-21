@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 
 import {Test} from "forge-std/Test.sol";
+import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
 import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
@@ -9,15 +10,17 @@ import {MessagingFee, SendParam} from "@LayerZero/oft/interfaces/IOFT.sol";
 
 import {StUsdc} from "src/token/StUsdc.sol";
 import {StUsdcLite} from "src/token/StUsdcLite.sol";
-import {YieldRelayer} from "src/messaging/YieldRelayer.sol";
 import {WstUsdc} from "src/token/WstUsdc.sol";
 import {WstUsdcLite} from "src/token/WstUsdcLite.sol";
 import {WstUsdcBridge} from "src/messaging/WstUsdcBridge.sol";
 
+import {Tby} from "@bloom-v2/token/Tby.sol";
+import {IStUsdcLite} from "src/interfaces/IStUsdcLite.sol";
 import {ILayerZeroSettings} from "src/interfaces/ILayerZeroSettings.sol";
 import {CrossChainSetup} from "../CrossChainSetup.t.sol";
 
 contract CrossChainUnitTest is CrossChainSetup {
+    using FpMath for uint256;
     using OFTComposeMsgCodec for address;
     using OptionsBuilder for bytes;
     using OFTComposeMsgCodec for bytes32;
@@ -56,7 +59,7 @@ contract CrossChainUnitTest is CrossChainSetup {
 
         assertEq(stUsdc.globalShares(), 10000e18);
 
-        _bridgeToChain2(alice, stUsdc2);
+        _bridgeToChain(2, alice, stUsdc2, 5000e18);
 
         skip(1 days);
         stUsdc.poke();
@@ -64,48 +67,60 @@ contract CrossChainUnitTest is CrossChainSetup {
         assertEq(stUsdc.globalShares(), 10000e18);
     }
 
-    // function testYieldDistribution() public {
-    //     uint256 amount = 10000e6;
-    //     usdc.mint(address(this), amount * 2);
-    //     usdc.approve(address(stUsdc), amount);
+    function testYieldDistributionSingleUser() public {
+        uint256 aliceAmount = 100e6;
 
-    //     stUsdc.depositUnderlying(amount);
+        // To simplify calculations, we will remove the borrowers take from bloom rates
+        vm.startPrank(owner);
+        bloomPool.setSpread(1e18);
+        vm.stopPrank();
 
-    //     skip(3 days);
-    //     /// Bridge 50% to chain B
-    //     bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
-    //     SendParam memory sendParam = SendParam(
-    //         bEid, // Destination ID
-    //         addressToBytes32(address(this)),
-    //         5000e18,
-    //         5000e18,
-    //         options,
-    //         "",
-    //         ""
-    //     );
-    //     MessagingFee memory fee = stUsdc.quoteSend(sendParam, false);
+        // Mint 100 stUsdc to alice
+        _depositAsset(alice, aliceAmount);
 
-    //     stUsdc.send{value: fee.nativeFee}(sendParam, fee, payable(address(this)));
-    //     verifyPackets(bEid, addressToBytes32(address(stTBYB)));
+        // Start a new TBY through bloom
+        uint256 totalCollateral = _matchBloomOrder(address(stUsdc), aliceAmount);
+        _bloomStartNewTby(totalCollateral);
 
-    //     /// Update rates to simulate adding yield to the system
-    //     pool.mint(address(stUsdc), 10000e6);
+        StUsdcLite stUsdc2 = StUsdcLite(stakeUpContracts[2].stUsdcLite);
+        StUsdcLite stUsdc3 = StUsdcLite(stakeUpContracts[3].stUsdcLite);
 
-    //     swap.setRate(1.1e18);
-    //     registry.setExchangeRate(address(pool), 1.1e18);
-    //     bpsFeed.updateRate(1.1e4);
+        /// Bridge 25% to chain 2
+        _bridgeToChain(2, alice, stUsdc2, 25e18);
+        /// Bridge 25% to chain 3
+        _bridgeToChain(3, alice, stUsdc3, 25e18);
 
-    //     uint256 expectedYieldPerShare = uint256(1e17).divWadUp(stUsdc.globalShares());
-    //     console2.log("Expected yield per share: %d", expectedYieldPerShare);
-    //     skip(1 days);
-    //     stUsdc.poke();
-    //     verifyPackets(1, addressToBytes32(address(stUsdc)));
+        /// Update rates to simulate adding 10% yield to the system
+        _skipAndUpdatePrice(50 days, 121e8, 1);
 
-    //     yieldRelayerB.updateYield(expectedYieldPerShare);
-    //     assertEq(stUsdc.getTotalUsd(), 5500e18);
-    //     assertEq(stTBYB.getTotalUsd(), 5500e18);
-    //     assertEq(stUsdc.getTotalUsd() + stTBYB.getTotalUsd(), 11000e18);
-    // }
+        // 10% of yield should be sent to StakeUp in fees
+        // yield = 10e18, fees = 1e18, alice = 9e18
+        uint256 expectedAliceAmount = 109e18;
+        uint256 expectedStakeUpAmount = 1e18;
+        uint256 sharePreFee = 100e18;
+
+        uint256 expectedUsdPerShare = expectedAliceAmount.divWad(sharePreFee);
+
+        skip(1 days);
+        vm.expectEmit(true, true, true, true);
+        emit IStUsdcLite.UpdatedUsdPerShare(expectedUsdPerShare);
+        stUsdc.poke();
+
+        vm.startPrank(keeper);
+        stakeUpContracts[2].stUsdcLite.setUsdPerShare(expectedUsdPerShare);
+        stakeUpContracts[3].stUsdcLite.setUsdPerShare(expectedUsdPerShare);
+
+        assertEq(stUsdc.totalUsd(), (expectedAliceAmount / 2) + expectedStakeUpAmount);
+        assertEq(stUsdc2.totalUsd(), expectedAliceAmount / 4);
+        assertEq(stUsdc3.totalUsd(), expectedAliceAmount / 4);
+        assertEq(stUsdc.totalUsd() + stUsdc2.totalUsd() + stUsdc3.totalUsd(), 110e18);
+
+        // Verify that the yield is distributed correctly to each users balance
+        assertEq(stUsdc.balanceOf(alice), expectedAliceAmount / 2);
+        assertEq(stUsdc2.balanceOf(alice), expectedAliceAmount / 4);
+        assertEq(stUsdc3.balanceOf(alice), expectedAliceAmount / 4);
+        _isEqualWithDust(stUsdc.balanceOf(address(staking)), expectedStakeUpAmount);
+    }
 
     function testWstTBYBridge() public {
         WstUsdcBridge wstUsdcBridge2 = WstUsdcBridge(stakeUpContracts[2].wstUsdcBridge);
@@ -163,14 +178,14 @@ contract CrossChainUnitTest is CrossChainSetup {
         assertEq(stUsdcDest.totalUsd(), sentAmount);
     }
 
-    function _bridgeToChain2(address user, StUsdcLite stUsdc2) internal {
+    function _bridgeToChain(uint32 destEid, address user, StUsdcLite stUsdcDest, uint256 amount) internal {
         vm.startPrank(user);
         bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
-        SendParam memory sendParam = _createSendParam(2, user, 2500e18, options);
+        SendParam memory sendParam = _createSendParam(destEid, user, amount, options);
         MessagingFee memory fee = stUsdc.quoteSend(sendParam, false);
         deal(user, fee.nativeFee);
         stUsdc.send{value: fee.nativeFee}(sendParam, fee, payable(user));
-        verifyPackets(2, addressToBytes32(address(stUsdc2)));
+        verifyPackets(destEid, addressToBytes32(address(stUsdcDest)));
         vm.stopPrank();
     }
 

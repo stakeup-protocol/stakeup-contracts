@@ -11,7 +11,6 @@ import {StUsdc} from "src/token/StUsdc.sol";
 import {StUsdcLite} from "src/token/StUsdcLite.sol";
 import {StakeUpToken} from "src/token/StakeUpToken.sol";
 import {StakeUpTokenLite} from "src/token/StakeUpTokenLite.sol";
-import {YieldRelayer} from "src/messaging/YieldRelayer.sol";
 import {WstUsdc} from "src/token/WstUsdc.sol";
 import {WstUsdcLite} from "src/token/WstUsdcLite.sol";
 import {WstUsdcBridge} from "src/messaging/WstUsdcBridge.sol";
@@ -33,7 +32,6 @@ abstract contract CrossChainSetup is StUsdcSetup {
         StakeUpTokenLite stakeUpTokenLite;
         WstUsdcBridge wstUsdcBridge;
         BridgeOperator bridgeOperator;
-        YieldRelayer yieldRelayer;
     }
 
     function setUp() public virtual override(StUsdcSetup) {
@@ -88,9 +86,11 @@ abstract contract CrossChainSetup is StUsdcSetup {
         require(expectedSupAddr == address(stakeUpTokenLite), "Address mismatch");
         stakeUpContracts[i + 1].stakeUpTokenLite = stakeUpTokenLite;
 
-        StUsdcLite stUsdcLite = new StUsdcLite(endpoints[i + 1], address(bridgeOperator));
+        StUsdcLite stUsdcLite = new StUsdcLite(endpoints[i + 1], address(bridgeOperator), true);
         require(expectedStUsdcAddr == address(stUsdcLite), "Address mismatch");
         stakeUpContracts[i + 1].stUsdcLite = stUsdcLite;
+
+        bridgeOperator.setKeeper(keeper);
 
         WstUsdcLite wstUsdcLite = new WstUsdcLite(expectedStUsdcAddr);
         stakeUpContracts[i + 1].wstUsdcLite = wstUsdcLite;
@@ -98,9 +98,6 @@ abstract contract CrossChainSetup is StUsdcSetup {
         WstUsdcBridge wstUsdcBridge = new WstUsdcBridge(address(wstUsdcLite), endpoints[i + 1], address(bridgeOperator));
         require(expectedWstUsdcBridgeAddr == address(wstUsdcBridge), "Address mismatch");
         stakeUpContracts[i + 1].wstUsdcBridge = wstUsdcBridge;
-
-        YieldRelayer yieldRelayer = new YieldRelayer(address(stUsdcLite), address(bridgeOperator), owner);
-        stakeUpContracts[i + 1].yieldRelayer = yieldRelayer;
     }
 
     function _connectContracts(

@@ -40,10 +40,16 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     /// @dev The usdPerShare value at the time of the last rate update.
     uint256 internal _lastUsdPerShare;
 
+    /// @dev The address of the keeper
+    address internal _keeper;
+
+    /// @dev Denotes if keepers are eligible to be used within the contract (keepers do not exists on the stUsdc full deployment)
+    bool internal _areKeepersAllowed;
+
     // =================== Modifiers ===================
 
-    modifier onlyRelayer() {
-        if (msg.sender != address(_yieldRelayer)) {
+    modifier onlyKeeper() {
+        if (msg.sender != _keeper) {
             revert Errors.UnauthorizedCaller();
         }
         _;
@@ -51,17 +57,18 @@ contract StUsdcLite is IStUsdcLite, OFTController {
 
     // ================== Constructor ==================
 
-    constructor(address layerZeroEndpoint, address bridgeOperator)
+    constructor(address layerZeroEndpoint, address bridgeOperator, bool areKeepersAllowed)
         OFTController("staked USDC", "stUSDC", layerZeroEndpoint, bridgeOperator)
     {
+        _areKeepersAllowed = areKeepersAllowed;
         _lastRateUpdate = block.timestamp;
     }
 
     // =================== Functions ==================
 
     /// @inheritdoc IStUsdcLite
-    function setUsdPerShare(uint256 yieldPerShare) external onlyRelayer {
-        _setUsdPerShare(yieldPerShare);
+    function setUsdPerShare(uint256 usdPerShare) external onlyKeeper {
+        _setUsdPerShare(usdPerShare);
     }
 
     /**
@@ -196,6 +203,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @inheritdoc IStUsdcLite
+    function keeper() external view override returns (address) {
+        return _keeper;
+    }
+
+    /// @inheritdoc IStUsdcLite
     function sharesByUsd(uint256 usdAmount) public view override returns (uint256) {
         uint256 totalShares_ = _getTotalShares();
         uint256 totalUsd_ = _getTotalUsd();
@@ -234,6 +246,16 @@ contract StUsdcLite is IStUsdcLite, OFTController {
         _transferShares(sender, recipient, sharesAmount);
         _emitTransferEvents(sender, recipient, tokensAmount, sharesAmount);
         return tokensAmount;
+    }
+
+    /**
+     * @notice Sets the keeper the network
+     * @param keeper_ The address of the new keeper
+     */
+    function setKeeper(address keeper_) external onlyBridgeOperator {
+        require(_areKeepersAllowed, Errors.KeepersNotAllowed());
+        require(keeper_ != address(0), Errors.ZeroAddress());
+        _keeper = keeper_;
     }
 
     /**
@@ -391,11 +413,12 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @dev This is called on the base chain before distributing yield to other chains
-    function _setUsdPerShare(uint256 yieldPerShare) internal {
+    function _setUsdPerShare(uint256 usdPerShare) internal {
         _lastRateUpdate = block.timestamp;
-        uint256 usdValue = _getTotalShares().mulWad(yieldPerShare);
+        _lastUsdPerShare = usdPerShare;
+        uint256 usdValue = _getTotalShares().mulWad(usdPerShare);
         _setTotalUsd(usdValue);
-        emit UpdatedYieldPerShare(yieldPerShare);
+        emit UpdatedUsdPerShare(usdPerShare);
     }
 
     function _debit(uint256 _amountLD, uint256 _minAmountLD, uint32 _dstEid)

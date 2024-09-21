@@ -9,7 +9,7 @@ import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
 
 import {ControllerBase} from "./controllers/ControllerBase.sol";
-import {OFTController} from "./controllers/OFTController.sol";
+import {StUsdcLite} from "../token/StUsdcLite.sol";
 
 /**
  * @title BridgeOperator
@@ -35,11 +35,11 @@ contract BridgeOperator is Ownable2Step {
     /**
      * @notice Sets the yield oracle the network
      * @dev Can only be called by the owner
-     * @param newYieldRelayer The address of the new yield relayer
+     * @param newKeeper The address of the new keeper
      */
-    function setYieldRelayer(address newYieldRelayer) external onlyOwner {
+    function setKeeper(address newKeeper) external onlyOwner {
         (address stUsdc,,) = _decodeContracts();
-        OFTController(stUsdc).setYieldRelayer(newYieldRelayer);
+        StUsdcLite(stUsdc).setKeeper(newKeeper);
     }
 
     /**
