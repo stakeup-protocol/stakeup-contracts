@@ -30,8 +30,8 @@ contract CurveGaugeDistributorUnitTest is StUsdcSetup {
                 curvePool: stUsdcStablePool,
                 curveGauge: address(0),
                 gaugeFactory: address(BASE_CURVE_GAUGE_FACTORY),
-                rewardsRemaining: 350_000_000e18,
-                maxRewards: 350_000_000e18
+                rewardsRemaining: 50_000_000e18,
+                maxRewards: 50_000_000e18
             })
         );
 
