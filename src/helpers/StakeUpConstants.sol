@@ -10,9 +10,6 @@ library StakeUpConstants {
     /// @notice The denominator in Bips for calculating fees
     uint16 constant BPS_DENOMINATOR = 10000;
 
-    /// @notice The amount of time before the end of the commit phase where excess funds will be autostaked in Bloom Pools
-    uint256 constant AUTO_STAKE_PHASE = 1 days;
-
     // =================== VESTING ===================
     /// @notice The duration of the cliff users are subject to
     uint256 constant CLIFF_DURATION = 52 weeks;

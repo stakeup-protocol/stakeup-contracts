@@ -106,16 +106,11 @@ abstract contract StUsdcSetup is TestHelper {
         // Deploy StakeUp Contracts
         curveGaugeDistributor = new CurveGaugeDistributor(owner);
 
-        address expectedSupAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
         address expectedStUsdcAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 2);
         address expectedBridgeOperatorAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 5);
 
-        staking = new StakeUpStaking(address(expectedSupAddress), expectedStUsdcAddress);
-
-        supToken = new StakeUpToken(
-            address(staking), address(curveGaugeDistributor), owner, endpoints[1], expectedBridgeOperatorAddress
-        );
-        require(address(supToken) == expectedSupAddress, "SUP address mismatch");
+        supToken = new StakeUpToken(owner, endpoints[1], expectedBridgeOperatorAddress);
+        staking = new StakeUpStaking(address(supToken), expectedStUsdcAddress);
 
         address expectedWstUsdcAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
 
@@ -141,7 +136,8 @@ abstract contract StUsdcSetup is TestHelper {
         vm.label(address(bridgeOperator), "Bridge Operator");
         require(address(bridgeOperator) == expectedBridgeOperatorAddress, "Bridge Operator address mismatch");
 
-        // Deploy Bloom Pool Contracts
+        supToken.initialize(address(staking), address(curveGaugeDistributor));
+
         vm.stopPrank();
 
         bloomLenders.push(address(stUsdc));

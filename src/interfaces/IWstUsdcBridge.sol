@@ -4,7 +4,9 @@ pragma solidity 0.8.26;
 import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
 
-interface IWstUsdcBridge is ILayerZeroSettings {
+import {IControllerBase} from "./IControllerBase.sol";
+
+interface IWstUsdcBridge is ILayerZeroSettings, IControllerBase {
     // =================== Events ===================
 
     /// @notice Emitted when wstUsdc is bridged sent to another chain

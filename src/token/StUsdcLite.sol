@@ -14,7 +14,6 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     using FixedPointMathLib for uint256;
 
     // =================== Storage ===================
-
     /**
      * @dev stTBY balances are dynamic and are calculated based on the accounts' shares
      * and the total amount of USD controlled by the protocol. Account shares aren't
@@ -47,16 +46,12 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     bool internal _areKeepersAllowed;
 
     // =================== Modifiers ===================
-
     modifier onlyKeeper() {
-        if (msg.sender != _keeper) {
-            revert Errors.UnauthorizedCaller();
-        }
+        require(msg.sender == _keeper, Errors.UnauthorizedCaller());
         _;
     }
 
     // ================== Constructor ==================
-
     constructor(address layerZeroEndpoint, address bridgeOperator, bool areKeepersAllowed)
         OFTController("staked USDC", "stUSDC", layerZeroEndpoint, bridgeOperator)
     {
@@ -65,10 +60,19 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     // =================== Functions ==================
-
     /// @inheritdoc IStUsdcLite
     function setUsdPerShare(uint256 usdPerShare) external onlyKeeper {
         _setUsdPerShare(usdPerShare);
+    }
+
+    /**
+     * @notice Sets the keeper the network
+     * @param keeper_ The address of the new keeper
+     */
+    function setKeeper(address keeper_) external onlyBridgeOperator {
+        require(_areKeepersAllowed, Errors.KeepersNotAllowed());
+        require(keeper_ != address(0), Errors.ZeroAddress());
+        _keeper = keeper_;
     }
 
     /**
@@ -249,16 +253,6 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /**
-     * @notice Sets the keeper the network
-     * @param keeper_ The address of the new keeper
-     */
-    function setKeeper(address keeper_) external onlyBridgeOperator {
-        require(_areKeepersAllowed, Errors.KeepersNotAllowed());
-        require(keeper_ != address(0), Errors.ZeroAddress());
-        _keeper = keeper_;
-    }
-
-    /**
      * @dev This is used for calculating tokens from shares and vice versa.
      * @dev This function is required to be implemented in a derived contract.
      * @return Total amount of Usd controlled by the protocol
@@ -294,8 +288,8 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * - `spender` cannot be the zero address.
      */
     function _approve(address owner, address spender, uint256 amount) internal override {
-        require(owner != address(0), "APPROVE_FROM_ZERO_ADDR");
-        require(spender != address(0), "APPROVE_TO_ZERO_ADDR");
+        require(owner != address(0), Errors.ZeroAddress());
+        require(spender != address(0), Errors.ZeroAddress());
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
@@ -337,11 +331,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param sharesAmount Amount of shares to transfer
      */
     function _transferShares(address sender, address recipient, uint256 sharesAmount) internal {
-        require(sender != address(0), "TRANSFER_FROM_ZERO_ADDR");
-        require(recipient != address(0), "TRANSFER_TO_ZERO_ADDR");
+        require(sender != address(0), Errors.ZeroAddress());
+        require(recipient != address(0), Errors.ZeroAddress());
 
         uint256 currentSenderShares = _shares[sender];
-        require(sharesAmount <= currentSenderShares, "BALANCE_EXCEEDED");
+        require(sharesAmount <= currentSenderShares, Errors.InsufficientBalance());
 
         _shares[sender] = currentSenderShares - sharesAmount;
         _shares[recipient] = _shares[recipient] + sharesAmount;
@@ -356,7 +350,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param sharesAmount Amount of shares to mint
      */
     function _mintShares(address recipient, uint256 sharesAmount) internal virtual returns (uint256 newTotalShares) {
-        require(recipient != address(0), "MINT_TO_ZERO_ADDR");
+        require(recipient != address(0), Errors.ZeroAddress());
 
         newTotalShares = _getTotalShares() + sharesAmount;
         _totalShares = newTotalShares;
@@ -381,10 +375,10 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param sharesAmount Amount of shares to burn
      */
     function _burnShares(address account, uint256 sharesAmount) internal virtual returns (uint256 newTotalShares) {
-        require(account != address(0), "BURN_FROM_ZERO_ADDR");
+        require(account != address(0), Errors.ZeroAddress());
 
         uint256 accountShares = _shares[account];
-        require(sharesAmount <= accountShares, "BALANCE_EXCEEDED");
+        require(sharesAmount <= accountShares, Errors.InsufficientBalance());
 
         uint256 preRebaseTokenAmount = usdByShares(sharesAmount);
 
