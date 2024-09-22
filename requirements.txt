@@ -1,3 +1,0 @@
-eth-wake==4.7.0
-python-dotenv==1.0.0
-

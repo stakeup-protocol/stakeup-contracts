@@ -6,5 +6,3 @@ yarn
 yarn build
 cd ../..
 forge build
-# wake init pytypes
-# wake compile 
