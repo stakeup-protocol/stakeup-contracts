@@ -38,9 +38,8 @@ contract StUsdcFuzzTest is StUsdcSetup {
         assertEq(stUsdc.totalShares(), expectedAmountReceived);
         assertEq(stUsdc.globalShares(), expectedAmountReceived);
 
-        // Validate that the user received mint rewards if they deposited 200M or less
-        uint256 expectedSup = (amount < 200_000_000e6) ? amount : 200_000_000e6;
-        assertGt(supToken.balanceOf(alice), expectedSup);
+        // Validate that the user received no mint rewards
+        assertEq(supToken.balanceOf(alice), 0);
 
         // Validate that stUsdc created a lend order in the bloomPool
         assertEq(bloomPool.amountOpen(address(stUsdc)), amount);
@@ -95,10 +94,6 @@ contract StUsdcFuzzTest is StUsdcSetup {
     function testFuzzRedeemOpenOrder(uint256 amount) public {
         amount = bound(amount, 1, 100_000_000_000e6);
 
-        // use up all mint rewards
-        _depositAsset(rando, 200_000_000e6);
-        _redeemStUsdc(rando, 200_000_000e18);
-
         // Alice deposits some asset
         uint256 amountReceived = _depositAsset(alice, amount);
 
@@ -121,10 +116,6 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
     function testFuzzRedeemBlendedOrder(uint256 amount) public {
         amount = bound(amount, 10e6, 100_000_000_000e6);
-
-        // use up all mint rewards
-        _depositAsset(rando, 200_000_000e6);
-        _redeemStUsdc(rando, 200_000_000e18);
 
         // Alice deposits some asset
         uint256 amountReceived = _depositAsset(alice, amount);
@@ -156,10 +147,6 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
     function testFuzzRedeemMatchedOrder(uint256 amount) public {
         amount = bound(amount, 10e6, 100_000_000_000e6);
-
-        // use up all mint rewards
-        _depositAsset(rando, 200_000_000e6);
-        _redeemStUsdc(rando, 200_000_000e18);
 
         // Alice deposits some asset
         uint256 amountReceived = _depositAsset(alice, amount);
@@ -254,9 +241,6 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
     function testFullFlow(uint256 amount) public {
         amount = bound(amount, 10e6, 100_000_000_000e6);
-
-        _depositAsset(rando, 200_000_000e6);
-        _redeemStUsdc(rando, 200_000_000e6);
 
         _depositAsset(alice, amount);
 

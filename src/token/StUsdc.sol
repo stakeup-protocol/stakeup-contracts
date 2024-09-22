@@ -133,7 +133,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     function redeemStUsdc(uint256 amount) external nonReentrant returns (uint256 assetAmount) {
         require(amount > 0, Errors.ZeroAmount());
         require(balanceOf(msg.sender) >= amount, Errors.InsufficientBalance());
-        require(_mintRewardsRemaining == 0, Errors.RedemptionsNotAllowed());
 
         uint256 shares = sharesByUsd(amount);
         assetAmount = amount / _scalingFactor;
