@@ -111,7 +111,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         _deposit(amountMinted);
         emit AssetDeposited(msg.sender, amount);
-
         _openLendOrder(amount);
     }
 
@@ -124,6 +123,8 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         //     to accurately calculate the amount of stUsdc to mint.
         amountMinted = pool.getRate(tbyId).mulWad(amount) * _scalingFactor;
         _deposit(amountMinted);
+        _mintRewards(amountMinted);
+
         emit TbyDeposited(msg.sender, tbyId, amount, amountMinted);
         _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
     }
@@ -221,14 +222,21 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         _mintShares(msg.sender, sharesAmount);
         _globalShares += sharesAmount;
+        _setTotalUsd(_getTotalUsd() + amount);
+    }
 
+    /**
+     * @notice Mints SUP rewards to the depositor
+     * @dev Mint rewards are only eligible for users who deposit TBYs into the contract
+     * @param amount The amount of rewards to mint
+     */
+    function _mintRewards(uint256 amount) internal {
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
         if (mintRewardsRemaining > 0) {
             uint256 eligibleAmount = Math.min(amount, mintRewardsRemaining);
             _mintRewardsRemaining -= eligibleAmount;
             _stakeupToken.mintRewards(msg.sender, eligibleAmount);
         }
-        _setTotalUsd(_getTotalUsd() + amount);
     }
 
     /**
