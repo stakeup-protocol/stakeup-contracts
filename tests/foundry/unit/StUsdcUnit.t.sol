@@ -32,7 +32,7 @@ contract StUsdcUnitTest is StUsdcSetup {
     }
 
     function test_deployWithInvalidAsset() public {
-        vm.expectRevert(Errors.InvalidAddress.selector);
+        vm.expectRevert(Errors.ZeroAddress.selector);
         new StUsdc(address(0), address(bloomPool), address(staking), address(wstUsdc), endpoints[1], address(owner));
     }
 
@@ -70,12 +70,6 @@ contract StUsdcUnitTest is StUsdcSetup {
         vm.expectRevert(Errors.UnauthorizedCaller.selector);
         stUsdc.setUsdPerShare(1e18);
     }
-
-    // function test_setRelayer() public {
-    //     vm.startPrank(owner);
-    //     stUsdc.setYieldRelayer(address(1));
-    //     assertEq(stUsdc.yieldRelayer(), address(1));
-    // }
 
     function test_transfer() public {
         _depositAsset(alice, 100e6);

@@ -4,7 +4,6 @@ pragma solidity 0.8.26;
 import {OApp, OAppCore} from "@LayerZero/oapp/OApp.sol";
 
 import {StakeUpErrors as Errors} from "../../helpers/StakeUpErrors.sol";
-
 import {ControllerBase} from "./ControllerBase.sol";
 
 /**
@@ -24,21 +23,15 @@ abstract contract OAppController is ControllerBase, OApp {
     // =================== Functions ===================
     /// @inheritdoc ControllerBase
     function setPeer(uint32 eid, bytes32 peer) public virtual override(ControllerBase, OAppCore) onlyBridgeOperator {
-        if (eid == 0) {
-            revert Errors.InvalidPeerID();
-        }
-        if (peer == bytes32(0)) {
-            revert Errors.ZeroAddress();
-        }
+        require(eid != 0, Errors.InvalidPeerID());
+        require(peer != bytes32(0), Errors.ZeroAddress());
         peers[eid] = peer;
         emit PeerSet(eid, peer);
     }
 
     /// @inheritdoc ControllerBase
     function forceSetDelegate(address newDelegate) external override onlyBridgeOperator {
-        if (newDelegate == address(0)) {
-            revert Errors.ZeroAddress();
-        }
+        require(newDelegate != address(0), Errors.ZeroAddress());
         endpoint.setDelegate(newDelegate);
     }
 }

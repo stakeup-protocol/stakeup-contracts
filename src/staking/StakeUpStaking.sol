@@ -4,8 +4,6 @@ pragma solidity 0.8.26;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
-import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 
 import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
@@ -17,7 +15,7 @@ import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
 
 /**
  * @title StakeUpStaking
- * @notice Allows users to stake their STAKEUP tokens to earn stUsdc rewards.
+ * @notice Allows users to stake their SUP tokens to earn stUsdc rewards.
  *         Tokens can be staked for any amount of time and can be unstaked at any time.
  *         The rewards tracking system is based on the methods similar to those used by
  *         Pendle Finance for rewarding Liquidity Providers.
@@ -29,7 +27,6 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     using FixedPointMathLib for uint256;
 
     // =================== Storage ===================
-
     /// @dev Global reward data
     RewardData private _rewardData;
 
@@ -43,12 +40,10 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     mapping(address => StakingData) private _stakingData;
 
     // =================== Immutables ===================
-
     /// @notice The stUsdc token
     IStUsdc private immutable _stUsdc;
 
     // =================== Modifiers ===================
-
     /// @notice Updates the global reward index and available reward balance for StakeUp
     modifier updateIndex() {
         _updateRewardIndex();
@@ -63,21 +58,18 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
 
     /// @notice Only the reward token or the contract itself can call this function
     modifier onlyStUsdc() {
-        if (msg.sender != address(_stUsdc)) {
-            revert Errors.UnauthorizedCaller();
-        }
+        require(msg.sender == address(_stUsdc), Errors.UnauthorizedCaller());
         _;
     }
 
     // ================= Constructor =================
-
     constructor(address stakeupToken_, address stUsdc_) SUPVesting(stakeupToken_) {
+        require(stUsdc_ != address(0), Errors.ZeroAddress());
         _stUsdc = IStUsdc(stUsdc_);
         _lastRewardBlock = block.number;
     }
 
     // ================== functions ==================
-
     /// @inheritdoc IStakeUpStaking
     function stake(uint256 stakeupAmount) external override updateIndex distributeRewards {
         _stake(msg.sender, stakeupAmount);
@@ -92,8 +84,8 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         distributeRewards
     {
         StakingData storage data = _stakingData[msg.sender];
-
-        if (data.amountStaked == 0) revert Errors.UserHasNoStake();
+        require(data.amountStaked != 0, Errors.UserHasNoStake());
+        require(stakeupAmount <= data.amountStaked, Errors.InsufficientBalance());
 
         if (stakeupAmount > data.amountStaked) {
             stakeupAmount = data.amountStaked;
@@ -109,17 +101,16 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         data.amountStaked -= uint128(stakeupAmount);
         _totalStakeUpStaked -= stakeupAmount;
 
-        IERC20(address(_stakeupToken)).safeTransfer(msg.sender, stakeupAmount);
-
         emit StakeUpUnstaked(msg.sender, stakeupAmount);
+        IERC20(address(_stakeupToken)).safeTransfer(msg.sender, stakeupAmount);
     }
 
     /// @inheritdoc IStakeUpStaking
     function harvest() public nonReentrant updateIndex {
         uint256 rewardAmount = _distributeRewards(msg.sender);
-        if (rewardAmount == 0) revert Errors.NoRewardsToClaim();
-        _transferRewards(msg.sender);
+        require(rewardAmount != 0, Errors.NoRewardsToClaim());
         emit RewardsHarvested(msg.sender, rewardAmount);
+        _transferRewards(msg.sender);
     }
 
     /// @inheritdoc IStakeUpStaking
@@ -166,15 +157,13 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     /// @dev Transfers the staked tokens to the staking contract and updates the user's total staked amount
     function _stake(address user, uint256 amount) internal nonReentrant {
         StakingData storage data = _stakingData[user];
-
-        if (amount == 0) revert Errors.ZeroTokensStaked();
-
-        IERC20(address(_stakeupToken)).safeTransferFrom(msg.sender, address(this), amount);
+        require(amount != 0, Errors.ZeroTokensStaked());
 
         data.amountStaked += uint128(amount);
         _totalStakeUpStaked += amount;
 
         emit StakeUpStaked(user, amount);
+        IERC20(address(_stakeupToken)).safeTransferFrom(msg.sender, address(this), amount);
     }
 
     /**
