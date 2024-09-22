@@ -32,7 +32,7 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
 
     // =================== Modifiers ===================
     modifier initialized() {
-        if (!_initialized) revert Errors.NotInitialized();
+        require(_initialized, Errors.NotInitialized());
         _;
     }
 
@@ -46,7 +46,7 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
 
     function initialize(CurvePoolData[] calldata curvePools, address stakeupToken) external onlyOwner {
         require(stakeupToken != address(0), Errors.ZeroAddress());
-        require(_initialized == false, Errors.AlreadyInitialized());
+        require(!_initialized, Errors.AlreadyInitialized());
 
         _stakeupToken = IStakeUpToken(stakeupToken);
         _initialized = true;
