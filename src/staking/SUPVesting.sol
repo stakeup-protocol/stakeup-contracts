@@ -23,7 +23,6 @@ abstract contract SUPVesting is ISUPVesting {
     using SafeERC20 for IERC20;
 
     // =================== Storage ===================
-
     /// @notice Total amount of STAKEUP locked in vesting
     uint256 internal _totalStakeUpVesting;
 
@@ -31,31 +30,28 @@ abstract contract SUPVesting is ISUPVesting {
     mapping(address => VestedAllocation) internal _tokenAllocations;
 
     // =================== Immutables ===================
-
     /// @notice The STAKEUP token
     IStakeUpToken internal immutable _stakeupToken;
 
     // =================== Modifiers ===================
-
     modifier onlySUP() {
-        if (msg.sender != address(_stakeupToken)) {
-            revert Errors.UnauthorizedCaller();
-        }
+        require(msg.sender == address(_stakeupToken), Errors.UnauthorizedCaller());
         _;
     }
 
     // ================= Constructor =================
-
     constructor(address stakeupToken_) {
+        require(stakeupToken_ != address(0), Errors.ZeroAddress());
         _stakeupToken = IStakeUpToken(stakeupToken_);
     }
 
     // =================== Functions ===================
-
     /// @inheritdoc ISUPVesting
     function vestTokens(address account, uint256 amount) external onlySUP {
-        _updateRewardState(account);
+        require(account != address(0), Errors.ZeroAddress());
+        require(amount > 0, Errors.ZeroAmount());
 
+        _updateRewardState(account);
         VestedAllocation storage allocation = _tokenAllocations[account];
 
         _totalStakeUpVesting += amount;

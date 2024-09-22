@@ -6,10 +6,9 @@ import {IOAppCore} from "@LayerZero/oapp/interfaces/IOAppCore.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
-
 import {ControllerBase} from "./controllers/ControllerBase.sol";
 import {StUsdcLite} from "../token/StUsdcLite.sol";
+import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
 
 /**
  * @title BridgeOperator
@@ -17,33 +16,33 @@ import {StUsdcLite} from "../token/StUsdcLite.sol";
  */
 contract BridgeOperator is Ownable2Step {
     // =================== Storage ===================
-
     /// @notice Bytes encoded with the addresses of various contracts in the StakeUp ecosystem
     bytes private _stakeUpContracts;
 
     // ================== Constructor ================
     constructor(address stUsdc, address supToken, address wstUsdcBridge, address owner) Ownable2Step() {
-        if (stUsdc == address(0) || supToken == address(0) || wstUsdcBridge == address(0) || owner == address(0)) {
-            revert Errors.ZeroAddress();
-        }
+        require(
+            stUsdc != address(0) && supToken != address(0) && wstUsdcBridge != address(0) && owner != address(0),
+            Errors.ZeroAddress()
+        );
         _transferOwnership(owner);
         _stakeUpContracts = abi.encode(stUsdc, supToken, wstUsdcBridge);
     }
 
     // =================== Functions ===================
-
     /**
-     * @notice Sets the yield oracle the network
+     * @notice Sets the keeper that will be used on non-base chain's to sync the usdPerShares value across chains
      * @dev Can only be called by the owner
      * @param newKeeper The address of the new keeper
      */
     function setKeeper(address newKeeper) external onlyOwner {
+        require(newKeeper != address(0), Errors.ZeroAddress());
         (address stUsdc,,) = _decodeContracts();
         StUsdcLite(stUsdc).setKeeper(newKeeper);
     }
 
     /**
-     * @notice Adds a new endpoint to the StakeUp ecosystem
+     * @notice Adds a new endpoint/peer pair to the StakeUp ecosystem
      * @dev Can only be called by the owner
      * @dev The order of the peers is [stUsdc, supToken, wstUsdcBridge]
      * @param eid The endpoint ID
@@ -78,6 +77,7 @@ contract BridgeOperator is Ownable2Step {
      * @param bridge The address of the wstUsdc bridge contract
      */
     function setWstUsdcBridge(uint32 eid, address bridge) external onlyOwner {
+        require(bridge != address(0), Errors.ZeroAddress());
         (,, address wstUsdcBridge) = _decodeContracts();
         IWstUsdcBridge(wstUsdcBridge).setWstUsdcBridge(eid, bridge);
     }
@@ -97,6 +97,7 @@ contract BridgeOperator is Ownable2Step {
 
     /// @notice Logic for updating the delegate for all contracts in the StakeUp ecosystem
     function _setDelegates(address newDelegate) internal {
+        require(newDelegate != address(0), Errors.ZeroAddress());
         (address stUsdc, address supToken, address wstUsdcBridge) = _decodeContracts();
 
         ControllerBase(stUsdc).forceSetDelegate(newDelegate);
