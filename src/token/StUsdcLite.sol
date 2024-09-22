@@ -30,7 +30,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     /// @dev Total amount of shares
     uint256 internal _totalShares;
 
-    /// @dev Total amount of Usd
+    /// @dev Total amount of USD
     uint256 internal _totalUsd;
 
     /// @dev Last rate update timestamp
@@ -78,7 +78,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     /**
      * @notice Get the total supply of stTBY
      * @dev Always equals to `_getTotalUsd()` since token amount
-     *  is pegged to the total amount of Usd controlled by the protocol.
+     *  is pegged to the total amount of USD controlled by the protocol.
      * @return Amount of tokens in existence
      */
     function totalSupply() public view override returns (uint256) {
@@ -93,7 +93,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     /**
      * @notice Get the balance of an account
      * @dev Balances are dynamic and equal the `_account`'s share in the amount of the
-     * total Usd controlled by the protocol. See `sharesOf`.
+     * total USD controlled by the protocol. See `sharesOf`.
      * @param account Account to get balance of
      * @return Amount of tokens owned by the `_account`
      */
@@ -255,14 +255,14 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     /**
      * @dev This is used for calculating tokens from shares and vice versa.
      * @dev This function is required to be implemented in a derived contract.
-     * @return Total amount of Usd controlled by the protocol
+     * @return Total amount of USD controlled by the protocol
      */
     function _getTotalUsd() internal view returns (uint256) {
         return _totalUsd;
     }
 
     /**
-     * @dev Set the total amount of Usd.
+     * @dev Set the total amount of USD.
      * @param amount Amount
      */
     function _setTotalUsd(uint256 amount) internal virtual {
