@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-interface IStakeUpToken {
+import {IControllerBase} from "./IControllerBase.sol";
+
+interface IStakeUpToken is IControllerBase {
     /**
      * @notice Mints SUP rewards
      * @dev This function is callable by the Reward Manager only

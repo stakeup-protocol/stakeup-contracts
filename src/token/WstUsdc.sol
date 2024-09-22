@@ -21,15 +21,14 @@ import {IWstUsdc} from "../interfaces/IWstUsdc.sol";
 contract WstUsdc is IWstUsdc, WstUsdcLite, ERC1155TokenReceiver {
     using SafeERC20 for IERC20;
     // =================== Immutables ===================
-
     /// @notice Instance of the stUsdc underlying token
+
     IERC20 private immutable _stUsdcAsset;
 
     /// @notice Instance of the TBY token
     ERC1155 private immutable _tby;
 
     // ================== Constructor ==================
-
     constructor(address stUsdc_) WstUsdcLite(stUsdc_) {
         _stUsdcAsset = IStUsdc(stUsdc_).asset();
         _tby = IStUsdc(stUsdc_).tby();

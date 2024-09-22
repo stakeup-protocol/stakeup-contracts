@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-interface IStUsdcLite {
+import {IControllerBase} from "./IControllerBase.sol";
+
+interface IStUsdcLite is IControllerBase {
     /**
      * @notice An executed shares transfer from `sender` to `recipient`.
      * @dev emitted in pair with an ERC20-defined `Transfer` event.
