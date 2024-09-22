@@ -6,6 +6,6 @@
   "license": "MIT",
   "scripts": {
     "build": "bash compile.sh",
-    "test": "bash test.sh"
+    "test": "forge test"
   }
 }
