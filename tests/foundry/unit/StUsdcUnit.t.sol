@@ -71,12 +71,6 @@ contract StUsdcUnitTest is StUsdcSetup {
         stUsdc.setUsdPerShare(1e18);
     }
 
-    // function test_setRelayer() public {
-    //     vm.startPrank(owner);
-    //     stUsdc.setYieldRelayer(address(1));
-    //     assertEq(stUsdc.yieldRelayer(), address(1));
-    // }
-
     function test_transfer() public {
         _depositAsset(alice, 100e6);
 
