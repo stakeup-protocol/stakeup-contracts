@@ -15,7 +15,7 @@ import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
  * @notice This contract handles the vesting of SUP tokens
  * @dev All SUP tokens that a subject to vesting are held by this contract
  * and follow the following vesting schedule:
- * - 3-year linear vesting w/ a 1-year cliff
+ * - 2-year linear vesting w/ a 1-year cliff
  * @dev All SUP tokens held in this vesting contract are considered to be
  * automatically staked in the StakeUp protocol
  */

@@ -15,7 +15,7 @@ library StakeUpConstants {
     uint256 constant CLIFF_DURATION = 52 weeks;
 
     /// @notice The total duration of the vesting period
-    uint256 constant VESTING_DURATION = 3 * CLIFF_DURATION;
+    uint256 constant VESTING_DURATION = 2 * CLIFF_DURATION;
 
     /// @notice The initial reward index
     uint256 constant INITIAL_REWARD_INDEX = 1;
@@ -28,9 +28,9 @@ library StakeUpConstants {
     uint256 constant MAX_SUPPLY = 1_000_000_000e18;
 
     /// @notice Total rewards to be distributed to Curve pools
-    uint256 constant POOL_REWARDS = 350_000_000e18;
+    uint256 constant POOL_REWARDS = 50_000_000e18;
 
-    /// @notice Amount of rewards to be distributed to users for poking the contract (mainnet only)
+    /// @notice Amount of rewards to be distributed to users for poking the contract (Base only)
     uint256 constant POKE_REWARDS = 10_000_000e18;
 
     // =================== GENERAL ===================
