@@ -378,7 +378,8 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
      */
     function _calculateRewards(IBloomPool pool, uint256 tbyId, uint256 amountMinted) internal view returns (uint256) {
         IBloomPool.TbyMaturity memory maturity = pool.tbyMaturity(tbyId);
-        uint256 percentMature = (block.timestamp - maturity.start).divWad(maturity.end - maturity.start);
+        uint256 timeElapsed = block.timestamp - maturity.start;
+        uint256 percentMature = timeElapsed.divWad(maturity.end - maturity.start);
         percentMature = percentMature >= Math.WAD ? Math.WAD : percentMature;
         uint256 rewardsAbandoned = amountMinted.mulWad(percentMature);
         return amountMinted - rewardsAbandoned;
