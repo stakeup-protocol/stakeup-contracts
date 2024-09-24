@@ -137,9 +137,12 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         uint256 shares = sharesByUsd(amount);
         assetAmount = amount / _scalingFactor;
 
-        if (_asset.balanceOf(address(this)) < assetAmount) {
-            _tryOrderCancellation(assetAmount);
-            require(_asset.balanceOf(address(this)) >= assetAmount, Errors.InsufficientBalance());
+        uint256 assetBalance = _asset.balanceOf(address(this));
+        if (assetBalance < assetAmount) {
+            uint256 amountNeeded = assetAmount - assetBalance;
+            _tryOrderCancellation(amountNeeded);
+            uint256 newAssetBalance = _asset.balanceOf(address(this));
+            require(newAssetBalance >= assetAmount, Errors.InsufficientBalance());
         }
 
         _burnShares(msg.sender, shares);
