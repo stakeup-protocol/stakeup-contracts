@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import {Test} from "forge-std/Test.sol";
 import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
+import {TestHelper} from "@LayerZeroTesting/TestHelper.sol";
 
 // Bloom Dependencies
 import {IBloomPoolExt} from "../mocks/IBloomPoolExt.sol";
@@ -22,7 +23,7 @@ import {MockEndpoint} from "../mocks/MockEndpoint.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockPriceFeed} from "../mocks/MockPriceFeed.sol";
 
-abstract contract StUsdcSetup is Test {
+abstract contract StUsdcSetup is TestHelper {
     using FpMath for uint256;
 
     // StakeUp Contracts
@@ -34,6 +35,9 @@ abstract contract StUsdcSetup is Test {
     BridgeOperator internal bridgeOperator;
     CurveGaugeDistributor internal curveGaugeDistributor;
 
+    // StakeUp Keeper
+    address internal keeper = makeAddr("keeper");
+
     // Bloom Pool Contracts
     MockERC20 internal stableToken;
     MockERC20 internal billToken;
@@ -44,9 +48,6 @@ abstract contract StUsdcSetup is Test {
     // Bloom Pool Settings
     uint256 internal initialLeverage = 50e18;
     uint256 internal initialSpread = 0.995e18;
-
-    // LayerZero Contracts
-    MockEndpoint internal layerZeroEndpointA;
 
     // Users
     address internal owner = makeAddr("owner");
@@ -60,13 +61,14 @@ abstract contract StUsdcSetup is Test {
 
     // Constants
     uint256 internal constant SCALER = 1e12;
-    uint32 internal constant EID_A = 1;
 
     bytes internal constant NOT_OWNER_ERROR = bytes("Ownable: caller is not the owner");
 
     address[] internal bloomLenders;
 
-    function setUp() public virtual {
+    uint256 internal numberOfEndpoints = 1;
+
+    function setUp() public virtual override {
         // Deploy Bloom Dependencies
         stableToken = new MockERC20(6);
         vm.label(address(stableToken), "StableToken");
@@ -74,6 +76,9 @@ abstract contract StUsdcSetup is Test {
         vm.label(address(billToken), "BillyToken");
 
         skip(1 weeks);
+
+        // Deploy LayerZero Contracts
+        setUpEndpoints(uint8(numberOfEndpoints), LibraryType.UltraLightNode);
 
         vm.startPrank(owner);
         priceFeed = new MockPriceFeed(8); // bib01 token price feed has 8 decimals
@@ -85,7 +90,9 @@ abstract contract StUsdcSetup is Test {
         bloomPool = IBloomPoolExt(
             deployCode(
                 "lib/bloom-v2/out/BloomPool.sol/BloomPool.json",
-                abi.encode(address(stableToken), address(billToken), priceFeed, initialLeverage, initialSpread, owner)
+                abi.encode(
+                    address(stableToken), address(billToken), priceFeed, 1 days, initialLeverage, initialSpread, owner
+                )
             )
         );
         vm.label(address(bloomPool), "Bloom Pool");
@@ -96,27 +103,14 @@ abstract contract StUsdcSetup is Test {
         tby = Tby(bloomPool.tby());
         vm.label(address(tby), "Tby");
 
-        // Deploy LayerZero Contracts
-        layerZeroEndpointA = new MockEndpoint();
-        vm.label(address(layerZeroEndpointA), "LayerZero Endpoint A");
-
         // Deploy StakeUp Contracts
         curveGaugeDistributor = new CurveGaugeDistributor(owner);
 
-        address expectedSupAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
         address expectedStUsdcAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 2);
         address expectedBridgeOperatorAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 5);
 
-        staking = new StakeUpStaking(address(expectedSupAddress), expectedStUsdcAddress);
-
-        supToken = new StakeUpToken(
-            address(staking),
-            address(curveGaugeDistributor),
-            owner,
-            address(layerZeroEndpointA),
-            expectedBridgeOperatorAddress
-        );
-        require(address(supToken) == expectedSupAddress, "SUP address mismatch");
+        supToken = new StakeUpToken(owner, endpoints[1], expectedBridgeOperatorAddress);
+        staking = new StakeUpStaking(address(supToken), expectedStUsdcAddress);
 
         address expectedWstUsdcAddress = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
 
@@ -125,7 +119,7 @@ abstract contract StUsdcSetup is Test {
             address(bloomPool),
             address(staking),
             expectedWstUsdcAddress,
-            address(layerZeroEndpointA),
+            endpoints[1],
             expectedBridgeOperatorAddress
         );
         vm.label(address(stUsdc), "StUsdc");
@@ -135,14 +129,15 @@ abstract contract StUsdcSetup is Test {
         vm.label(address(wstUsdc), "WstUsdc");
         require(address(wstUsdc) == expectedWstUsdcAddress, "WstUsdc address mismatch");
 
-        wstUsdcBridge = new WstUsdcBridge(address(wstUsdc), address(layerZeroEndpointA), expectedBridgeOperatorAddress);
+        wstUsdcBridge = new WstUsdcBridge(address(wstUsdc), endpoints[1], expectedBridgeOperatorAddress);
         vm.label(address(wstUsdcBridge), "WstUsdc Bridge");
 
-        bridgeOperator = new BridgeOperator(address(wstUsdc), address(wstUsdcBridge), owner);
+        bridgeOperator = new BridgeOperator(address(stUsdc), address(supToken), address(wstUsdcBridge), owner);
         vm.label(address(bridgeOperator), "Bridge Operator");
         require(address(bridgeOperator) == expectedBridgeOperatorAddress, "Bridge Operator address mismatch");
 
-        // Deploy Bloom Pool Contracts
+        supToken.initialize(address(staking), address(curveGaugeDistributor));
+
         vm.stopPrank();
 
         bloomLenders.push(address(stUsdc));
@@ -209,5 +204,9 @@ abstract contract StUsdcSetup is Test {
         } else {
             return false;
         }
+    }
+
+    function _setNumberOfEndpoints(uint256 _numberOfEndpoints) internal {
+        numberOfEndpoints = _numberOfEndpoints;
     }
 }

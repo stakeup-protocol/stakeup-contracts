@@ -4,8 +4,8 @@ on: [push]
 
 env:
   FOUNDRY_PROFILE: ci
-  ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
   ARBITRUM_RPC_URL: ${{ secrets.ARBITRUM_RPC_URL }}
+  BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
 
 jobs:
   check:

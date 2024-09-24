@@ -2,19 +2,16 @@
 pragma solidity 0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {OApp, Origin} from "@LayerZero/oapp/OApp.sol";
-import {IOFT, SendParam, MessagingReceipt, OFTReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
+import {Origin} from "@LayerZero/oapp/OApp.sol";
+import {IOFT, SendParam, MessagingReceipt, OFTReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
 import {WstUsdcLite} from "../token/WstUsdcLite.sol";
-import {StUsdcLite} from "../token/StUsdcLite.sol";
-
-import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
-
 import {OAppController} from "./controllers/OAppController.sol";
+import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
 
 /**
  * @title WstUsdcBridge
@@ -24,12 +21,10 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
     using OFTComposeMsgCodec for address;
 
     // =================== Storage ===================
-
     /// @notice mapping of LayerZero Endpoint IDs to WstUsdcBridge instances
     mapping(uint32 => address) private _wstUsdcBridges;
 
     // =================== Immutables ===================
-
     /// @notice Address of stUsdc contract
     address private immutable _stUsdc;
 
@@ -37,7 +32,6 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
     WstUsdcLite private immutable _wstUsdc;
 
     // ================= Constructor =================
-
     constructor(address wstUsdc_, address layerZeroEndpoint, address bridgeOperator)
         OAppController(layerZeroEndpoint, bridgeOperator)
     {
@@ -46,7 +40,6 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
     }
 
     // =================== Functions ===================
-
     /// @inheritdoc IWstUsdcBridge
     function bridgeWstUsdc(
         address destinationAddress,
@@ -54,19 +47,32 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
         uint32 dstEid,
         LzSettings calldata settings
     ) external payable returns (LzBridgeReceipt memory bridgingReceipt) {
+        require(destinationAddress != address(0), Errors.ZeroAddress());
+        require(wstUsdcAmount > 0, Errors.ZeroAmount());
+
         _wstUsdc.transferFrom(msg.sender, address(this), wstUsdcAmount);
         uint256 stUsdcAmount = _wstUsdc.unwrap(wstUsdcAmount);
 
-        bridgingReceipt = _bridgeStUsdc(destinationAddress, stUsdcAmount, dstEid, settings);
-
         emit WstUsdcBridged(endpoint.eid(), dstEid, wstUsdcAmount);
+        bridgingReceipt = _bridgeStUsdc(destinationAddress, stUsdcAmount, dstEid, settings);
     }
 
     /// @inheritdoc IWstUsdcBridge
     function setWstUsdcBridge(uint32 eid, address bridge) external override onlyBridgeOperator {
-        if (eid == 0) revert Errors.InvalidPeerID();
-        if (bridge == address(0)) revert Errors.ZeroAddress();
+        require(eid != 0, Errors.InvalidPeerID());
+        require(bridge != address(0), Errors.ZeroAddress());
         _wstUsdcBridges[eid] = bridge;
+    }
+
+    /// @inheritdoc IWstUsdcBridge
+    function quoteBridgeWstUsdc(
+        uint32 dstEid,
+        address destinationAddress,
+        uint256 wstUsdcAmount,
+        bytes calldata options
+    ) external view returns (MessagingFee memory fee) {
+        SendParam memory sendParam = _setSendParam(destinationAddress, wstUsdcAmount, dstEid, options);
+        return IOFT(_stUsdc).quoteSend(sendParam, false);
     }
 
     /// @inheritdoc IWstUsdcBridge
@@ -129,9 +135,12 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
         view
         returns (SendParam memory)
     {
+        address wstUsdcBridge = _wstUsdcBridges[dstEid];
+        require(wstUsdcBridge != address(0), Errors.ZeroAddress());
+
         return SendParam({
             dstEid: dstEid,
-            to: _wstUsdcBridges[dstEid].addressToBytes32(),
+            to: wstUsdcBridge.addressToBytes32(),
             amountLD: amount,
             minAmountLD: amount,
             extraOptions: options,

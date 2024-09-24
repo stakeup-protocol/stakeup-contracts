@@ -10,7 +10,6 @@ import {WstUsdcLite} from "src/token/WstUsdcLite.sol";
 import {StakeUpTokenLite} from "src/token/StakeUpTokenLite.sol";
 import {WstUsdcBridge} from "src/messaging/WstUsdcBridge.sol";
 import {BridgeOperator} from "src/messaging/BridgeOperator.sol";
-import {YieldRelayer} from "src/messaging/YieldRelayer.sol";
 
 contract DeployLiteScript is Script {
     uint256 public LAYER_ZERO_EID_ARB_SEP = 40231;
@@ -24,25 +23,27 @@ contract DeployLiteScript is Script {
         vm.startBroadcast(deployerPrivateKey);
         address owner = 0x263c0a1ff85604f0ee3f4160cAa445d0bad28dF7;
 
+        address expectedBridgeOperatorAddr = LibRLP.computeAddress(owner, vm.getNonce(owner) + 1);
         address expectedStUsdcAddr = LibRLP.computeAddress(owner, vm.getNonce(owner) + 3);
         address expectedWstUsdcBridgeAddr = LibRLP.computeAddress(owner, vm.getNonce(owner) + 4);
 
-        BridgeOperator bridgeOperator = new BridgeOperator(expectedStUsdcAddr, expectedWstUsdcBridgeAddr, owner);
-        console2.log("BridgeOperator", address(bridgeOperator));
-        StakeUpTokenLite stakeUpTokenLite = new StakeUpTokenLite(LAYER_ZERO_ENDPOINT_ARB_SEP, address(bridgeOperator));
+        StakeUpTokenLite stakeUpTokenLite = new StakeUpTokenLite(LAYER_ZERO_ENDPOINT_ARB_SEP, expectedBridgeOperatorAddr);
         console2.log("StakeUpTokenLite", address(stakeUpTokenLite));
+
+        BridgeOperator bridgeOperator = new BridgeOperator(expectedStUsdcAddr, address(stakeUpTokenLite), expectedWstUsdcBridgeAddr, owner);
+        console2.log("BridgeOperator", address(bridgeOperator));
+        require(address(bridgeOperator) == expectedBridgeOperatorAddr, "BridgeOperator address mismatch");
 
         WstUsdcLite wstUsdcLite = new WstUsdcLite(expectedStUsdcAddr);
         console2.log("WstUsdcLite", address(wstUsdcLite));
-        StUsdcLite stUsdcLite = new StUsdcLite(LAYER_ZERO_ENDPOINT_ARB_SEP, address(bridgeOperator));
+
+        StUsdcLite stUsdcLite = new StUsdcLite(LAYER_ZERO_ENDPOINT_ARB_SEP, address(bridgeOperator), true);
         require(expectedStUsdcAddr == address(stUsdcLite), "StUsdcLite address mismatch");
         console2.log("StUsdcLite", address(stUsdcLite));
-        WstUsdcBridge wstUsdcBridge = new WstUsdcBridge(address(wstUsdcLite), LAYER_ZERO_ENDPOINT_ARB_SEP, address(bridgeOperator));
+
+        WstUsdcBridge wstUsdcBridge =
+            new WstUsdcBridge(address(wstUsdcLite), LAYER_ZERO_ENDPOINT_ARB_SEP, address(bridgeOperator));
         require(expectedWstUsdcBridgeAddr == address(wstUsdcBridge), "WstUsdcBridge address mismatch");
         console2.log("WstUsdcBridge", address(wstUsdcBridge));
-        YieldRelayer yieldRelayer = new YieldRelayer(address(stUsdcLite), address(bridgeOperator), owner);
-        console2.log("YieldRelayer", address(yieldRelayer));
-
-        stUsdcLite.setYieldRelayer(address(yieldRelayer));
     }
 }

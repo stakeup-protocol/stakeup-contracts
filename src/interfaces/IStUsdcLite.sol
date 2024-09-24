@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-interface IStUsdcLite {
+import {IControllerBase} from "./IControllerBase.sol";
+
+interface IStUsdcLite is IControllerBase {
     /**
      * @notice An executed shares transfer from `sender` to `recipient`.
      * @dev emitted in pair with an ERC20-defined `Transfer` event.
@@ -25,15 +27,15 @@ interface IStUsdcLite {
         address indexed account, uint256 preRebaseTokenAmount, uint256 postRebaseTokenAmount, uint256 sharesAmount
     );
 
-    /// @notice Emitted when yieldPerShares is updated
-    event UpdatedYieldPerShare(uint256 yieldPerShares);
+    /// @notice Emitted when usdPerShare is updated
+    event UpdatedUsdPerShare(uint256 usdPerShare);
 
     /**
      * @notice Distribute yield according to the consentration of shares relative to
      *         implementations on other chains.
-     * @param yieldPerShares The additional yield per share to be distributed.
+     * @param usdPerShare The new usdPerShare value
      */
-    function setUsdPerShare(uint256 yieldPerShares) external;
+    function setUsdPerShare(uint256 usdPerShare) external;
 
     /**
      * @notice Transfer shares from caller to recipient
@@ -93,4 +95,7 @@ interface IStUsdcLite {
      * @return Amount of Usd that corresponds to `sharesAmount` token shares.
      */
     function usdByShares(uint256 sharesAmount) external view returns (uint256);
+
+    /// @notice Get the address of the keeper that can update the yield per share
+    function keeper() external view returns (address);
 }

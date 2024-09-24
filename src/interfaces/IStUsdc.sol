@@ -58,6 +58,7 @@ interface IStUsdc is IStUsdcLite {
 
     /**
      * @notice Deposit TBY and get stUsdc minted
+     * @dev TBY deposits are eligible for additional mint rewards
      * @param tbyId The tokenID of a TBY
      * @param amount TBY amount to deposit
      * @return amountMinted Amount of stUsdc minted

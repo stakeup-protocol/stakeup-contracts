@@ -2,7 +2,6 @@
 pragma solidity 0.8.26;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-
 import {StakeUpConstants as Constants} from "../../helpers/StakeUpConstants.sol";
 
 /**

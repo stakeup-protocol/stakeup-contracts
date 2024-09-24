@@ -23,9 +23,6 @@ library StakeUpErrors {
     error NoRewardsToClaim();
 
     // ========================= Layer Zero ===========================
-    /// @dev Error emitted when the provided address is the zero address
-    error InvalidMessageType();
-
     // @notice If the LZ Compose call fails
     error LZComposeFailed();
 
@@ -36,33 +33,24 @@ library StakeUpErrors {
     error InvalidPeerID();
 
     // ========================= SUP Token ===========================
-    /// @notice Amount being minted is greater than the available tokens
-    error ExceedsAvailableTokens();
-
-    ///@notice Amount being minted is greater than the allocation limit
-    error ExceedsMaxAllocationLimit();
-
     /// @notice Amount being minted is greater than the supply cap
     error ExceedsMaxSupply();
 
     /// @notice Invalid recipient, must be non-zero address
     error InvalidRecipient();
 
-    /// @notice Invalid caller, must be StakeUpStaking or the CurveGaugeDistributor
-    error CallerAuthorizedMinter();
-
-    /// @notice The total number of shares have not been fully allocated
-    error SharesNotFullyAllocated();
-
     // ========================= StUsdc Token ===========================
+    /// @notice Error emitted if the asset does not match the BloomPool's asset
+    error InvalidAsset();
+
     /// @notice Insufficient balance
     error InsufficientBalance();
 
     /// @notice TBY redeemable
     error RedeemableTbyNotAllowed();
 
-    /// @notice Redemptions are not allowed, while mint rewards are still available
-    error RedemptionsNotAllowed();
+    /// @notice Keepers are not allowed for this deployment of stUsdc
+    error KeepersNotAllowed();
 
     // ========================= General ===========================
     /// @notice Zero amount
@@ -74,9 +62,6 @@ library StakeUpErrors {
     /// @dev Error emitted when caller is not allowed to execute a function
     error UnauthorizedCaller();
 
-    /// @notice WstUsdc already initialized
+    /// @notice Contract has already been initialized
     error AlreadyInitialized();
-
-    /// @notice Emitted if the caller passes an invalid address
-    error InvalidAddress();
 }

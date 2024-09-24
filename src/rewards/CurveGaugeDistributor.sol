@@ -31,14 +31,12 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
     bool internal _initialized;
 
     // =================== Modifiers ===================
-
     modifier initialized() {
-        if (!_initialized) revert Errors.NotInitialized();
+        require(_initialized, Errors.NotInitialized());
         _;
     }
 
     // ================= Constructor =================
-
     constructor(address owner) Ownable2Step() {
         _initialized = false;
         _transferOwnership(owner);
@@ -47,8 +45,8 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
     // =================== Functions ===================
 
     function initialize(CurvePoolData[] calldata curvePools, address stakeupToken) external onlyOwner {
-        if (stakeupToken == address(0)) revert Errors.InvalidAddress();
-        if (_initialized) revert Errors.AlreadyInitialized();
+        require(stakeupToken != address(0), Errors.ZeroAddress());
+        require(!_initialized, Errors.AlreadyInitialized());
 
         _stakeupToken = IStakeUpToken(stakeupToken);
         _initialized = true;
@@ -107,7 +105,9 @@ contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownab
 
         for (uint256 i = 0; i < length; ++i) {
             // Deploy the Curve guage and register SUP as the reward token
-            address gauge = IChildLiquidityGaugeFactory(curvePools[i].gaugeFactory).deploy_gauge(curvePools[i].curvePool, bytes32("STAKEUP | Global Savings"));
+            address gauge = IChildLiquidityGaugeFactory(curvePools[i].gaugeFactory).deploy_gauge(
+                curvePools[i].curvePool, bytes32("STAKEUP | Global Savings")
+            );
             curvePools[i].curveGauge = gauge;
 
             totalRewards -= curvePools[i].maxRewards;

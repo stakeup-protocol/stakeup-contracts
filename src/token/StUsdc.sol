@@ -9,9 +9,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {StUsdcLite} from "./StUsdcLite.sol";
 import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+
+import {StUsdcLite} from "./StUsdcLite.sol";
 import {StakeUpRewardMathLib} from "../rewards/lib/StakeUpRewardMathLib.sol";
 import {StakeUpMintRewardLib} from "../rewards/lib/StakeUpMintRewardLib.sol";
 
@@ -27,7 +28,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     using SafeERC20 for IWstUsdc;
 
     // =================== Storage ===================
-
     /// @dev The total amount of stUsdc shares in circulation on all chains
     uint256 internal _globalShares;
 
@@ -41,7 +41,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     uint256 internal _lastRedeemedTbyId;
 
     // ================== Immutables ===================
-
     /// @dev Underlying token
     IERC20 private immutable _asset;
 
@@ -78,15 +77,13 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         address wstUsdc_,
         address layerZeroEndpoint,
         address bridgeOperator
-    ) StUsdcLite(layerZeroEndpoint, bridgeOperator) {
-        if (asset_ == address(0) || stakeupStaking_ == address(0) || wstUsdc_ == address(0)) {
-            revert Errors.InvalidAddress();
-        }
+    ) StUsdcLite(layerZeroEndpoint, bridgeOperator, false) {
+        require(asset_ != address(0) && stakeupStaking_ != address(0) && wstUsdc_ != address(0), Errors.ZeroAddress());
 
         _asset = IERC20(asset_);
         _assetDecimals = IERC20Metadata(asset_).decimals();
 
-        require(IBloomPool(bloomPool_).asset() == asset_, "Invalid underlying token");
+        require(IBloomPool(bloomPool_).asset() == asset_, Errors.InvalidAsset());
         _bloomPool = IBloomPool(bloomPool_);
         _tby = ERC1155(IBloomPool(bloomPool_).tby());
 
@@ -96,12 +93,11 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         _scalingFactor = 10 ** (18 - _assetDecimals);
         _startTimestamp = block.timestamp;
-        _lastRateUpdate = block.timestamp;
 
         _pokeRewardsRemaining = Constants.POKE_REWARDS;
         _mintRewardsRemaining = StakeUpMintRewardLib._getMintRewardAllocation();
 
-        // On the first redemption we will increment this value, so we start at 0.
+        // On the first redemption we will increment this value to overflow and start at 0.
         _lastRedeemedTbyId = type(uint256).max;
         _lastUsdPerShare = Math.WAD;
     }
@@ -115,7 +111,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         _deposit(amountMinted);
         emit AssetDeposited(msg.sender, amount);
-
         _openLendOrder(amount);
     }
 
@@ -128,6 +123,8 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         //     to accurately calculate the amount of stUsdc to mint.
         amountMinted = pool.getRate(tbyId).mulWad(amount) * _scalingFactor;
         _deposit(amountMinted);
+        _mintRewards(amountMinted);
+
         emit TbyDeposited(msg.sender, tbyId, amount, amountMinted);
         _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
     }
@@ -136,7 +133,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     function redeemStUsdc(uint256 amount) external nonReentrant returns (uint256 assetAmount) {
         require(amount > 0, Errors.ZeroAmount());
         require(balanceOf(msg.sender) >= amount, Errors.InsufficientBalance());
-        require(_mintRewardsRemaining == 0, Errors.RedemptionsNotAllowed());
 
         uint256 shares = sharesByUsd(amount);
         assetAmount = amount / _scalingFactor;
@@ -174,11 +170,18 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         if (newUsdPerShare > lastUsdPerShare) {
             uint256 yieldPerShare = newUsdPerShare - lastUsdPerShare;
-            // Calculate yield for users and performance fee
-            (uint256 userYield, uint256 fee) = _calculateYieldAndFee(yieldPerShare, globalShares_);
-            newUsdPerShare = (_totalUsd + userYield).divWad(globalShares_);
+            // Calculate performance fee
+            uint256 fee = _calculateFee(yieldPerShare, globalShares_);
+            // Calculate the new total value of the protocol for users
+            uint256 userValue = protocolValue - fee;
+            newUsdPerShare = userValue.divWad(globalShares_);
+            // Update state to distribute yield to users
             _setUsdPerShare(newUsdPerShare);
+            // Process fee to StakeUpStaking
             _processFee(fee);
+        } else if (newUsdPerShare < lastUsdPerShare) {
+            // If the protocol has lost value, we need to update the USD per share to reflect the loss.
+            _setUsdPerShare(newUsdPerShare);
         }
 
         // Harvest matured TBYs and distribute rewards
@@ -186,14 +189,15 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         _distributePokeRewards();
     }
 
-    function _calculateYieldAndFee(uint256 yieldPerShare, uint256 globalShares_)
-        private
-        pure
-        returns (uint256 userYield, uint256 fee)
-    {
+    /**
+     * @notice Calculate the performance fee for the protocol
+     * @param yieldPerShare The yield per share
+     * @param globalShares_ The total number of shares
+     * @return The performance fee that will be distributed to StakeUpStaking
+     */
+    function _calculateFee(uint256 yieldPerShare, uint256 globalShares_) private pure returns (uint256) {
         uint256 totalYield = yieldPerShare.mulWad(globalShares_);
-        fee = (totalYield * Constants.PERFORMANCE_BPS) / Constants.BPS_DENOMINATOR;
-        userYield = totalYield - fee;
+        return (totalYield * Constants.PERFORMANCE_BPS) / Constants.BPS_DENOMINATOR;
     }
 
     /**
@@ -217,14 +221,21 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         _mintShares(msg.sender, sharesAmount);
         _globalShares += sharesAmount;
+        _setTotalUsd(_getTotalUsd() + amount);
+    }
 
+    /**
+     * @notice Mints SUP rewards to the depositor
+     * @dev Mint rewards are only eligible for users who deposit TBYs into the contract
+     * @param amount The amount of rewards to mint
+     */
+    function _mintRewards(uint256 amount) internal {
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
         if (mintRewardsRemaining > 0) {
             uint256 eligibleAmount = Math.min(amount, mintRewardsRemaining);
             _mintRewardsRemaining -= eligibleAmount;
             _stakeupToken.mintRewards(msg.sender, eligibleAmount);
         }
-        _setTotalUsd(_getTotalUsd() + amount);
     }
 
     /**
@@ -301,6 +312,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
      */
     function _liveTbyValue(IBloomPool pool) internal view returns (uint256 value) {
         uint256 startingId = lastRedeemedTbyId();
+        // Because we start at type(uint256).max, we need to increment and overflow to 0.
         unchecked {
             startingId++;
         }

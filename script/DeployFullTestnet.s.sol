@@ -14,7 +14,7 @@ import {BridgeOperator} from "src/messaging/BridgeOperator.sol";
 contract DeployFullScript is Script {
     address public USDC_BASE_SEP = 0x0dfda9C55381949cafF24dbe0fB61f34be8c4832;
     address public BIB01_BASE_SEP = 0x6E6132E8D7126c53458aD6CA047305F7D561A837;
-    address public BLOOM_POOL_BASE_SEP = 0x182a1E1d7Ee2DEC6331cDF6a668BdD85D9Ad86CE;
+    address public BLOOM_POOL_BASE_SEP = 0x4C5EFa7fA20f707c3B1B1FB15a92537c0FDbc363;
 
     uint256 public LAYER_ZERO_EID_BASE_SEP = 40245;
     address public LAYER_ZERO_ENDPOINT_BASE_SEP = 0x6EDCE65403992e310A62460808c4b910D972f10f;
@@ -31,13 +31,8 @@ contract DeployFullScript is Script {
         StakeUpStaking staking = new StakeUpStaking(address(expectedSupAddress), expectedStUsdcAddress);
         console2.log("StakeUpStaking", address(staking));
 
-        StakeUpToken supToken = new StakeUpToken(
-            address(staking),
-            address(0), // Not needed for testnet
-            owner,
-            address(LAYER_ZERO_ENDPOINT_BASE_SEP),
-            expectedBridgeOperatorAddress
-        );
+        StakeUpToken supToken =
+            new StakeUpToken(owner, address(LAYER_ZERO_ENDPOINT_BASE_SEP), expectedBridgeOperatorAddress);
         require(address(supToken) == expectedSupAddress, "SUP address mismatch");
         console2.log("StakeUpToken", address(supToken));
 
@@ -60,13 +55,16 @@ contract DeployFullScript is Script {
         require(address(wstUsdc) == expectedWstUsdcAddress, "WstUsdc address mismatch");
         console2.log("WstUsdc", address(wstUsdc));
 
-        WstUsdcBridge wstUsdcBridge = new WstUsdcBridge(address(wstUsdc), address(LAYER_ZERO_ENDPOINT_BASE_SEP), expectedBridgeOperatorAddress);
+        WstUsdcBridge wstUsdcBridge =
+            new WstUsdcBridge(address(wstUsdc), address(LAYER_ZERO_ENDPOINT_BASE_SEP), expectedBridgeOperatorAddress);
         vm.label(address(wstUsdcBridge), "WstUsdc Bridge");
         console2.log("WstUsdc Bridge", address(wstUsdcBridge));
 
-        BridgeOperator bridgeOperator = new BridgeOperator(address(wstUsdc), address(wstUsdcBridge), owner);
+        BridgeOperator bridgeOperator = new BridgeOperator(address(stUsdc), address(supToken), address(wstUsdcBridge), owner);
         vm.label(address(bridgeOperator), "Bridge Operator");
         require(address(bridgeOperator) == expectedBridgeOperatorAddress, "Bridge Operator address mismatch");
         console2.log("Bridge Operator", address(bridgeOperator));
+
+        supToken.initialize(address(staking), address(0));
     }
 }
