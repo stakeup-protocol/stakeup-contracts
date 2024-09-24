@@ -64,6 +64,47 @@ contract StUsdcUnitTest is StUsdcSetup {
         stUsdc.depositTby(id, amount);
     }
 
+    function test_mintRewardMechanics() public {
+        // Set spread to 1e18 & price to 100e8 to validate math easily
+        vm.prank(owner);
+        bloomPool.setSpread(1e18);
+
+        _skipAndUpdatePrice(1 days, 100e8, 2);
+
+        // lend into the bloom pool
+        vm.startPrank(alice);
+        stableToken.mint(alice, 100e6);
+        stableToken.approve(address(bloomPool), 100e6);
+        bloomPool.lendOrder(100e6);
+        bloomLenders.push(alice);
+
+        uint256 totalCollateral = 100e6;
+        totalCollateral += _matchBloomOrder(alice, 100e6);
+        // start a new TBY
+        uint256 id = _bloomStartNewTby(totalCollateral);
+
+        vm.startPrank(alice);
+        tby.setApprovalForAll(address(stUsdc), true);
+
+        // Deposit 25% of the TBY immediately & validate receiveing 100% of deposit mint rewards
+        stUsdc.depositTby(id, 25e6);
+        assertEq(supToken.balanceOf(alice), 25e18);
+
+        // Deposit 25% of TBYs halfway through its maturity
+        _skipAndUpdatePrice(90 days, 105e8, 2);
+
+        uint256 expectedHalfWayBalance = 25e18 + ((25e18 * 1.05e18) / 2e18);
+        vm.prank(alice);
+        stUsdc.depositTby(id, 25e6);
+        assertEq(supToken.balanceOf(alice), expectedHalfWayBalance);
+
+        // Deposit 50% of TBYs at maturity & receive 0 mint rewards
+        _skipAndUpdatePrice(180 days, 115e8, 3);
+        vm.prank(alice);
+        stUsdc.depositTby(id, 50e6);
+        assertEq(supToken.balanceOf(alice), expectedHalfWayBalance);
+    }
+
     /// StUsdcLite Unit Tests
     function test_setUsdPerShareNonRelayer() public {
         vm.startPrank(rando);

@@ -123,7 +123,9 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         //     to accurately calculate the amount of stUsdc to mint.
         amountMinted = pool.getRate(tbyId).mulWad(amount) * _scalingFactor;
         _deposit(amountMinted);
-        _mintRewards(amountMinted);
+
+        // Calculate & mint SUP mint rewards to users.
+        _mintRewards(pool, tbyId, amountMinted);
 
         emit TbyDeposited(msg.sender, tbyId, amount, amountMinted);
         _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
@@ -230,12 +232,15 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     /**
      * @notice Mints SUP rewards to the depositor
      * @dev Mint rewards are only eligible for users who deposit TBYs into the contract
-     * @param amount The amount of rewards to mint
+     * @param pool The Bloom Pool contract
+     * @param tbyId The TBY ID
+     * @param amountMinted The amount of stUsdc minted
      */
-    function _mintRewards(uint256 amount) internal {
+    function _mintRewards(IBloomPool pool, uint256 tbyId, uint256 amountMinted) internal {
         uint256 mintRewardsRemaining = _mintRewardsRemaining;
         if (mintRewardsRemaining > 0) {
-            uint256 eligibleAmount = Math.min(amount, mintRewardsRemaining);
+            uint256 maxRewards = _calculateRewards(pool, tbyId, amountMinted);
+            uint256 eligibleAmount = Math.min(maxRewards, mintRewardsRemaining);
             _mintRewardsRemaining -= eligibleAmount;
             _stakeupToken.mintRewards(msg.sender, eligibleAmount);
         }
@@ -360,6 +365,23 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
                 IStakeUpToken(_stakeupToken).mintRewards(msg.sender, amount);
             }
         }
+    }
+
+    /**
+     * @notice Calculates the maximum amount of mint rewards for a user depositing TBYs
+     * @dev There is an inverse relationship between the amount of time a TBY has been minted and the amount of rewards a user can earn.
+     * @dev This calculation method is used in order to prevent users from gaming the rewards system.
+     * @param pool The Bloom Pool contract
+     * @param tbyId The TBY ID
+     * @param amountMinted The amount of stUsdc minted
+     * @return The maximum rewards eligible for a user depositing TBYs
+     */
+    function _calculateRewards(IBloomPool pool, uint256 tbyId, uint256 amountMinted) internal view returns (uint256) {
+        IBloomPool.TbyMaturity memory maturity = pool.tbyMaturity(tbyId);
+        uint256 percentMature = (block.timestamp - maturity.start).divWad(maturity.end - maturity.start);
+        percentMature = percentMature >= Math.WAD ? Math.WAD : percentMature;
+        uint256 rewardsAbandoned = amountMinted.mulWad(percentMature);
+        return amountMinted - rewardsAbandoned;
     }
 
     /// @inheritdoc IStUsdc

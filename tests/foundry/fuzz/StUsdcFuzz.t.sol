@@ -73,7 +73,7 @@ contract StUsdcFuzzTest is StUsdcSetup {
         // mint TBY to alice
         (uint256 id,) = bloomPool.swapIn(bloomLenders, totalCollateral);
         // Skip to a new price
-        _skipAndUpdatePrice(30 days, 115e8, 2);
+        _skipAndUpdatePrice(90 days, 115e8, 2);
 
         assertEq(tby.balanceOf(alice, id), amount);
 
@@ -87,7 +87,8 @@ contract StUsdcFuzzTest is StUsdcSetup {
         assertEq(stUsdc.balanceOf(alice), expectedStUsdc);
 
         // Validate that the user received mint rewards if they deposited 200M or less
-        uint256 expectedSup = (expectedStUsdc < 200_000_000e18) ? expectedStUsdc : 200_000_000e18;
+        // Since 50% of the TBYs maturity has passed, the user should have received 50% of the mint rewards
+        uint256 expectedSup = ((expectedStUsdc / 2) < 200_000_000e18) ? (expectedStUsdc / 2) : 200_000_000e18;
         assertEq(supToken.balanceOf(alice), expectedSup);
     }
 
