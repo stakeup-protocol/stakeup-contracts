@@ -52,6 +52,7 @@ contract StakingFuzzTest is StUsdcSetup {
         staking.stake(amount);
 
         vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1 days);
         staking.unstake(amount, true);
 
         IStakeUpStaking.StakingData memory stakingData = staking.userStakingData(alice);
@@ -137,6 +138,7 @@ contract StakingFuzzTest is StUsdcSetup {
         uint256 expectedRewards = staking.claimableRewards(alice);
 
         vm.roll(block.number + 2);
+        vm.warp(block.timestamp + 1 days);
         vm.startPrank(alice);
         staking.harvest();
 

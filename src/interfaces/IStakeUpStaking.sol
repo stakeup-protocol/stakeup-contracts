@@ -103,4 +103,7 @@ interface IStakeUpStaking is ISUPVesting {
 
     /// @notice Returns the last block that global reward data was updated
     function lastRewardBlock() external view returns (uint256);
+
+    /// @notice Returns the last deposit timestamp for a user
+    function lastDeposit(address user) external view returns (uint256);
 }

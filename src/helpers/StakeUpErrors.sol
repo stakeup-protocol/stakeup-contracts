@@ -2,6 +2,10 @@
 pragma solidity 0.8.27;
 
 library StakeUpErrors {
+    // =================== Staking ===================
+    /// @notice Emitted if the staking is locked due to a user depositing less than 24 hours ago
+    error Locked();
+
     // =================== Curve Gauge Distributor ===================
     /// @notice Emitted if the caller tries to seed the gauges to early
     error TooEarlyToSeed();
