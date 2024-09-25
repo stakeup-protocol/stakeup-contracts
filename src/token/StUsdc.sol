@@ -83,7 +83,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         address wstUsdc_,
         address layerZeroEndpoint,
         address bridgeOperator
-    ) StUsdcLite(layerZeroEndpoint, bridgeOperator, false) {
+    ) StUsdcLite(layerZeroEndpoint, bridgeOperator) {
         require(asset_ != address(0) && stakeupStaking_ != address(0) && wstUsdc_ != address(0), Errors.ZeroAddress());
 
         _asset = IERC20(asset_);
@@ -162,7 +162,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     }
 
     /// @inheritdoc IStUsdc
-    function poke() external nonReentrant {
+    function poke(LzSettings calldata settings) external payable nonReentrant {
         uint256 currentTimestamp = block.timestamp;
         uint256 lastUpdate = _lastRateUpdate;
         if (currentTimestamp - lastUpdate < Constants.ONE_DAY) return;
@@ -196,6 +196,13 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         // Update USD per share to reflect the new value
         _setUsdPerShare(newUsdPerShare);
+
+        uint256 peerLength = _peerEids.length;
+        if (peerLength != 0) {
+            _keeper.sync{value: settings.fee.nativeFee}(
+                newUsdPerShare, _peerEids, settings.options, settings.refundRecipient
+            );
+        }
 
         // If their is a previous pending fee, we need to distribute it to StakeUpStaking
         if (prevFee != 0) {

@@ -8,6 +8,7 @@ import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
 import {IStUsdcLite} from "../interfaces/IStUsdcLite.sol";
 import {OFTController} from "src/messaging/controllers/OFTController.sol";
+import {StakeUpKeeper} from "src/messaging/StakeUpKeeper.sol";
 
 /// @title Staked TBY Base Contract
 contract StUsdcLite is IStUsdcLite, OFTController {
@@ -42,25 +43,25 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     /// @dev The rewardPerSecond of yield accrual that is distributed 24 hours after rate updates (per share)
     uint256 internal _rewardPerSecond;
 
-    /// @dev The address of the keeper
-    address internal _keeper;
-
-    /// @dev Denotes if keepers are eligible to be used within the contract (keepers do not exists on the stUsdc full deployment)
-    bool internal _areKeepersAllowed;
+    // =================== Immutables ===================
+    /// @dev The Keeper contract that handles cross-chain yield distribution
+    StakeUpKeeper internal immutable _keeper;
 
     // =================== Modifiers ===================
     modifier onlyKeeper() {
-        require(msg.sender == _keeper, Errors.UnauthorizedCaller());
+        require(msg.sender == address(_keeper), Errors.UnauthorizedCaller());
         _;
     }
 
     // ================== Constructor ==================
-    constructor(address layerZeroEndpoint, address bridgeOperator, bool areKeepersAllowed)
+    constructor(address layerZeroEndpoint, address bridgeOperator)
         OFTController("staked USDC", "stUSDC", layerZeroEndpoint, bridgeOperator)
     {
-        _areKeepersAllowed = areKeepersAllowed;
         _lastRateUpdate = block.timestamp;
         _lastUsdPerShare = Math.WAD;
+
+        // Deploy the StakeUpKeeper contract
+        _keeper = new StakeUpKeeper(address(this), layerZeroEndpoint, bridgeOperator);
     }
 
     // =================== Functions ==================
@@ -68,16 +69,6 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     function setUsdPerShare(uint256 usdPerShare) external onlyKeeper {
         require(block.timestamp - _lastRateUpdate >= Constants.ONE_DAY, Errors.RateUpdateTooOften());
         _setUsdPerShare(usdPerShare);
-    }
-
-    /**
-     * @notice Sets the keeper the network
-     * @param keeper_ The address of the new keeper
-     */
-    function setKeeper(address keeper_) external onlyBridgeOperator {
-        require(_areKeepersAllowed, Errors.KeepersNotAllowed());
-        require(keeper_ != address(0), Errors.ZeroAddress());
-        _keeper = keeper_;
     }
 
     /**
@@ -217,7 +208,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @inheritdoc IStUsdcLite
-    function keeper() external view override returns (address) {
+    function keeper() external view override returns (StakeUpKeeper) {
         return _keeper;
     }
 

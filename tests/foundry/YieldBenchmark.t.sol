@@ -35,6 +35,6 @@ contract YieldBenchmarkTest is StUsdcSetup {
     }
 
     function testYieldBenchmark() public {
-        stUsdc.poke();
+        stUsdc.poke(_generateSettings(address(0)));
     }
 }

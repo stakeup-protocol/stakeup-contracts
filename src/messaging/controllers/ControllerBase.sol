@@ -3,12 +3,12 @@ pragma solidity 0.8.27;
 
 import {StakeUpErrors as Errors} from "../../helpers/StakeUpErrors.sol";
 import {IControllerBase} from "../../interfaces/IControllerBase.sol";
+
 /**
  * @title ControllerBase
  * @notice Base logic and storage for OApp and OFT controllers to inherit. Controllers in StakeUp are used
  *         by the BridgeOperator to manage the peer's and delegates of the StakeUp ecosystem
  */
-
 abstract contract ControllerBase is IControllerBase {
     // =================== Storage ===================
     /// @dev The address of the bridge operator

@@ -9,8 +9,9 @@ import {IStakeUpStaking} from "./IStakeUpStaking.sol";
 import {IStakeUpToken} from "./IStakeUpToken.sol";
 import {IStUsdcLite} from "./IStUsdcLite.sol";
 import {IWstUsdc} from "./IWstUsdc.sol";
+import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 
-interface IStUsdc is IStUsdcLite {
+interface IStUsdc is IStUsdcLite, ILayerZeroSettings {
     // =================== Events ===================
 
     /**
@@ -86,8 +87,9 @@ interface IStUsdc is IStUsdcLite {
      * if the most recent deposit did not get fully staked
      * @dev autoMint feature is invoked if the last created pool is in
      * the commit state
+     * @dev Sends a messages to all LayerZero peers to update _rewardPerSecond
      */
-    function poke() external;
+    function poke(LzSettings calldata settings) external payable;
 
     /// @notice Returns the underlying asset
     function asset() external view returns (IERC20);

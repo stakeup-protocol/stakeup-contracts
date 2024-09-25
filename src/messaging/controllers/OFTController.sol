@@ -13,6 +13,10 @@ import {ControllerBase} from "./ControllerBase.sol";
  *        OFTs within the StakeUp ecosystem
  */
 abstract contract OFTController is ControllerBase, OFT {
+    // =================== Storage ===================
+    /// @dev A list of peerEids for the OFT
+    uint32[] internal _peerEids;
+
     // ================= Constructor =================
     constructor(string memory tokenName, string memory tokenSymbol, address layerZeroEndpoint, address bridgeOperator_)
         OFT(tokenName, tokenSymbol, layerZeroEndpoint, bridgeOperator_)
@@ -26,6 +30,7 @@ abstract contract OFTController is ControllerBase, OFT {
     function setPeer(uint32 eid, bytes32 peer) public virtual override(ControllerBase, OAppCore) onlyBridgeOperator {
         require(eid != 0, Errors.InvalidPeerID());
         require(peer != bytes32(0), Errors.ZeroAddress());
+        if (peers[eid] == bytes32(0)) _peerEids.push(eid);
         peers[eid] = peer;
         emit PeerSet(eid, peer);
     }
@@ -34,5 +39,9 @@ abstract contract OFTController is ControllerBase, OFT {
     function forceSetDelegate(address newDelegate) external override onlyBridgeOperator {
         require(newDelegate != address(0), Errors.ZeroAddress());
         endpoint.setDelegate(newDelegate);
+    }
+
+    function peerEids() external view returns (uint32[] memory) {
+        return _peerEids;
     }
 }

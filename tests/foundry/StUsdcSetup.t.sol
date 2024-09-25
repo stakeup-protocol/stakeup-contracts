@@ -3,6 +3,7 @@ pragma solidity 0.8.27;
 
 import {Test} from "forge-std/Test.sol";
 import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
+import {OptionsBuilder} from "@LayerZero/oapp/libs/OptionsBuilder.sol";
 import {LibRLP} from "solady/utils/LibRLP.sol";
 import {TestHelper} from "@LayerZeroTesting/TestHelper.sol";
 
@@ -18,6 +19,7 @@ import {WstUsdc} from "src/token/WstUsdc.sol";
 import {StakeUpStaking} from "src/staking/StakeUpStaking.sol";
 import {WstUsdcBridge} from "src/messaging/WstUsdcBridge.sol";
 import {CurveGaugeDistributor} from "src/rewards/CurveGaugeDistributor.sol";
+import {ILayerZeroSettings, MessagingFee} from "src/interfaces/ILayerZeroSettings.sol";
 
 import {MockEndpoint} from "../mocks/MockEndpoint.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
@@ -25,6 +27,7 @@ import {MockPriceFeed} from "../mocks/MockPriceFeed.sol";
 
 abstract contract StUsdcSetup is TestHelper {
     using FpMath for uint256;
+    using OptionsBuilder for bytes;
 
     // StakeUp Contracts
     StUsdc internal stUsdc;
@@ -208,5 +211,23 @@ abstract contract StUsdcSetup is TestHelper {
 
     function _setNumberOfEndpoints(uint256 _numberOfEndpoints) internal {
         numberOfEndpoints = _numberOfEndpoints;
+    }
+
+    function _generateSettings(address refundRecipient)
+        internal
+        view
+        returns (ILayerZeroSettings.LzSettings memory settings)
+    {
+        uint32[] memory peerEids = stUsdc.peerEids();
+
+        if (peerEids.length != 0) {
+            bytes memory msgOptions = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0);
+
+            uint256 nativeFee = stUsdc.keeper().quoteSync(1000e18, peerEids, msgOptions);
+
+            settings.options = msgOptions;
+            settings.fee = MessagingFee({nativeFee: nativeFee, lzTokenFee: 0});
+            settings.refundRecipient = refundRecipient;
+        }
     }
 }

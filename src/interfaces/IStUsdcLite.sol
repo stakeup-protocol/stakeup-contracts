@@ -3,6 +3,8 @@ pragma solidity 0.8.27;
 
 import {IControllerBase} from "./IControllerBase.sol";
 
+import {StakeUpKeeper} from "../messaging/StakeUpKeeper.sol";
+
 interface IStUsdcLite is IControllerBase {
     /**
      * @notice An executed shares transfer from `sender` to `recipient`.
@@ -100,5 +102,5 @@ interface IStUsdcLite is IControllerBase {
     function usdByShares(uint256 sharesAmount) external view returns (uint256);
 
     /// @notice Get the address of the keeper that can update the yield per share
-    function keeper() external view returns (address);
+    function keeper() external view returns (StakeUpKeeper);
 }
