@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
-import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {FixedPointMathLib as Math} from "solady/utils/FixedPointMathLib.sol";
 
 import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
@@ -11,7 +11,7 @@ import {OFTController} from "src/messaging/controllers/OFTController.sol";
 
 /// @title Staked TBY Base Contract
 contract StUsdcLite is IStUsdcLite, OFTController {
-    using FixedPointMathLib for uint256;
+    using Math for uint256;
 
     // =================== Storage ===================
     /**
@@ -30,14 +30,17 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     /// @dev Total amount of shares
     uint256 internal _totalShares;
 
-    /// @dev Total amount of USD
-    uint256 internal _totalUsd;
+    /// @dev Total amount of USD excluding any yield that is accruing during the current day
+    uint256 internal _totalUsdFloor;
 
     /// @dev Last rate update timestamp
     uint256 internal _lastRateUpdate;
 
     /// @dev The usdPerShare value at the time of the last rate update.
     uint256 internal _lastUsdPerShare;
+
+    /// @dev The rewardPerSecond of yield accrual that is distributed 24 hours after rate updates (per share)
+    uint256 internal _rewardPerSecond;
 
     /// @dev The address of the keeper
     address internal _keeper;
@@ -57,11 +60,13 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     {
         _areKeepersAllowed = areKeepersAllowed;
         _lastRateUpdate = block.timestamp;
+        _lastUsdPerShare = Math.WAD;
     }
 
     // =================== Functions ==================
     /// @inheritdoc IStUsdcLite
     function setUsdPerShare(uint256 usdPerShare) external onlyKeeper {
+        require(block.timestamp - _lastRateUpdate >= Constants.ONE_DAY, Errors.RateUpdateTooOften());
         _setUsdPerShare(usdPerShare);
     }
 
@@ -88,6 +93,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     /// @inheritdoc IStUsdcLite
     function totalUsd() external view override returns (uint256) {
         return _getTotalUsd();
+    }
+
+    /// @inheritdoc IStUsdcLite
+    function rewardPerSecond() external view returns (uint256) {
+        return _rewardPerSecond;
     }
 
     /**
@@ -258,15 +268,25 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @return Total amount of USD controlled by the protocol
      */
     function _getTotalUsd() internal view returns (uint256) {
-        return _totalUsd;
+        uint256 timeElapsed = block.timestamp - _lastRateUpdate;
+        uint256 yieldPerShare = timeElapsed >= Constants.ONE_DAY
+            ? (_rewardPerSecond.mulWad(Constants.ONE_DAY))
+            : (_rewardPerSecond.mulWad(timeElapsed));
+        uint256 yield = yieldPerShare.mulWad(_getTotalShares());
+        return _totalUsdFloor + yield;
+    }
+
+    /// @dev Get the floor amount of total USD excluding yield accruing from rewardPerSecond.
+    function _getTotalUsdFloor() internal view returns (uint256) {
+        return _totalUsdFloor;
     }
 
     /**
-     * @dev Set the total amount of USD.
+     * @dev Set the floor amount of total USD excluding yield accruing from rewardPerSecond.
      * @param amount Amount
      */
-    function _setTotalUsd(uint256 amount) internal virtual {
-        _totalUsd = amount;
+    function _setTotalUsdFloor(uint256 amount) internal virtual {
+        _totalUsdFloor = amount;
     }
 
     /**
@@ -408,10 +428,18 @@ contract StUsdcLite is IStUsdcLite, OFTController {
 
     /// @dev This is called on the base chain before distributing yield to other chains
     function _setUsdPerShare(uint256 usdPerShare) internal {
+        // solidify the yield from the last 24 hours
+        _setTotalUsdFloor(_getTotalUsd());
         _lastRateUpdate = block.timestamp;
+
+        uint256 lastUsdPerShare = _lastUsdPerShare;
+        if (usdPerShare > lastUsdPerShare) {
+            uint256 yieldPerShare = usdPerShare - lastUsdPerShare;
+            _rewardPerSecond = yieldPerShare.divWad(Constants.ONE_DAY);
+        } else {
+            _rewardPerSecond = 0;
+        }
         _lastUsdPerShare = usdPerShare;
-        uint256 usdValue = _getTotalShares().mulWad(usdPerShare);
-        _setTotalUsd(usdValue);
         emit UpdatedUsdPerShare(usdPerShare);
     }
 
@@ -424,7 +452,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
 
         uint256 shares = sharesByUsd(amountSentLD);
         _burnShares(msg.sender, shares);
-        _setTotalUsd(_getTotalUsd() - amountSentLD);
+        _setTotalUsdFloor(_getTotalUsdFloor() - amountSentLD);
     }
 
     function _credit(address _to, uint256 _amountToCreditLD, uint32 /*_srcEid*/ )
@@ -433,7 +461,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
         returns (uint256 amountReceivedLD)
     {
         _mintShares(_to, sharesByUsd(_amountToCreditLD));
-        _setTotalUsd(_getTotalUsd() + _amountToCreditLD);
+        _setTotalUsdFloor(_getTotalUsdFloor() + _amountToCreditLD);
         return _amountToCreditLD;
     }
 }

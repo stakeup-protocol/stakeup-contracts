@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import {IBloomPool} from "@bloom-v2/interfaces/IBloomPool.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
@@ -39,6 +39,12 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
     /// @dev Last redeemed tbyId
     uint256 internal _lastRedeemedTbyId;
+
+    /// @dev Highest usdPerShare value used to calculate the performance fee
+    uint256 internal _highestUsdPerShare;
+
+    /// @dev The pending fee to be distributed during the next poke
+    uint256 internal _pendingFee;
 
     // ================== Immutables ===================
     /// @dev Underlying token
@@ -99,7 +105,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         // On the first redemption we will increment this value to overflow and start at 0.
         _lastRedeemedTbyId = type(uint256).max;
-        _lastUsdPerShare = Math.WAD;
+        _highestUsdPerShare = Math.WAD;
     }
 
     // =================== Functions ==================
@@ -148,7 +154,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         }
 
         _burnShares(msg.sender, shares);
-        _setTotalUsd(_getTotalUsd() - amount);
+        _setTotalUsdFloor(_getTotalUsdFloor() - amount);
         _globalShares -= shares;
 
         emit Redeemed(msg.sender, shares, assetAmount);
@@ -159,9 +165,8 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     function poke() external nonReentrant {
         uint256 currentTimestamp = block.timestamp;
         uint256 lastUpdate = _lastRateUpdate;
-        if (currentTimestamp - lastUpdate < 24 hours) return;
+        if (currentTimestamp - lastUpdate < Constants.ONE_DAY) return;
 
-        _lastRateUpdate = currentTimestamp;
         IBloomPool pool = _bloomPool;
 
         // Open a lend order in the Bloom Pool to auto-compound USDC
@@ -172,21 +177,29 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         uint256 protocolValue = _protocolValue(pool);
         uint256 newUsdPerShare = protocolValue.divWad(globalShares_);
         uint256 lastUsdPerShare = _lastUsdPerShare;
+        uint256 prevFee = _pendingFee;
 
         if (newUsdPerShare > lastUsdPerShare) {
-            uint256 yieldPerShare = newUsdPerShare - lastUsdPerShare;
-            // Calculate performance fee
-            uint256 fee = _calculateFee(yieldPerShare, globalShares_);
+            uint256 newPendingFee;
+            uint256 highestUsdPerShare = _highestUsdPerShare;
+            if (newUsdPerShare > highestUsdPerShare) {
+                // Calculate performance fee
+                uint256 yieldPerShare = newUsdPerShare - highestUsdPerShare;
+                newPendingFee = _calculateFee(yieldPerShare, globalShares_);
+                _highestUsdPerShare = newUsdPerShare;
+            }
             // Calculate the new total value of the protocol for users
-            uint256 userValue = protocolValue - fee;
+            uint256 userValue = protocolValue - newPendingFee;
             newUsdPerShare = userValue.divWad(globalShares_);
-            // Update state to distribute yield to users
-            _setUsdPerShare(newUsdPerShare);
-            // Process fee to StakeUpStaking
-            _processFee(fee);
-        } else if (newUsdPerShare < lastUsdPerShare) {
-            // If the protocol has lost value, we need to update the USD per share to reflect the loss.
-            _setUsdPerShare(newUsdPerShare);
+            _pendingFee = newPendingFee;
+        }
+
+        // Update USD per share to reflect the new value
+        _setUsdPerShare(newUsdPerShare);
+
+        // If their is a previous pending fee, we need to distribute it to StakeUpStaking
+        if (prevFee != 0) {
+            _processFee(prevFee);
         }
 
         // Harvest matured TBYs and distribute rewards
@@ -226,7 +239,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         _mintShares(msg.sender, sharesAmount);
         _globalShares += sharesAmount;
-        _setTotalUsd(_getTotalUsd() + amount);
+        _setTotalUsdFloor(_getTotalUsdFloor() + amount);
     }
 
     /**
@@ -254,7 +267,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         if (fee > 0) {
             uint256 sharesFeeAmount = sharesByUsd(fee);
             _mintShares(address(_stakeupStaking), sharesFeeAmount);
-            _setTotalUsd(_getTotalUsd() + fee);
+            _setTotalUsdFloor(_getTotalUsdFloor() + fee);
 
             _globalShares += sharesFeeAmount;
             emit FeeCaptured(sharesFeeAmount);
@@ -433,5 +446,10 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     /// @inheritdoc IStUsdc
     function lastRateUpdate() public view returns (uint256) {
         return _lastRateUpdate;
+    }
+
+    /// @inheritdoc IStUsdc
+    function pendingFee() external view returns (uint256) {
+        return _pendingFee;
     }
 }
