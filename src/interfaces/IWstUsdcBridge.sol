@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 import {MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";

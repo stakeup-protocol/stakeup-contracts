@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 library StakeUpConstants {
     // =================== STTBY ===================
@@ -42,4 +42,7 @@ library StakeUpConstants {
 
     /// @notice One year in seconds
     uint256 constant ONE_YEAR = 52 weeks;
+
+    /// @notice One day in seconds
+    uint256 constant ONE_DAY = 24 hours;
 }

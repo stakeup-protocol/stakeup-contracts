@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import {IControllerBase} from "./IControllerBase.sol";
 
@@ -76,6 +76,9 @@ interface IStUsdcLite is IControllerBase {
      * it is necessary to store it in order to calculate each account's relative share.
      */
     function totalShares() external view returns (uint256);
+
+    /// @notice Get the rewardPerSecond of yield accrual that is distributed 24 hours after rate updates
+    function rewardPerSecond() external view returns (uint256);
 
     /**
      * @notice Get the amount of shares owned by `_account`

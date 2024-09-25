@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import {Test} from "forge-std/Test.sol";
 import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
@@ -199,6 +199,12 @@ contract StUsdcFuzzTest is StUsdcSetup {
         // Poke the contract to rebase and accrue value
         stUsdc.poke();
 
+        // skip 24hours for all yield to accrue
+        _skipAndUpdatePrice(24 hours, 111e8, 2);
+        stUsdc.poke();
+
+        assertEq(stUsdc.totalUsd(), accruedValue);
+
         // Validate that the accrued value is correct & that the performance fee was correctly captured.
         assertApproxEqRel(stUsdc.balanceOf(alice), expectedAliceAmount, 0.000000001e18);
         assertApproxEqRel(stUsdc.balanceOf(address(staking)), performanceFee, 0.000000001e18);
@@ -231,11 +237,11 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
         // Poke the contract to rebase and accrue value & harvest the matured TBY
         stUsdc.poke();
+        _skipAndUpdatePrice(1 days, 115e8, 2);
+        // Poke again to update yield distribution fully (Notethis will deposit idle usdc back into the pool)
+        stUsdc.poke();
 
-        // Validate that the performance fee was correctly captured.
-        assertApproxEqRel(stUsdc.totalUsd(), stableToken.balanceOf(address(stUsdc)) * SCALER, 0.0000001e18);
-        assertGe(stUsdc.totalUsd(), stableToken.balanceOf(address(stUsdc)));
-
+        assertApproxEqRel(stUsdc.totalUsd(), bloomPool.amountOpen(address(stUsdc)) * SCALER, 0.0000001e18);
         // Validate that the last redeemed TBY ID state variable is updated
         assertEq(stUsdc.lastRedeemedTbyId(), id);
     }
@@ -282,11 +288,13 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
         // Poke the contract to trigger the auto-lend feature.
         stUsdc.poke();
+        _skipAndUpdatePrice(1 days, 110e8, 2);
+        stUsdc.poke();
 
         // Validate that the accrued value is correct
         assertEq(stableToken.balanceOf(address(stUsdc)), 0);
         assertEq(bloomPool.amountOpen(address(stUsdc)), totalDeposits);
-        assertEq(stUsdc.totalUsd(), totalDeposits * SCALER);
+        assertTrue(_isEqualWithDust(totalDeposits * SCALER, stUsdc.totalUsd()));
 
         // Validate that the last rate update state variable updated properly
         assertEq(stUsdc.lastRateUpdate(), block.timestamp);

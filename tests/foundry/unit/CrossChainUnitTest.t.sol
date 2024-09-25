@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import {Test} from "forge-std/Test.sol";
 import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
@@ -110,16 +110,20 @@ contract CrossChainUnitTest is CrossChainSetup {
         stakeUpContracts[2].stUsdcLite.setUsdPerShare(expectedUsdPerShare);
         stakeUpContracts[3].stUsdcLite.setUsdPerShare(expectedUsdPerShare);
 
-        assertEq(stUsdc.totalUsd(), (expectedAliceAmount / 2) + expectedStakeUpAmount);
-        assertEq(stUsdc2.totalUsd(), expectedAliceAmount / 4);
-        assertEq(stUsdc3.totalUsd(), expectedAliceAmount / 4);
-        assertEq(stUsdc.totalUsd() + stUsdc2.totalUsd() + stUsdc3.totalUsd(), 110e18);
+        // skip 24hours for all yield to accrue
+        _skipAndUpdatePrice(24 hours, 111e8, 2);
+        stUsdc.poke();
+
+        assertApproxEqRel(stUsdc.totalUsd(), (expectedAliceAmount / 2) + expectedStakeUpAmount, 1e16);
+        assertApproxEqRel(stUsdc2.totalUsd(), expectedAliceAmount / 4, 1e16);
+        assertApproxEqRel(stUsdc3.totalUsd(), expectedAliceAmount / 4, 1e16);
+        assertApproxEqRel(stUsdc.totalUsd() + stUsdc2.totalUsd() + stUsdc3.totalUsd(), 110e18, 1e16);
 
         // Verify that the yield is distributed correctly to each users balance
-        assertEq(stUsdc.balanceOf(alice), expectedAliceAmount / 2);
-        assertEq(stUsdc2.balanceOf(alice), expectedAliceAmount / 4);
-        assertEq(stUsdc3.balanceOf(alice), expectedAliceAmount / 4);
-        _isEqualWithDust(stUsdc.balanceOf(address(staking)), expectedStakeUpAmount);
+        assertApproxEqRel(stUsdc.balanceOf(alice), expectedAliceAmount / 2, 1e16);
+        assertApproxEqRel(stUsdc2.balanceOf(alice), expectedAliceAmount / 4, 1e16);
+        assertApproxEqRel(stUsdc3.balanceOf(alice), expectedAliceAmount / 4, 1e16);
+        assertTrue(_isEqualWithDust(expectedStakeUpAmount, stUsdc.balanceOf(address(staking))));
     }
 
     function testWstTBYBridge() public {

@@ -8,7 +8,7 @@ optimizer = true
 optimizer-runs = 150
 evm_version = "paris"
 
-solc = "0.8.26"
+solc = "0.8.27"
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
 
 remappings = [

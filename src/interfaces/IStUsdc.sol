@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import {IBloomPool} from "@bloom-v2/interfaces/IBloomPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -118,4 +118,7 @@ interface IStUsdc is IStUsdcLite {
 
     /// @notice The last time the rate was updated
     function lastRateUpdate() external view returns (uint256);
+
+    /// @notice The pending fee to be captured during the next poke
+    function pendingFee() external view returns (uint256);
 }

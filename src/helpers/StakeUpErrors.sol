@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 library StakeUpErrors {
     // =================== Curve Gauge Distributor ===================
@@ -51,6 +51,9 @@ library StakeUpErrors {
 
     /// @notice Keepers are not allowed for this deployment of stUsdc
     error KeepersNotAllowed();
+
+    /// @notice Rate update too often
+    error RateUpdateTooOften();
 
     // ========================= General ===========================
     /// @notice Zero amount
