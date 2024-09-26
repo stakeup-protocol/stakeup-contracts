@@ -7,14 +7,14 @@ import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {OAppController} from "./controllers/OAppController.sol";
+import {LzOrderedMessenger} from "./LzOrderedMessenger.sol";
 import {IStUsdc} from "../interfaces/IStUsdc.sol";
 
 /**
  * @title StakeUpKeeper
  * @notice Contract that managing the yield distribution between cross-chain instances of stUsdc
  */
-contract StakeUpKeeper is OAppController {
+contract StakeUpKeeper is LzOrderedMessenger {
     using OFTComposeMsgCodec for bytes32;
 
     // =================== Storage ===================
@@ -29,7 +29,7 @@ contract StakeUpKeeper is OAppController {
 
     // ================= Constructor =================
     constructor(address stUsdc_, address layerZeroEndpoint, address bridgeOperator)
-        OAppController(layerZeroEndpoint, bridgeOperator)
+        LzOrderedMessenger(layerZeroEndpoint, bridgeOperator)
     {
         _stUsdc = stUsdc_;
     }
@@ -123,29 +123,15 @@ contract StakeUpKeeper is OAppController {
      *         And makes the necessary relay call to the stUsdc contract
      */
     function _lzReceive(
-        Origin calldata, /*_origin*/
-        bytes32, /*_guid*/
+        Origin calldata _origin,
+        bytes32 _guid,
         bytes calldata _message,
-        address, /*_executor*/
-        bytes calldata /*_extraData*/
+        address _executor,
+        bytes calldata _extraData
     ) internal virtual override {
+        super._lzReceive(_origin, _guid, _message, _executor, _extraData);
         uint256 newUsdPerShare = _decodeUsdPerShare(_message);
         IStUsdc(_stUsdc).setUsdPerShare(newUsdPerShare);
-    }
-
-    /**
-     * @notice Pays the native fee associated with the message
-     * @dev Overrides the OAppSender._payNative function in order to allow for batch sending of messages
-     * @dev Without the override, the OAppSender._payNative would revert on the second message due to a
-     *      failed conditional checking if msg.value is greater than or equal to the native fee. Instead,
-     *      we should check if the balance of the contract is greater than or equal to the native fee
-     * @param _nativeFee The native fee to pay
-     * @return nativeFee The amount of native fee paid
-     */
-    function _payNative(uint256 _nativeFee) internal view override returns (uint256 nativeFee) {
-        uint256 balance = address(this).balance;
-        if (balance < _nativeFee) revert NotEnoughNative(balance);
-        return _nativeFee;
     }
 
     /**
@@ -155,6 +141,4 @@ contract StakeUpKeeper is OAppController {
     function _decodeUsdPerShare(bytes memory encodedData) internal pure returns (uint256) {
         return abi.decode(encodedData, (uint256));
     }
-
-    receive() external payable {}
 }
