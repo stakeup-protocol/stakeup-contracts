@@ -9,8 +9,9 @@ import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAp
 
 import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
 
-import {WstUsdcLite} from "../token/WstUsdcLite.sol";
 import {OAppController} from "./controllers/OAppController.sol";
+import {WstUsdcLite} from "../token/WstUsdcLite.sol";
+import {IStUsdcLite} from "../interfaces/IStUsdcLite.sol";
 import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
 
 /**
@@ -54,7 +55,7 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
         uint256 stUsdcAmount = _wstUsdc.unwrap(wstUsdcAmount);
 
         emit WstUsdcBridged(endpoint.eid(), dstEid, wstUsdcAmount);
-        bridgingReceipt = _bridgeStUsdc(dstEid, destinationAddress, stUsdcAmount, settings);
+        bridgingReceipt = _bridgeStUsdc(dstEid, destinationAddress, stUsdcAmount, wstUsdcAmount, settings);
     }
 
     /// @inheritdoc IWstUsdcBridge
@@ -72,7 +73,8 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
         uint256 wstUsdcAmount,
         bytes calldata options
     ) external view returns (MessagingFee memory fee) {
-        SendParam memory sendParam = _setSendParam(dstEid, destinationAddress, wstUsdcAmount, options);
+        uint256 stUsdcAmount = IStUsdcLite(_stUsdc).usdByShares(wstUsdcAmount);
+        SendParam memory sendParam = _setSendParam(dstEid, destinationAddress, stUsdcAmount, wstUsdcAmount, options);
         return IOFT(_stUsdc).quoteSend(sendParam, false);
     }
 
@@ -96,6 +98,7 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
      * @param dstEid The destination LayerZero Endpoint ID
      * @param destinationAddress The address to send the bridged wstUsdc to (casted to bytes32)
      * @param stUsdcAmount The unwrapped amount of stUsdc to bridge
+     * @param wstUsdcAmount The amount of wstUsdc to bridge
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
@@ -103,9 +106,11 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
         uint32 dstEid,
         bytes32 destinationAddress,
         uint256 stUsdcAmount,
+        uint256 wstUsdcAmount,
         LzSettings calldata settings
     ) internal returns (LzBridgeReceipt memory bridgingReceipt) {
-        SendParam memory sendParam = _setSendParam(dstEid, destinationAddress, stUsdcAmount, settings.options);
+        SendParam memory sendParam =
+            _setSendParam(dstEid, destinationAddress, stUsdcAmount, wstUsdcAmount, settings.options);
 
         (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt) =
             IOFT(_stUsdc).send{value: msg.value}(sendParam, settings.fee, settings.refundRecipient);
@@ -116,11 +121,12 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
     /**
      * @notice Delivers wstUsdc tokens to the destination address
      * @param destinationAddress The address to send the bridged wstUsdc to
-     * @param stUsdcAmount The unwrapped amount of stUsdc to be wrapped
+     * @param wstUsdcAmount The wrapped amount of wstUsdc to deliver (Same as shares of wstUsdc to wrap)
      */
-    function _deliverWstUsdc(address destinationAddress, uint256 stUsdcAmount) internal returns (bool) {
+    function _deliverWstUsdc(address destinationAddress, uint256 wstUsdcAmount) internal returns (bool) {
+        uint256 stUsdcAmount = IStUsdcLite(_stUsdc).usdByShares(wstUsdcAmount);
         IERC20(_stUsdc).approve(address(_wstUsdc), stUsdcAmount);
-        uint256 wstUsdcAmount = _wstUsdc.wrap(stUsdcAmount);
+        wstUsdcAmount = _wstUsdc.wrap(stUsdcAmount);
         return _wstUsdc.transfer(destinationAddress, wstUsdcAmount);
     }
 
@@ -131,11 +137,13 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
      * @param amount The minimum amount of tokens to send
      * @param options The executor options for the send operation
      */
-    function _setSendParam(uint32 dstEid, bytes32 destinationAddress, uint256 amount, bytes calldata options)
-        internal
-        view
-        returns (SendParam memory)
-    {
+    function _setSendParam(
+        uint32 dstEid,
+        bytes32 destinationAddress,
+        uint256 amount,
+        uint256 wstUsdcAmount,
+        bytes calldata options
+    ) internal view returns (SendParam memory) {
         bytes32 wstUsdcBridge = _wstUsdcBridges[dstEid];
         require(wstUsdcBridge != bytes32(0), Errors.ZeroAddress());
 
@@ -145,7 +153,7 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
             amountLD: amount,
             minAmountLD: amount,
             extraOptions: options,
-            composeMsg: abi.encode(destinationAddress, amount),
+            composeMsg: abi.encode(destinationAddress, wstUsdcAmount),
             oftCmd: ""
         });
     }
@@ -163,10 +171,10 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
 
         bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(_message);
 
-        (bytes32 destinationAddressBytes32, uint256 stUsdcAmount) = abi.decode(_composeMsgContent, (bytes32, uint256));
+        (bytes32 destinationAddressBytes32, uint256 wstUsdcAmount) = abi.decode(_composeMsgContent, (bytes32, uint256));
         address destinationAddress = destinationAddressBytes32.bytes32ToAddress();
 
-        bool success = _deliverWstUsdc(destinationAddress, stUsdcAmount);
+        bool success = _deliverWstUsdc(destinationAddress, wstUsdcAmount);
         if (!success) revert Errors.LZComposeFailed();
     }
 
