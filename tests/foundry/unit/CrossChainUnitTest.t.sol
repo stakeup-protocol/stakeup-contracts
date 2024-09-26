@@ -221,7 +221,8 @@ contract CrossChainUnitTest is CrossChainSetup {
         msgOptions =
             OptionsBuilder.newOptions().addExecutorLzReceiveOption(200000, 0).addExecutorLzComposeOption(0, 200000, 0);
 
-        MessagingFee memory fee = wstUsdcBridge.quoteBridgeWstUsdc(dstChainId, user, amount, msgOptions);
+        MessagingFee memory fee =
+            wstUsdcBridge.quoteBridgeWstUsdc(dstChainId, user.addressToBytes32(), amount, msgOptions);
         ILayerZeroSettings.LzSettings memory settings = ILayerZeroSettings.LzSettings({
             options: msgOptions,
             fee: MessagingFee({nativeFee: fee.nativeFee, lzTokenFee: 0}),
@@ -230,7 +231,9 @@ contract CrossChainUnitTest is CrossChainSetup {
 
         wstUsdc.approve(address(wstUsdcBridge), amount);
         deal(user, settings.fee.nativeFee);
-        receipt = wstUsdcBridge.bridgeWstUsdc{value: settings.fee.nativeFee}(user, amount, dstChainId, settings);
+        receipt = wstUsdcBridge.bridgeWstUsdc{value: settings.fee.nativeFee}(
+            dstChainId, user.addressToBytes32(), amount, settings
+        );
         vm.stopPrank();
     }
 

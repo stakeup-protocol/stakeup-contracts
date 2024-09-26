@@ -18,11 +18,11 @@ import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
  * @notice Contract used for bridging wstUsdc between chains
  */
 contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
-    using OFTComposeMsgCodec for address;
+    using OFTComposeMsgCodec for bytes32;
 
     // =================== Storage ===================
     /// @notice mapping of LayerZero Endpoint IDs to WstUsdcBridge instances
-    mapping(uint32 => address) private _wstUsdcBridges;
+    mapping(uint32 => bytes32) private _wstUsdcBridges;
 
     // =================== Immutables ===================
     /// @notice Address of stUsdc contract
@@ -42,36 +42,37 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
     // =================== Functions ===================
     /// @inheritdoc IWstUsdcBridge
     function bridgeWstUsdc(
-        address destinationAddress,
-        uint256 wstUsdcAmount,
         uint32 dstEid,
+        bytes32 destinationAddress,
+        uint256 wstUsdcAmount,
         LzSettings calldata settings
     ) external payable returns (LzBridgeReceipt memory bridgingReceipt) {
-        require(destinationAddress != address(0), Errors.ZeroAddress());
+        require(destinationAddress != bytes32(0), Errors.ZeroAddress());
         require(wstUsdcAmount > 0, Errors.ZeroAmount());
 
         _wstUsdc.transferFrom(msg.sender, address(this), wstUsdcAmount);
         uint256 stUsdcAmount = _wstUsdc.unwrap(wstUsdcAmount);
 
         emit WstUsdcBridged(endpoint.eid(), dstEid, wstUsdcAmount);
-        bridgingReceipt = _bridgeStUsdc(destinationAddress, stUsdcAmount, dstEid, settings);
+        bridgingReceipt = _bridgeStUsdc(dstEid, destinationAddress, stUsdcAmount, settings);
     }
 
     /// @inheritdoc IWstUsdcBridge
-    function setWstUsdcBridge(uint32 eid, address bridge) external override onlyBridgeOperator {
+    function setWstUsdcBridge(uint32 eid, bytes32 bridge) external override onlyBridgeOperator {
         require(eid != 0, Errors.InvalidPeerID());
-        require(bridge != address(0), Errors.ZeroAddress());
+        require(bridge != bytes32(0), Errors.ZeroAddress());
         _wstUsdcBridges[eid] = bridge;
+        emit WstUsdcBridgeSet(eid, bridge);
     }
 
     /// @inheritdoc IWstUsdcBridge
     function quoteBridgeWstUsdc(
         uint32 dstEid,
-        address destinationAddress,
+        bytes32 destinationAddress,
         uint256 wstUsdcAmount,
         bytes calldata options
     ) external view returns (MessagingFee memory fee) {
-        SendParam memory sendParam = _setSendParam(destinationAddress, wstUsdcAmount, dstEid, options);
+        SendParam memory sendParam = _setSendParam(dstEid, destinationAddress, wstUsdcAmount, options);
         return IOFT(_stUsdc).quoteSend(sendParam, false);
     }
 
@@ -86,25 +87,25 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
     }
 
     /// @inheritdoc IWstUsdcBridge
-    function bridgeByEid(uint32 eid) external view returns (address) {
+    function bridgeByEid(uint32 eid) external view returns (bytes32) {
         return _wstUsdcBridges[eid];
     }
 
     /**
      * @notice Bridges stUsdc tokens to the destination wstUsdc Bridge contract
-     * @param destinationAddress The address to send the bridged wstUsdc to
-     * @param stUsdcAmount The unwrapped amount of stUsdc to bridge
      * @param dstEid The destination LayerZero Endpoint ID
+     * @param destinationAddress The address to send the bridged wstUsdc to (casted to bytes32)
+     * @param stUsdcAmount The unwrapped amount of stUsdc to bridge
      * @param settings Configuration settings for bridging using LayerZero
      * @return bridgingReceipt LzBridgeReceipt Receipts for bridging using LayerZero
      */
     function _bridgeStUsdc(
-        address destinationAddress,
-        uint256 stUsdcAmount,
         uint32 dstEid,
+        bytes32 destinationAddress,
+        uint256 stUsdcAmount,
         LzSettings calldata settings
     ) internal returns (LzBridgeReceipt memory bridgingReceipt) {
-        SendParam memory sendParam = _setSendParam(destinationAddress, stUsdcAmount, dstEid, settings.options);
+        SendParam memory sendParam = _setSendParam(dstEid, destinationAddress, stUsdcAmount, settings.options);
 
         (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt) =
             IOFT(_stUsdc).send{value: msg.value}(sendParam, settings.fee, settings.refundRecipient);
@@ -125,22 +126,22 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
 
     /**
      * @notice Sets the send parameters for the bridging operation
-     * @param destinationAddress The address to send the tokens to
-     * @param amount The minimum amount of tokens to send
      * @param dstEid The destination LayerZero Endpoint ID
+     * @param destinationAddress The address to send the tokens to (casted to bytes32)
+     * @param amount The minimum amount of tokens to send
      * @param options The executor options for the send operation
      */
-    function _setSendParam(address destinationAddress, uint256 amount, uint32 dstEid, bytes calldata options)
+    function _setSendParam(uint32 dstEid, bytes32 destinationAddress, uint256 amount, bytes calldata options)
         internal
         view
         returns (SendParam memory)
     {
-        address wstUsdcBridge = _wstUsdcBridges[dstEid];
-        require(wstUsdcBridge != address(0), Errors.ZeroAddress());
+        bytes32 wstUsdcBridge = _wstUsdcBridges[dstEid];
+        require(wstUsdcBridge != bytes32(0), Errors.ZeroAddress());
 
         return SendParam({
             dstEid: dstEid,
-            to: wstUsdcBridge.addressToBytes32(),
+            to: wstUsdcBridge,
             amountLD: amount,
             minAmountLD: amount,
             extraOptions: options,
@@ -162,7 +163,8 @@ contract WstUsdcBridge is IWstUsdcBridge, OAppController, IOAppComposer {
 
         bytes memory _composeMsgContent = OFTComposeMsgCodec.composeMsg(_message);
 
-        (address destinationAddress, uint256 stUsdcAmount) = abi.decode(_composeMsgContent, (address, uint256));
+        (bytes32 destinationAddressBytes32, uint256 stUsdcAmount) = abi.decode(_composeMsgContent, (bytes32, uint256));
+        address destinationAddress = destinationAddressBytes32.bytes32ToAddress();
 
         bool success = _deliverWstUsdc(destinationAddress, stUsdcAmount);
         if (!success) revert Errors.LZComposeFailed();
