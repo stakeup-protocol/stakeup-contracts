@@ -55,8 +55,17 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     // ================== Constructor ==================
-    constructor(address layerZeroEndpoint, address bridgeOperator, bool areKeepersAllowed)
-        OFTController("staked USDC", "stUSDC", layerZeroEndpoint, bridgeOperator)
+    constructor(
+        address layerZeroEndpoint,
+        address bridgeOperator,
+        bool areKeepersAllowed
+    )
+        OFTController(
+            "staked USDC",
+            "stUSDC",
+            layerZeroEndpoint,
+            bridgeOperator
+        )
     {
         _areKeepersAllowed = areKeepersAllowed;
         _lastRateUpdate = block.timestamp;
@@ -65,9 +74,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
 
     // =================== Functions ==================
     /// @inheritdoc IStUsdcLite
-    function setUsdPerShare(uint256 usdPerShare) external onlyKeeper {
-        require(block.timestamp - _lastRateUpdate >= Constants.ONE_DAY, Errors.RateUpdateTooOften());
-        _setUsdPerShare(usdPerShare);
+    function setUsdPerShare(
+        uint256 usdPerShare,
+        uint64 timestamp
+    ) external onlyKeeper {
+        _setUsdPerShare(usdPerShare, timestamp);
     }
 
     /**
@@ -122,7 +133,10 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param recipient recipient of stTBY tokens
      * @param amount Amount of tokens being transfered
      */
-    function transfer(address recipient, uint256 amount) public override returns (bool) {
+    function transfer(
+        address recipient,
+        uint256 amount
+    ) public override returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
@@ -134,7 +148,10 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param owner Owner of the tokens
      * @param spender Spender of the tokens
      */
-    function allowance(address owner, address spender) public view override returns (uint256) {
+    function allowance(
+        address owner,
+        address spender
+    ) public view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
@@ -146,7 +163,10 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param spender Spender of stTBY tokens
      * @param amount Amount of stTBY tokens allowed to be spent
      */
-    function approve(address spender, uint256 amount) public override returns (bool) {
+    function approve(
+        address spender,
+        uint256 amount
+    ) public override returns (bool) {
         _approve(msg.sender, spender, amount);
         return true;
     }
@@ -165,7 +185,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param recipient Destination of stTBY tokens
      * @param amount Amount of tokens being transfered
      */
-    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public override returns (bool) {
         _spendAllowance(sender, msg.sender, amount);
         _transfer(sender, recipient, amount);
         return true;
@@ -182,8 +206,15 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param spender The address which the allowance is increased for
      * @param addedValue The additional amount of allowance to be granted
      */
-    function increaseAllowance(address spender, uint256 addedValue) public override returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
+    function increaseAllowance(
+        address spender,
+        uint256 addedValue
+    ) public override returns (bool) {
+        _approve(
+            msg.sender,
+            spender,
+            _allowances[msg.sender][spender] + addedValue
+        );
         return true;
     }
 
@@ -199,7 +230,10 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param spender The address which the allowance is decreased for
      * @param subtractedValue The amount of allowance to be reduced
      */
-    function decreaseAllowance(address spender, uint256 subtractedValue) public override returns (bool) {
+    function decreaseAllowance(
+        address spender,
+        uint256 subtractedValue
+    ) public override returns (bool) {
         uint256 currentAllowance = _allowances[msg.sender][spender];
         require(currentAllowance >= subtractedValue, "ALLOWANCE_BELOW_ZERO");
         _approve(msg.sender, spender, currentAllowance - subtractedValue);
@@ -212,7 +246,9 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @inheritdoc IStUsdcLite
-    function sharesOf(address account) external view override returns (uint256) {
+    function sharesOf(
+        address account
+    ) external view override returns (uint256) {
         return _sharesOf(account);
     }
 
@@ -222,7 +258,9 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @inheritdoc IStUsdcLite
-    function sharesByUsd(uint256 usdAmount) public view override returns (uint256) {
+    function sharesByUsd(
+        uint256 usdAmount
+    ) public view override returns (uint256) {
         uint256 totalShares_ = _getTotalShares();
         uint256 totalUsd_ = _getTotalUsd();
 
@@ -237,7 +275,9 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @inheritdoc IStUsdcLite
-    function usdByShares(uint256 sharesAmount) public view override returns (uint256) {
+    function usdByShares(
+        uint256 sharesAmount
+    ) public view override returns (uint256) {
         uint256 totalShares_ = _getTotalShares();
         if (totalShares_ == 0) {
             return sharesAmount;
@@ -246,7 +286,10 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @inheritdoc IStUsdcLite
-    function transferShares(address recipient, uint256 sharesAmount) external returns (uint256) {
+    function transferShares(
+        address recipient,
+        uint256 sharesAmount
+    ) external returns (uint256) {
         _transferShares(msg.sender, recipient, sharesAmount);
         uint256 tokensAmount = usdByShares(sharesAmount);
         _emitTransferEvents(msg.sender, recipient, tokensAmount, sharesAmount);
@@ -254,7 +297,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @inheritdoc IStUsdcLite
-    function transferSharesFrom(address sender, address recipient, uint256 sharesAmount) external returns (uint256) {
+    function transferSharesFrom(
+        address sender,
+        address recipient,
+        uint256 sharesAmount
+    ) external returns (uint256) {
         uint256 tokensAmount = usdByShares(sharesAmount);
         _spendAllowance(sender, msg.sender, tokensAmount);
         _transferShares(sender, recipient, sharesAmount);
@@ -294,7 +341,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @dev Emits a `Transfer` event.
      * @dev Emits a `TransferShares` event.
      */
-    function _transfer(address sender, address recipient, uint256 amount) internal override {
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal override {
         uint256 sharesToTransfer = sharesByUsd(amount);
         _transferShares(sender, recipient, sharesToTransfer);
         _emitTransferEvents(sender, recipient, amount, sharesToTransfer);
@@ -307,7 +358,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
-    function _approve(address owner, address spender, uint256 amount) internal override {
+    function _approve(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal override {
         require(owner != address(0), Errors.ZeroAddress());
         require(spender != address(0), Errors.ZeroAddress());
 
@@ -321,7 +376,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * Revert if not enough allowance is available.
      * Might emit an {Approval} event.
      */
-    function _spendAllowance(address owner, address spender, uint256 amount) internal override {
+    function _spendAllowance(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal override {
         uint256 currentAllowance = _allowances[owner][spender];
         if (currentAllowance != Constants.MAX_UINT_256) {
             require(currentAllowance >= amount, "ALLOWANCE_EXCEEDED");
@@ -350,12 +409,19 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param recipient The recipient of stTBY tokens
      * @param sharesAmount Amount of shares to transfer
      */
-    function _transferShares(address sender, address recipient, uint256 sharesAmount) internal {
+    function _transferShares(
+        address sender,
+        address recipient,
+        uint256 sharesAmount
+    ) internal {
         require(sender != address(0), Errors.ZeroAddress());
         require(recipient != address(0), Errors.ZeroAddress());
 
         uint256 currentSenderShares = _shares[sender];
-        require(sharesAmount <= currentSenderShares, Errors.InsufficientBalance());
+        require(
+            sharesAmount <= currentSenderShares,
+            Errors.InsufficientBalance()
+        );
 
         _shares[sender] = currentSenderShares - sharesAmount;
         _shares[recipient] = _shares[recipient] + sharesAmount;
@@ -369,7 +435,10 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param recipient Destination where minted shares will be sent
      * @param sharesAmount Amount of shares to mint
      */
-    function _mintShares(address recipient, uint256 sharesAmount) internal virtual returns (uint256 newTotalShares) {
+    function _mintShares(
+        address recipient,
+        uint256 sharesAmount
+    ) internal virtual returns (uint256 newTotalShares) {
         require(recipient != address(0), Errors.ZeroAddress());
 
         newTotalShares = _getTotalShares() + sharesAmount;
@@ -394,7 +463,10 @@ contract StUsdcLite is IStUsdcLite, OFTController {
      * @param account Account to burn shares from
      * @param sharesAmount Amount of shares to burn
      */
-    function _burnShares(address account, uint256 sharesAmount) internal virtual returns (uint256 newTotalShares) {
+    function _burnShares(
+        address account,
+        uint256 sharesAmount
+    ) internal virtual returns (uint256 newTotalShares) {
         require(account != address(0), Errors.ZeroAddress());
 
         uint256 accountShares = _shares[account];
@@ -409,7 +481,12 @@ contract StUsdcLite is IStUsdcLite, OFTController {
 
         uint256 postRebaseTokenAmount = usdByShares(sharesAmount);
 
-        emit SharesBurnt(account, preRebaseTokenAmount, postRebaseTokenAmount, sharesAmount);
+        emit SharesBurnt(
+            account,
+            preRebaseTokenAmount,
+            postRebaseTokenAmount,
+            sharesAmount
+        );
 
         // Notice: we're not emitting a Transfer event to the zero address here since shares burn
         // works by redistributing the amount of tokens corresponding to the burned shares between
@@ -421,16 +498,21 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @dev Emits {Transfer} and {TransferShares} events
-    function _emitTransferEvents(address from, address to, uint256 tokenAmount, uint256 sharesAmount) internal {
+    function _emitTransferEvents(
+        address from,
+        address to,
+        uint256 tokenAmount,
+        uint256 sharesAmount
+    ) internal {
         emit Transfer(from, to, tokenAmount);
         emit TransferShares(from, to, sharesAmount);
     }
 
     /// @dev This is called on the base chain before distributing yield to other chains
-    function _setUsdPerShare(uint256 usdPerShare) internal {
+    function _setUsdPerShare(uint256 usdPerShare, uint256 timestamp) internal {
         // solidify the yield from the last 24 hours
         _setTotalUsdFloor(_getTotalUsd());
-        _lastRateUpdate = block.timestamp;
+        _lastRateUpdate = timestamp;
 
         uint256 lastUsdPerShare = _lastUsdPerShare;
         if (usdPerShare > lastUsdPerShare) {
@@ -443,23 +525,31 @@ contract StUsdcLite is IStUsdcLite, OFTController {
         emit UpdatedUsdPerShare(usdPerShare);
     }
 
-    function _debit(uint256 _amountLD, uint256 _minAmountLD, uint32 _dstEid)
+    function _debit(
+        uint256 _amountLD,
+        uint256 _minAmountLD,
+        uint32 _dstEid
+    )
         internal
         override
         returns (uint256 amountSentLD, uint256 amountReceivedLD)
     {
-        (amountSentLD, amountReceivedLD) = _debitView(_amountLD, _minAmountLD, _dstEid);
+        (amountSentLD, amountReceivedLD) = _debitView(
+            _amountLD,
+            _minAmountLD,
+            _dstEid
+        );
 
         uint256 shares = sharesByUsd(amountSentLD);
         _burnShares(msg.sender, shares);
         _setTotalUsdFloor(_getTotalUsdFloor() - amountSentLD);
     }
 
-    function _credit(address _to, uint256 _amountToCreditLD, uint32 /*_srcEid*/ )
-        internal
-        override
-        returns (uint256 amountReceivedLD)
-    {
+    function _credit(
+        address _to,
+        uint256 _amountToCreditLD,
+        uint32 /*_srcEid*/
+    ) internal override returns (uint256 amountReceivedLD) {
         _mintShares(_to, sharesByUsd(_amountToCreditLD));
         _setTotalUsdFloor(_getTotalUsdFloor() + _amountToCreditLD);
         return _amountToCreditLD;

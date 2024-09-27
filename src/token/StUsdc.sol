@@ -195,7 +195,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         }
 
         // Update USD per share to reflect the new value
-        _setUsdPerShare(newUsdPerShare);
+        _setUsdPerShare(newUsdPerShare, currentTimestamp);
 
         // If their is a previous pending fee, we need to distribute it to StakeUpStaking
         if (prevFee != 0) {
@@ -443,7 +443,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         return _lastRedeemedTbyId;
     }
 
-    /// @inheritdoc IStUsdc
+    // /// @inheritdoc IStUsdc
     function lastRateUpdate() public view returns (uint256) {
         return _lastRateUpdate;
     }

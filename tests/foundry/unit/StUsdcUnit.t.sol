@@ -109,7 +109,7 @@ contract StUsdcUnitTest is StUsdcSetup {
     function test_setUsdPerShareNonRelayer() public {
         vm.startPrank(rando);
         vm.expectRevert(Errors.UnauthorizedCaller.selector);
-        stUsdc.setUsdPerShare(1e18);
+        stUsdc.setUsdPerShare(1e18, uint64(block.timestamp));
     }
 
     function test_transfer() public {
