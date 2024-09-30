@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 import {IBloomPool} from "@bloom-v2/interfaces/IBloomPool.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";

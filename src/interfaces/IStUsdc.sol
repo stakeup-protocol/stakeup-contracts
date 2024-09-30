@@ -118,7 +118,4 @@ interface IStUsdc is IStUsdcLite {
 
     /// @notice The last time the rate was updated
     function lastRateUpdate() external view returns (uint256);
-
-    /// @notice The pending fee to be captured during the next poke
-    function pendingFee() external view returns (uint256);
 }

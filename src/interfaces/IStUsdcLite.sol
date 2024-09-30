@@ -77,9 +77,6 @@ interface IStUsdcLite is IControllerBase {
      */
     function totalShares() external view returns (uint256);
 
-    /// @notice Get the rewardPerSecond of yield accrual that is distributed 24 hours after rate updates
-    function rewardPerSecond() external view returns (uint256);
-
     /**
      * @notice Get the amount of shares owned by `_account`
      * @param account Account to get shares of
