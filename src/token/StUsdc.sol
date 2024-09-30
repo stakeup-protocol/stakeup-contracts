@@ -121,11 +121,12 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         require(!pool.isTbyRedeemable(tbyId), Errors.RedeemableTbyNotAllowed());
         // If the token is a TBY, we need to get the current exchange rate of the token
         //     to accurately calculate the amount of stUsdc to mint.
-        amountMinted = pool.getRate(tbyId).mulWad(amount) * _scalingFactor;
-        _deposit(amountMinted);
+        uint256 scaledAmount = amount * _scalingFactor;
+        amountMinted = pool.getRate(tbyId).mulWad(scaledAmount);
 
+        _deposit(amountMinted);
         // Calculate & mint SUP mint rewards to users.
-        _mintRewards(pool, tbyId, amountMinted);
+        _mintRewards(pool, tbyId, scaledAmount);
 
         emit TbyDeposited(msg.sender, tbyId, amount, amountMinted);
         _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
