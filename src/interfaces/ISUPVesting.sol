@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.26;
+pragma solidity 0.8.27;
 
 interface ISUPVesting {
     /// @dev The max supply of SUP tokens is 1 billion so we can use uint32 for balances
