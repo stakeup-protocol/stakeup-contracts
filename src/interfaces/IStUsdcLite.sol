@@ -118,6 +118,6 @@ interface IStUsdcLite is IControllerBase {
     /// @notice Get the address of the keeper that can update the yield per share
     function keeper() external view returns (address);
 
-    // /// @notice The last time the rate was updated
-    // function lastRateUpdate() external view returns (uint256);
+    /// @notice The last time the rate was updated
+    function lastRateUpdate() external view returns (uint256);
 }

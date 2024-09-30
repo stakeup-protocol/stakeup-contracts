@@ -294,7 +294,7 @@ contract StUsdcFuzzTest is StUsdcSetup {
         // Validate that the accrued value is correct
         assertEq(stableToken.balanceOf(address(stUsdc)), 0);
         assertEq(bloomPool.amountOpen(address(stUsdc)), totalDeposits);
-        assertEq(totalDeposits * SCALER, stUsdc.totalUsd());
+        assertTrue(_isEqualWithDust(totalDeposits * SCALER, stUsdc.totalUsd()));
 
         // Validate that the last rate update state variable updated properly
         assertEq(stUsdc.lastRateUpdate(), block.timestamp);

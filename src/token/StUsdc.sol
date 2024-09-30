@@ -443,11 +443,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         return _lastRedeemedTbyId;
     }
 
-    // /// @inheritdoc IStUsdc
-    function lastRateUpdate() public view returns (uint256) {
-        return _lastRateUpdate;
-    }
-
     /// @inheritdoc IStUsdc
     function pendingFee() external view returns (uint256) {
         return _pendingFee;
