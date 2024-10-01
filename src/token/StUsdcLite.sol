@@ -66,7 +66,7 @@ contract StUsdcLite is IStUsdcLite, OFTController {
 
     // =================== Functions ==================
     /// @inheritdoc IStUsdcLite
-    function setUsdPerShare(uint256 usdPerShare, uint64 timestamp) external onlyKeeper {
+    function setUsdPerShare(uint256 usdPerShare, uint256 timestamp) external onlyKeeper {
         _setUsdPerShare(usdPerShare, timestamp);
     }
 

@@ -200,7 +200,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         uint256 peerLength = _peerEids.length;
         if (peerLength != 0) {
             _keeper.sync{value: settings.fee.nativeFee}(
-                newUsdPerShare, _peerEids, settings.options, settings.refundRecipient
+                newUsdPerShare, currentTimestamp, _peerEids, settings.options, settings.refundRecipient
             );
         }
 

@@ -38,17 +38,19 @@ contract StakeUpKeeper is LzOrderedMessenger {
     /**
      * @notice Syncs all stUsdc instances with the newUsdPerShare value
      * @param newUsdPerShare The new USD per share to be set in the stUsdc contract
+     * @param timestamp The timestamp that the newUsdPerShare is set at
      * @param peerEids An array of peer endpoint ids
      * @param options LayerZero messaging options
      * @param refundRecipient The address to refund any excess native fee to
      */
-    function sync(uint256 newUsdPerShare, uint32[] memory peerEids, bytes memory options, address refundRecipient)
-        external
-        payable
-        onlyStUsdc
-        returns (MessagingReceipt[] memory receipts)
-    {
-        return _batchSend(abi.encode(newUsdPerShare), peerEids, options, refundRecipient);
+    function sync(
+        uint256 newUsdPerShare,
+        uint256 timestamp,
+        uint32[] memory peerEids,
+        bytes memory options,
+        address refundRecipient
+    ) external payable onlyStUsdc returns (MessagingReceipt[] memory receipts) {
+        return _batchSend(abi.encode(newUsdPerShare, timestamp), peerEids, options, refundRecipient);
     }
 
     // ========================= Quote Functions =========================
@@ -85,7 +87,8 @@ contract StakeUpKeeper is LzOrderedMessenger {
     {
         uint256 length = peerEids.length;
         for (uint256 i = 0; i < length; ++i) {
-            MessagingFee memory fee = _quote(peerEids[i], abi.encode(expectedUsdPerShare), options, false);
+            MessagingFee memory fee =
+                _quote(peerEids[i], abi.encode(expectedUsdPerShare, block.timestamp), options, false);
             nativeFee += fee.nativeFee;
         }
     }
@@ -130,15 +133,15 @@ contract StakeUpKeeper is LzOrderedMessenger {
         bytes calldata _extraData
     ) internal virtual override {
         super._lzReceive(_origin, _guid, _message, _executor, _extraData);
-        uint256 newUsdPerShare = _decodeUsdPerShare(_message);
-        IStUsdc(_stUsdc).setUsdPerShare(newUsdPerShare);
+        (uint256 newUsdPerShare, uint256 timestamp) = _decodeUsdPerShare(_message);
+        IStUsdc(_stUsdc).setUsdPerShare(newUsdPerShare, timestamp);
     }
 
     /**
      * @notice Decodes the encoded data for share update message types
      * @param encodedData The encoded data to decode
      */
-    function _decodeUsdPerShare(bytes memory encodedData) internal pure returns (uint256) {
-        return abi.decode(encodedData, (uint256));
+    function _decodeUsdPerShare(bytes memory encodedData) internal pure returns (uint256, uint256) {
+        return abi.decode(encodedData, (uint256, uint256));
     }
 }

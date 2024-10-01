@@ -53,7 +53,7 @@ interface IStUsdcLite is IControllerBase {
      * @param usdPerShare The new usdPerShare value
      * @param timestamp The timestamp of the last rate update
      */
-    function setUsdPerShare(uint256 usdPerShare, uint64 timestamp) external;
+    function setUsdPerShare(uint256 usdPerShare, uint256 timestamp) external;
 
     /**
      * @notice Transfer shares from caller to recipient
@@ -117,8 +117,8 @@ interface IStUsdcLite is IControllerBase {
      */
     function usdByShares(uint256 sharesAmount) external view returns (uint256);
 
-    /// @notice Get the address of the keeper that can update the yield per share
-    function keeper() external view returns (address);
+    /// @notice Get the keeper that can update the yield per share
+    function keeper() external view returns (StakeUpKeeper);
 
     /// @notice The last time the rate was updated
     function lastRateUpdate() external view returns (uint256);
