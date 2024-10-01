@@ -28,11 +28,14 @@ contract WstUsdc is IWstUsdc, WstUsdcLite, ERC1155TokenReceiver {
     /// @notice Instance of the TBY token
     ERC1155 private immutable _tby;
 
+    /// @notice Instance of the SUP token
+    IERC20 private immutable _sup;
+
     // ================== Constructor ==================
     constructor(address stUsdc_) WstUsdcLite(stUsdc_) {
         _stUsdcAsset = IStUsdc(stUsdc_).asset();
         _tby = IStUsdc(stUsdc_).tby();
-
+        _sup = IERC20(address(IStUsdc(stUsdc_).stakeUpToken()));
         // Set approval for stUsdc to be able to transfer TBYs on behalf of the WstUsdc contract
         _tby.setApprovalForAll(address(stUsdc_), true);
     }
@@ -51,7 +54,16 @@ contract WstUsdc is IWstUsdc, WstUsdcLite, ERC1155TokenReceiver {
     function depositTby(uint256 tbyId, uint256 amount) external override returns (uint256 amountMinted) {
         _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
         amountMinted = _stUsdc.depositTby(tbyId, amount);
+
+        uint256 supStartBalance = _sup.balanceOf(address(this));
         amountMinted = _mintWstUsdc(amountMinted);
+
+        // If SUP rewards have been minted, transfer to the user
+        uint256 supEndBalance = _sup.balanceOf(address(this));
+        if (supEndBalance > supStartBalance) {
+            uint256 supMinted = supEndBalance - supStartBalance;
+            _sup.safeTransfer(msg.sender, supMinted);
+        }
     }
 
     /// @inheritdoc IWstUsdc
