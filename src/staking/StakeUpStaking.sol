@@ -65,7 +65,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         _;
     }
 
-    /// @notice Prevents a user from withdrawing or harvesting their stake within 24 hours of their last deposit
+    /// @notice Prevents a user from withdrawing their stake within 24 hours of their last deposit
     modifier lock() {
         require(_lastDeposit[msg.sender] <= block.timestamp - Constants.ONE_DAY, Errors.Locked());
         _;
@@ -117,7 +117,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     }
 
     /// @inheritdoc IStakeUpStaking
-    function harvest() public lock nonReentrant updateIndex {
+    function harvest() public nonReentrant updateIndex {
         uint256 rewardAmount = _distributeRewards(msg.sender);
         require(rewardAmount != 0, Errors.NoRewardsToClaim());
         emit RewardsHarvested(msg.sender, rewardAmount);

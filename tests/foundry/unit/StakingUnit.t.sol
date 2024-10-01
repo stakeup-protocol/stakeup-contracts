@@ -49,10 +49,6 @@ contract StakingUnitTest is StUsdcSetup {
         vm.expectRevert(Errors.Locked.selector);
         staking.unstake(100e18, false);
 
-        // Expect harvest to fail
-        vm.expectRevert(Errors.Locked.selector);
-        staking.harvest();
-
         // Fast forward to 25 hours after alice's deposit
         skip(2 hours);
 
