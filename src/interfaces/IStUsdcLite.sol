@@ -4,6 +4,7 @@ pragma solidity 0.8.27;
 import {IControllerBase} from "./IControllerBase.sol";
 
 interface IStUsdcLite is IControllerBase {
+    // =================== Events ===================
     /**
      * @notice An executed shares transfer from `sender` to `recipient`.
      * @dev emitted in pair with an ERC20-defined `Transfer` event.
@@ -30,12 +31,27 @@ interface IStUsdcLite is IControllerBase {
     /// @notice Emitted when usdPerShare is updated
     event UpdatedUsdPerShare(uint256 usdPerShare);
 
+    // ==================== Structs ====================
+    /**
+     * @notice Struct for holding yield data in a single storage slot
+     * @param lastRateUpdate The last rate update timestamp
+     * @param lastUsdPerShare The usdPerShare value at the time of the last rate update
+     * @param rewardPerSecond The rewardPerSecond of yield accrual that is distributed 24 hours after rate updates (per share)
+     */
+    struct YieldData {
+        uint256 lastRateUpdate;
+        uint256 lastUsdPerShare;
+        uint256 rewardPerSecond;
+    }
+
+    // =================== Functions ===================
     /**
      * @notice Distribute yield according to the consentration of shares relative to
      *         implementations on other chains.
      * @param usdPerShare The new usdPerShare value
+     * @param timestamp The timestamp of the last rate update
      */
-    function setUsdPerShare(uint256 usdPerShare) external;
+    function setUsdPerShare(uint256 usdPerShare, uint64 timestamp) external;
 
     /**
      * @notice Transfer shares from caller to recipient
@@ -101,4 +117,7 @@ interface IStUsdcLite is IControllerBase {
 
     /// @notice Get the address of the keeper that can update the yield per share
     function keeper() external view returns (address);
+
+    /// @notice The last time the rate was updated
+    function lastRateUpdate() external view returns (uint256);
 }

@@ -107,8 +107,8 @@ contract CrossChainUnitTest is CrossChainSetup {
         stUsdc.poke();
 
         vm.startPrank(keeper);
-        stakeUpContracts[2].stUsdcLite.setUsdPerShare(expectedUsdPerShare);
-        stakeUpContracts[3].stUsdcLite.setUsdPerShare(expectedUsdPerShare);
+        stakeUpContracts[2].stUsdcLite.setUsdPerShare(expectedUsdPerShare, uint64(block.timestamp));
+        stakeUpContracts[3].stUsdcLite.setUsdPerShare(expectedUsdPerShare, uint64(block.timestamp));
 
         // skip 24hours for all yield to accrue
         _skipAndUpdatePrice(24 hours, 111e8, 2);
