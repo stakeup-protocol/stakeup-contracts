@@ -39,6 +39,9 @@ library StakeUpErrors {
     /// @notice Error emmitted if the nonce of an incoming message is not what its suppose to be
     error InvalidNonce();
 
+    /// @notice Error emmitted if the msg.value is less than the fee
+    error InvalidMsgValue();
+
     // ========================= SUP Token ===========================
     /// @notice Amount being minted is greater than the supply cap
     error ExceedsMaxSupply();
