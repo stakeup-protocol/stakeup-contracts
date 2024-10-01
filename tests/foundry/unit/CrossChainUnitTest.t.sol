@@ -111,9 +111,11 @@ contract CrossChainUnitTest is CrossChainSetup {
         skip(1 days);
         vm.expectEmit(true, true, true, true);
         emit IStUsdcLite.UpdatedUsdPerShare(expectedUsdPerShare);
-        stUsdc.poke{value: settings.fee.nativeFee}(settings);
-        verifyPackets(2, addressToBytes32(address(stakeUpContracts[2].keeper)));
-        verifyPackets(3, addressToBytes32(address(stakeUpContracts[3].keeper)));
+        stUsdc.poke();
+
+        vm.startPrank(keeper);
+        stakeUpContracts[2].stUsdcLite.setUsdPerShare(expectedUsdPerShare, uint64(block.timestamp));
+        stakeUpContracts[3].stUsdcLite.setUsdPerShare(expectedUsdPerShare, uint64(block.timestamp));
 
         // skip 24hours for all yield to accrue
         _skipAndUpdatePrice(24 hours, 111e8, 2);

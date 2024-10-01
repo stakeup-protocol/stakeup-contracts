@@ -118,9 +118,6 @@ interface IStUsdc is IStUsdcLite, ILayerZeroSettings {
     /// @notice The total shares of stUsdc tokens in circulation on all chains
     function globalShares() external view returns (uint256);
 
-    /// @notice The last time the rate was updated
-    function lastRateUpdate() external view returns (uint256);
-
     /// @notice The pending fee to be captured during the next poke
     function pendingFee() external view returns (uint256);
 }

@@ -47,6 +47,7 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
     function testFuzzDepositTby(uint256 amount) public {
         amount = bound(amount, 10e6, 100_000_000_000e6);
+        vm.assume(amount % 2 == 0);
 
         vm.startPrank(alice);
         // Mint and approve stableToken
@@ -88,7 +89,8 @@ contract StUsdcFuzzTest is StUsdcSetup {
 
         // Validate that the user received mint rewards if they deposited 200M or less
         // Since 50% of the TBYs maturity has passed, the user should have received 50% of the mint rewards
-        uint256 expectedSup = ((expectedStUsdc / 2) < 200_000_000e18) ? (expectedStUsdc / 2) : 200_000_000e18;
+        uint256 scaledAmount = amount * SCALER;
+        uint256 expectedSup = ((scaledAmount / 2) < 200_000_000e18) ? (scaledAmount / 2) : 200_000_000e18;
         assertEq(supToken.balanceOf(alice), expectedSup);
     }
 

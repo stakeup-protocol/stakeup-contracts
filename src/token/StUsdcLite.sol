@@ -66,9 +66,8 @@ contract StUsdcLite is IStUsdcLite, OFTController {
 
     // =================== Functions ==================
     /// @inheritdoc IStUsdcLite
-    function setUsdPerShare(uint256 usdPerShare) external onlyKeeper {
-        require(block.timestamp - _lastRateUpdate >= Constants.ONE_DAY, Errors.RateUpdateTooOften());
-        _setUsdPerShare(usdPerShare);
+    function setUsdPerShare(uint256 usdPerShare, uint64 timestamp) external onlyKeeper {
+        _setUsdPerShare(usdPerShare, timestamp);
     }
 
     /**
@@ -210,6 +209,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     /// @inheritdoc IStUsdcLite
     function keeper() external view override returns (StakeUpKeeper) {
         return _keeper;
+    }
+
+    // /// @inheritdoc IStUsdcLite
+    function lastRateUpdate() public view returns (uint256) {
+        return _lastRateUpdate;
     }
 
     /// @inheritdoc IStUsdcLite
@@ -418,10 +422,10 @@ contract StUsdcLite is IStUsdcLite, OFTController {
     }
 
     /// @dev This is called on the base chain before distributing yield to other chains
-    function _setUsdPerShare(uint256 usdPerShare) internal {
+    function _setUsdPerShare(uint256 usdPerShare, uint256 timestamp) internal {
         // solidify the yield from the last 24 hours
         _setTotalUsdFloor(_getTotalUsd());
-        _lastRateUpdate = block.timestamp;
+        _lastRateUpdate = timestamp;
 
         uint256 lastUsdPerShare = _lastUsdPerShare;
         if (usdPerShare > lastUsdPerShare) {
