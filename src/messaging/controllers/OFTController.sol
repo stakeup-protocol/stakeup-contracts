@@ -4,8 +4,8 @@ pragma solidity 0.8.27;
 import {OFT} from "@LayerZero/oft/OFT.sol";
 import {OAppCore} from "@LayerZero/oapp/OApp.sol";
 
-import {StakeUpErrors as Errors} from "../../helpers/StakeUpErrors.sol";
-import {ControllerBase} from "./ControllerBase.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
+import {ControllerBase} from "@StakeUp/messaging/controllers/ControllerBase.sol";
 
 /**
  * @title OFTController

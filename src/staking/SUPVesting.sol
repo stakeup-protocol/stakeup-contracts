@@ -4,11 +4,11 @@ pragma solidity 0.8.27;
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+import {StakeUpConstants as Constants} from "@StakeUp/helpers/StakeUpConstants.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
-import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
-import {ISUPVesting} from "../interfaces/ISUPVesting.sol";
+import {IStakeUpToken} from "@StakeUp/interfaces/IStakeUpToken.sol";
+import {ISUPVesting} from "@StakeUp/interfaces/ISUPVesting.sol";
 
 /**
  * @title SUPVesting

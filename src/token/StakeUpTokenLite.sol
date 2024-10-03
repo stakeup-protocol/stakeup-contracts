@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {OFTController} from "../messaging/controllers/OFTController.sol";
+import {OFTController} from "@StakeUp/messaging/controllers/OFTController.sol";
 
 contract StakeUpTokenLite is OFTController {
     constructor(address layerZeroEndpoint, address bridgeOperator)

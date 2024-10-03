@@ -5,13 +5,13 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
-import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
-import {SUPVesting} from "./SUPVesting.sol";
+import {StakeUpConstants as Constants} from "@StakeUp/helpers/StakeUpConstants.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
+import {SUPVesting} from "@StakeUp/staking/SUPVesting.sol";
 
-import {IStUsdc} from "../interfaces/IStUsdc.sol";
-import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
-import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
+import {IStUsdc} from "@StakeUp/interfaces/IStUsdc.sol";
+import {IStakeUpToken} from "@StakeUp/interfaces/IStakeUpToken.sol";
+import {IStakeUpStaking} from "@StakeUp/interfaces/IStakeUpStaking.sol";
 
 /**
  * @title StakeUpStaking

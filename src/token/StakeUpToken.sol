@@ -3,13 +3,13 @@ pragma solidity 0.8.27;
 
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+import {StakeUpConstants as Constants} from "@StakeUp/helpers/StakeUpConstants.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
-import {StakeUpTokenLite} from "./StakeUpTokenLite.sol";
+import {StakeUpTokenLite} from "@StakeUp/token/StakeUpTokenLite.sol";
 
-import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
-import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
+import {IStakeUpToken} from "@StakeUp/interfaces/IStakeUpToken.sol";
+import {IStakeUpStaking} from "@StakeUp/interfaces/IStakeUpStaking.sol";
 
 contract StakeUpToken is IStakeUpToken, StakeUpTokenLite, Ownable2Step {
     // =================== Storage ===================

@@ -3,11 +3,11 @@ pragma solidity 0.8.27;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
-import {StUsdcLite} from "./StUsdcLite.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
+import {StUsdcLite} from "@StakeUp/token/StUsdcLite.sol";
 
-import {IStUsdc} from "../interfaces/IStUsdc.sol";
-import {IWstUsdcLite} from "../interfaces/IWstUsdcLite.sol";
+import {IStUsdc} from "@StakeUp/interfaces/IStUsdc.sol";
+import {IWstUsdcLite} from "@StakeUp/interfaces/IWstUsdcLite.sol";
 
 /**
  * @title Wrapped Staked TBY Base

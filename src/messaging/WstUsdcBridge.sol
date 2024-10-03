@@ -7,12 +7,12 @@ import {IOFT, SendParam, MessagingReceipt, OFTReceipt, MessagingFee} from "@Laye
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 import {IOAppComposer, ILayerZeroComposer} from "@LayerZero/oapp/interfaces/IOAppComposer.sol";
 
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
-import {OAppController} from "./controllers/OAppController.sol";
-import {WstUsdcLite} from "../token/WstUsdcLite.sol";
-import {IStUsdcLite} from "../interfaces/IStUsdcLite.sol";
-import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
+import {OAppController} from "@StakeUp/messaging/controllers/OAppController.sol";
+import {WstUsdcLite} from "@StakeUp/token/WstUsdcLite.sol";
+import {IStUsdcLite} from "@StakeUp/interfaces/IStUsdcLite.sol";
+import {IWstUsdcBridge} from "@StakeUp/interfaces/IWstUsdcBridge.sol";
 
 /**
  * @title WstUsdcBridge
