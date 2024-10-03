@@ -31,6 +31,7 @@ contract CrossChainUnitTest is CrossChainSetup {
     function setUp() public virtual override(CrossChainSetup) {
         _setNumberOfEndpoints(CHAIN_DEPLOYMENTS);
         super.setUp();
+        _deployL2Contracts();
     }
 
     function testBridge() public {
@@ -58,11 +59,14 @@ contract CrossChainUnitTest is CrossChainSetup {
         _depositAsset(alice, amount);
 
         assertEq(stUsdc.globalShares(), 10000e18);
-
         _bridgeToChain(2, alice, stUsdc2, 5000e18);
 
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(address(this));
+
         skip(1 days);
-        stUsdc.poke();
+        stUsdc.poke{value: settings.fee.nativeFee}(settings);
+        verifyPackets(2, addressToBytes32(address(stUsdc2)));
+        verifyPackets(3, addressToBytes32(address(stUsdc2)));
 
         assertEq(stUsdc.globalShares(), 10000e18);
     }
@@ -101,18 +105,21 @@ contract CrossChainUnitTest is CrossChainSetup {
 
         uint256 expectedUsdPerShare = expectedAliceAmount.divWad(sharePreFee);
 
+        // Layer Zero settings
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(address(this));
+
         skip(1 days);
         vm.expectEmit(true, true, true, true);
         emit IStUsdcLite.UpdatedUsdPerShare(expectedUsdPerShare);
-        stUsdc.poke();
-
-        vm.startPrank(keeper);
-        stakeUpContracts[2].stUsdcLite.setUsdPerShare(expectedUsdPerShare, uint64(block.timestamp));
-        stakeUpContracts[3].stUsdcLite.setUsdPerShare(expectedUsdPerShare, uint64(block.timestamp));
+        stUsdc.poke{value: settings.fee.nativeFee}(settings);
+        verifyPackets(2, addressToBytes32(address(stakeUpContracts[2].keeper)));
+        verifyPackets(3, addressToBytes32(address(stakeUpContracts[3].keeper)));
 
         // skip 24hours for all yield to accrue
         _skipAndUpdatePrice(24 hours, 111e8, 2);
-        stUsdc.poke();
+        stUsdc.poke{value: settings.fee.nativeFee}(settings);
+        verifyPackets(2, addressToBytes32(address(stakeUpContracts[2].keeper)));
+        verifyPackets(3, addressToBytes32(address(stakeUpContracts[3].keeper)));
 
         assertApproxEqRel(stUsdc.totalUsd(), (expectedAliceAmount / 2) + expectedStakeUpAmount, 1e16);
         assertApproxEqRel(stUsdc2.totalUsd(), expectedAliceAmount / 4, 1e16);
@@ -145,8 +152,12 @@ contract CrossChainUnitTest is CrossChainSetup {
         assertEq(wstUsdc.balanceOf(alice), transferAmount);
         assertEq(wstUsdc2.balanceOf(alice), transferAmount);
 
+        ILayerZeroSettings.LzSettings memory settings = _generateSettings(address(this));
+
         skip(1 days);
-        stUsdc.poke();
+        stUsdc.poke{value: settings.fee.nativeFee}(settings);
+        verifyPackets(2, addressToBytes32(address(stUsdc2)));
+        verifyPackets(3, addressToBytes32(address(stUsdc2)));
     }
 
     // Helper functions

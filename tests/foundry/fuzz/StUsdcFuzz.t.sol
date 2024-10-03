@@ -199,11 +199,11 @@ contract StUsdcFuzzTest is StUsdcSetup {
         uint256 expectedAliceAmount = accruedValue - performanceFee;
 
         // Poke the contract to rebase and accrue value
-        stUsdc.poke();
+        stUsdc.poke(_generateSettings(address(0)));
 
         // skip 24hours for all yield to accrue
         _skipAndUpdatePrice(24 hours, 111e8, 2);
-        stUsdc.poke();
+        stUsdc.poke(_generateSettings(address(0)));
 
         assertEq(stUsdc.totalUsd(), accruedValue);
 
@@ -238,10 +238,10 @@ contract StUsdcFuzzTest is StUsdcSetup {
         _bloomEndTby(id, (totalCollateral * tbyRate).mulWad(SCALER));
 
         // Poke the contract to rebase and accrue value & harvest the matured TBY
-        stUsdc.poke();
+        stUsdc.poke(_generateSettings(address(0)));
         _skipAndUpdatePrice(1 days, 115e8, 2);
         // Poke again to update yield distribution fully (Notethis will deposit idle usdc back into the pool)
-        stUsdc.poke();
+        stUsdc.poke(_generateSettings(address(0)));
 
         assertApproxEqRel(stUsdc.totalUsd(), bloomPool.amountOpen(address(stUsdc)) * SCALER, 0.0000001e18);
         // Validate that the last redeemed TBY ID state variable is updated
@@ -265,7 +265,7 @@ contract StUsdcFuzzTest is StUsdcSetup {
         _bloomEndTby(id, (totalCollateral * endPrice).mulWad(SCALER));
 
         // Update rate and harvest the matured TBY
-        stUsdc.poke();
+        stUsdc.poke(_generateSettings(address(0)));
 
         // Withdraw USDC
         uint256 stUsdcAmount = stUsdc.balanceOf(alice);
@@ -289,9 +289,9 @@ contract StUsdcFuzzTest is StUsdcSetup {
         _skipAndUpdatePrice(2 days, 110e8, 2);
 
         // Poke the contract to trigger the auto-lend feature.
-        stUsdc.poke();
+        stUsdc.poke(_generateSettings(address(0)));
         _skipAndUpdatePrice(1 days, 110e8, 2);
-        stUsdc.poke();
+        stUsdc.poke(_generateSettings(address(0)));
 
         // Validate that the accrued value is correct
         assertEq(stableToken.balanceOf(address(stUsdc)), 0);

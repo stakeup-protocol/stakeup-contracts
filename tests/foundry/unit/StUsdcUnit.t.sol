@@ -57,7 +57,7 @@ contract StUsdcUnitTest is StUsdcSetup {
         _bloomEndTby(id, (totalCollateral * endPrice).mulWad(SCALER));
 
         // Update rate and harvest the matured TBY
-        stUsdc.poke();
+        stUsdc.poke(_generateSettings(address(0)));
 
         // try to deposit the same TBY that was redeemed
         vm.expectRevert(Errors.RedeemableTbyNotAllowed.selector);
