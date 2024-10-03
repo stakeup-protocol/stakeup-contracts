@@ -9,17 +9,17 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+import {StakeUpConstants as Constants} from "@StakeUp/helpers/StakeUpConstants.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
-import {StUsdcLite} from "./StUsdcLite.sol";
-import {StakeUpRewardMathLib} from "../rewards/lib/StakeUpRewardMathLib.sol";
-import {StakeUpMintRewardLib} from "../rewards/lib/StakeUpMintRewardLib.sol";
+import {StUsdcLite} from "@StakeUp/token/StUsdcLite.sol";
+import {StakeUpRewardMathLib} from "@StakeUp/rewards/lib/StakeUpRewardMathLib.sol";
+import {StakeUpMintRewardLib} from "@StakeUp/rewards/lib/StakeUpMintRewardLib.sol";
 
-import {IStakeUpStaking} from "../interfaces/IStakeUpStaking.sol";
-import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
-import {IStUsdc} from "../interfaces/IStUsdc.sol";
-import {IWstUsdc} from "../interfaces/IWstUsdc.sol";
+import {IStakeUpStaking} from "@StakeUp/interfaces/IStakeUpStaking.sol";
+import {IStakeUpToken} from "@StakeUp/interfaces/IStakeUpToken.sol";
+import {IStUsdc} from "@StakeUp/interfaces/IStUsdc.sol";
+import {IWstUsdc} from "@StakeUp/interfaces/IWstUsdc.sol";
 
 /// @title Staked TBY Contract
 contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
@@ -154,7 +154,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         }
 
         _burnShares(msg.sender, shares);
-        _setTotalUsdFloor(_getTotalUsdFloor() - amount);
+        _setTotalUsdFloor(_totalUsdFloor - amount);
         _globalShares -= shares;
 
         emit Redeemed(msg.sender, shares, assetAmount);
@@ -248,7 +248,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         _mintShares(msg.sender, sharesAmount);
         _globalShares += sharesAmount;
-        _setTotalUsdFloor(_getTotalUsdFloor() + amount);
+        _setTotalUsdFloor(_totalUsdFloor + amount);
     }
 
     /**
@@ -276,7 +276,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         if (fee > 0) {
             uint256 sharesFeeAmount = sharesByUsd(fee);
             _mintShares(address(_stakeupStaking), sharesFeeAmount);
-            _setTotalUsdFloor(_getTotalUsdFloor() + fee);
+            _setTotalUsdFloor(_totalUsdFloor + fee);
 
             _globalShares += sharesFeeAmount;
             emit FeeCaptured(sharesFeeAmount);
