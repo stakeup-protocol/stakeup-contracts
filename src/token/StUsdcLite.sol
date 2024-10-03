@@ -443,11 +443,17 @@ contract StUsdcLite is IStUsdcLite, OFTController {
         override
         returns (uint256 amountSentLD, uint256 amountReceivedLD)
     {
-        (amountSentLD, amountReceivedLD) = _debitView(_amountLD, _minAmountLD, _dstEid);
+        // Shares will be sent in order to avoid share loss during travel
+        uint256 sharesLD = sharesByUsd(_amountLD);
+        uint256 minSharesLD = sharesByUsd(_minAmountLD);
 
-        uint256 shares = sharesByUsd(amountSentLD);
-        _burnShares(msg.sender, shares);
-        _setTotalUsdFloor(_getTotalUsdFloor() - amountSentLD);
+        // NOTE: While the variables are named amountSentLD and amountReceivedLD they are denominated in
+        //       shares.
+        (amountSentLD, amountReceivedLD) = _debitView(sharesLD, minSharesLD, _dstEid);
+
+        uint256 usdToDebit = usdByShares(amountSentLD);
+        _burnShares(msg.sender, amountSentLD);
+        _setTotalUsdFloor(_getTotalUsdFloor() - usdToDebit);
     }
 
     function _credit(address _to, uint256 _amountToCreditLD, uint32 /*_srcEid*/ )
@@ -455,8 +461,11 @@ contract StUsdcLite is IStUsdcLite, OFTController {
         override
         returns (uint256 amountReceivedLD)
     {
-        _mintShares(_to, sharesByUsd(_amountToCreditLD));
-        _setTotalUsdFloor(_getTotalUsdFloor() + _amountToCreditLD);
+        // NOTE: Shares will be received in order to avoid share loss during travel
+        //       _amountToCreditLD == sharesToCreditLD
+        uint256 usdToCredit = usdByShares(_amountToCreditLD);
+        _mintShares(_to, _amountToCreditLD);
+        _setTotalUsdFloor(_getTotalUsdFloor() + usdToCredit);
         return _amountToCreditLD;
     }
 }
