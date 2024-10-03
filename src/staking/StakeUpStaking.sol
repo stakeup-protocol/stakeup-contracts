@@ -39,6 +39,9 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     /// @dev Mapping of users to their staking data
     mapping(address => StakingData) private _stakingData;
 
+    /// @dev Mapping of users to their last deposit timestamp
+    mapping(address => uint256) private _lastDeposit;
+
     // =================== Immutables ===================
     /// @notice The stUsdc token
     IStUsdc private immutable _stUsdc;
@@ -62,6 +65,12 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         _;
     }
 
+    /// @notice Prevents a user from withdrawing their stake within 24 hours of their last deposit
+    modifier lock() {
+        require(_lastDeposit[msg.sender] <= block.timestamp - Constants.ONE_DAY, Errors.Locked());
+        _;
+    }
+
     // ================= Constructor =================
     constructor(address stakeupToken_, address stUsdc_) SUPVesting(stakeupToken_) {
         require(stUsdc_ != address(0), Errors.ZeroAddress());
@@ -72,6 +81,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     // ================== functions ==================
     /// @inheritdoc IStakeUpStaking
     function stake(uint256 stakeupAmount) external override updateIndex distributeRewards {
+        _lastDeposit[msg.sender] = block.timestamp;
         _stake(msg.sender, stakeupAmount);
     }
 
@@ -79,6 +89,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     function unstake(uint256 stakeupAmount, bool harvestRewards)
         external
         override
+        lock
         nonReentrant
         updateIndex
         distributeRewards
@@ -152,6 +163,11 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
     /// @inheritdoc IStakeUpStaking
     function lastRewardBlock() external view returns (uint256) {
         return _lastRewardBlock;
+    }
+
+    /// @inheritdoc IStakeUpStaking
+    function lastDeposit(address user) external view override returns (uint256) {
+        return _lastDeposit[user];
     }
 
     /// @dev Transfers the staked tokens to the staking contract and updates the user's total staked amount
