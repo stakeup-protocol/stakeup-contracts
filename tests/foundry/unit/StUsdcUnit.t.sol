@@ -93,7 +93,7 @@ contract StUsdcUnitTest is StUsdcSetup {
         // Deposit 25% of TBYs halfway through its maturity
         _skipAndUpdatePrice(90 days, 105e8, 2);
 
-        uint256 expectedHalfWayBalance = 25e18.divWad(2e18);
+        uint256 expectedHalfWayBalance = 25e18 + (uint256(25e18) / 2);
         vm.prank(alice);
         stUsdc.depositTby(id, 25e6);
         assertEq(supToken.balanceOf(alice), expectedHalfWayBalance);
@@ -109,7 +109,7 @@ contract StUsdcUnitTest is StUsdcSetup {
     function test_setUsdPerShareNonRelayer() public {
         vm.startPrank(rando);
         vm.expectRevert(Errors.UnauthorizedCaller.selector);
-        stUsdc.setUsdPerShare(1e18);
+        stUsdc.setUsdPerShare(1e18, uint64(block.timestamp));
     }
 
     function test_transfer() public {
