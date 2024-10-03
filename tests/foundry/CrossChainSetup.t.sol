@@ -113,7 +113,7 @@ abstract contract CrossChainSetup is StUsdcSetup {
                     address(StUsdc(stUsdcAddrs[j]).keeper()).addressToBytes32()
                 ];
                 operator.setPeers(uint32(j + 1), peers);
-                operator.setWstUsdcBridge(uint32(j + 1), wstUsdcBridgeAddrs[j]);
+                operator.setWstUsdcBridge(uint32(j + 1), wstUsdcBridgeAddrs[j].addressToBytes32());
             }
         }
     }
