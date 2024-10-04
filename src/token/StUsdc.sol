@@ -125,9 +125,8 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         IBloomPool pool = _bloomPool;
         require(amount > 0, Errors.ZeroAmount());
         require(!pool.isTbyRedeemable(tbyId), Errors.RedeemableTbyNotAllowed());
-        // If the token is a TBY, we need to get the current exchange rate of the token
-        //     to accurately calculate the amount of stUsdc to mint.
-        amountMinted = pool.getRate(tbyId).mulWad(amount) * _scalingFactor;
+
+        amountMinted = _calculateTbyMintAmount(pool, tbyId, amount);
 
         _deposit(amountMinted);
         // Calculate & mint SUP mint rewards to users.
@@ -249,6 +248,21 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         _mintShares(msg.sender, sharesAmount);
         _globalShares += sharesAmount;
         _setTotalUsdFloor(_totalUsdFloor + amount);
+    }
+
+    /**
+     * @notice Calculate the amount of stUsdc to mint for a given amount of TBYs
+     * @dev We must discount the TBY rate by the _rewardPerSecond * sharesAmount to prevent premature reward distribution.
+     * @param pool The Bloom Pool contract
+     * @param tbyId The TBY ID
+     * @param amount The amount of TBYs deposited
+     * @return The amount of stUsdc to mint
+     */
+    function _calculateTbyMintAmount(IBloomPool pool, uint256 tbyId, uint256 amount) internal view returns (uint256) {
+        uint256 sharesAmount = sharesByUsd(amount);
+        uint256 timeElapsed = block.timestamp - _lastRateUpdate;
+        uint256 discount = sharesAmount.mulWad(_rewardPerSecond.mulWad(timeElapsed));
+        return (amount.mulWad(pool.getRate(tbyId)) * _scalingFactor) - discount;
     }
 
     /**
