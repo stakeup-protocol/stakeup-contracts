@@ -90,17 +90,20 @@ contract StUsdcLite is IStUsdcLite, RebasingOFT {
 
     /// @dev This is called on the base chain before distributing yield to other chains
     function _setUsdPerShare(uint256 usdPerShare, uint256 timestamp) internal {
-        // solidify the yield from the last 24 hours
-        _setTotalUsdFloor(_totalUsd());
+        // solidify the yield from the last 24 hours (stored as floor which will be used to update totalUsdFloor)
+        uint256 floor = _totalUsd();
         _lastRateUpdate = timestamp;
 
         uint256 lastUsdPerShare_ = _lastUsdPerShare;
         if (usdPerShare > lastUsdPerShare_) {
             uint256 yieldPerShare = usdPerShare - lastUsdPerShare_;
             _rewardPerSecond = yieldPerShare.divWad(Constants.ONE_DAY);
-        } else {
+        } else if (usdPerShare < lastUsdPerShare_) {
             _rewardPerSecond = 0;
+            floor = usdPerShare.mulWad(_totalShares);
         }
+
+        _setTotalUsdFloor(floor);
         _lastUsdPerShare = usdPerShare;
         emit UpdatedUsdPerShare(usdPerShare);
     }
