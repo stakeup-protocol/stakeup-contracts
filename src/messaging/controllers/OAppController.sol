@@ -3,8 +3,8 @@ pragma solidity 0.8.27;
 
 import {OApp, OAppCore} from "@LayerZero/oapp/OApp.sol";
 
-import {StakeUpErrors as Errors} from "../../helpers/StakeUpErrors.sol";
-import {ControllerBase} from "./ControllerBase.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
+import {ControllerBase} from "@StakeUp/messaging/controllers/ControllerBase.sol";
 
 /**
  * @title OAppController

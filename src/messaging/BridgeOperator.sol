@@ -4,11 +4,11 @@ pragma solidity 0.8.27;
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IOAppCore} from "@LayerZero/oapp/interfaces/IOAppCore.sol";
 
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
-import {ControllerBase} from "./controllers/ControllerBase.sol";
-import {StUsdcLite} from "../token/StUsdcLite.sol";
-import {IWstUsdcBridge} from "../interfaces/IWstUsdcBridge.sol";
+import {ControllerBase} from "@StakeUp/messaging/controllers/ControllerBase.sol";
+import {StUsdcLite} from "@StakeUp/token/StUsdcLite.sol";
+import {IWstUsdcBridge} from "@StakeUp/interfaces/IWstUsdcBridge.sol";
 
 /**
  * @title BridgeOperator

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {StakeUpErrors as Errors} from "../../helpers/StakeUpErrors.sol";
-import {IControllerBase} from "../../interfaces/IControllerBase.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
+import {IControllerBase} from "@StakeUp/interfaces/IControllerBase.sol";
 
 /**
  * @title ControllerBase

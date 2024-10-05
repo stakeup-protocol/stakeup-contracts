@@ -21,6 +21,7 @@ remappings = [
     "@LayerZeroTesting/=lib/LayerZero-v2/oapp/test/",
     "solidity-bytes-utils/=lib/LayerZero-v2/oapp/node_modules/solidity-bytes-utils/",
     "@bloom-v2/=lib/bloom-v2/src/",
+    "@StakeUp/=src/"
 ]
 
 fs_permissions = [{ access = "read", path = "./lib/bloom-v2/out/BloomPool.sol/BloomPool.json"}]

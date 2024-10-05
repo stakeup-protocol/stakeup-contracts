@@ -2,8 +2,8 @@
 pragma solidity 0.8.27;
 
 import {OApp, Origin} from "@LayerZero/oapp/OApp.sol";
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
-import {OAppController} from "./controllers/OAppController.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
+import {OAppController} from "@StakeUp/messaging/controllers/OAppController.sol";
 
 /**
  * @title LzOrderedMessengers

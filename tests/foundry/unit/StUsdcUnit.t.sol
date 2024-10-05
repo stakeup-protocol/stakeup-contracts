@@ -13,6 +13,7 @@ import {IStUsdcLite} from "src/interfaces/IStUsdcLite.sol";
 
 import {StUsdc} from "src/token/StUsdc.sol";
 import {StUsdcSetup} from "../StUsdcSetup.t.sol";
+import {IRebasingOFT} from "src/interfaces/IRebasingOFT.sol";
 
 contract StUsdcUnitTest is StUsdcSetup {
     using FpMath for uint256;
@@ -141,7 +142,7 @@ contract StUsdcUnitTest is StUsdcSetup {
         // Alice can transfer her tokens to Bob
         vm.startPrank(alice);
         vm.expectEmit(true, true, true, true);
-        emit IStUsdcLite.TransferShares(alice, bob, 50e18);
+        emit IRebasingOFT.TransferShares(alice, bob, 50e18);
         stUsdc.transferShares(bob, 50e18);
 
         assertEq(stUsdc.sharesOf(bob), 50e18);

@@ -5,10 +5,10 @@ import {OApp, Origin} from "@LayerZero/oapp/OApp.sol";
 import {MessagingReceipt, MessagingFee} from "@LayerZero/oft/interfaces/IOFT.sol";
 import {OFTComposeMsgCodec} from "@LayerZero/oft/libs/OFTComposeMsgCodec.sol";
 
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
-import {LzOrderedMessenger} from "./LzOrderedMessenger.sol";
-import {IStUsdc} from "../interfaces/IStUsdc.sol";
+import {LzOrderedMessenger} from "@StakeUp/messaging/LzOrderedMessenger.sol";
+import {IStUsdc} from "@StakeUp/interfaces/IStUsdc.sol";
 
 /**
  * @title StakeUpKeeper

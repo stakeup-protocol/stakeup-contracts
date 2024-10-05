@@ -6,14 +6,14 @@ import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeE
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-import {StakeUpConstants as Constants} from "../helpers/StakeUpConstants.sol";
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+import {StakeUpConstants as Constants} from "@StakeUp/helpers/StakeUpConstants.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 import {StakeUpRewardMathLib} from "./lib/StakeUpRewardMathLib.sol";
 
-import {ICurveGaugeDistributor} from "../interfaces/ICurveGaugeDistributor.sol";
-import {IChildLiquidityGaugeFactory} from "../interfaces/curve/IChildLiquidityGaugeFactory.sol";
-import {ICurvePoolGauge} from "../interfaces//curve/ICurvePoolGauge.sol";
-import {IStakeUpToken} from "../interfaces/IStakeUpToken.sol";
+import {ICurveGaugeDistributor} from "@StakeUp/interfaces/ICurveGaugeDistributor.sol";
+import {IChildLiquidityGaugeFactory} from "@StakeUp/interfaces/curve/IChildLiquidityGaugeFactory.sol";
+import {ICurvePoolGauge} from "@StakeUp/interfaces/curve/ICurvePoolGauge.sol";
+import {IStakeUpToken} from "@StakeUp/interfaces/IStakeUpToken.sol";
 
 contract CurveGaugeDistributor is ICurveGaugeDistributor, ReentrancyGuard, Ownable2Step {
     using SafeERC20 for IERC20;

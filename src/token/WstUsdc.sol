@@ -6,13 +6,13 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {ERC1155TokenReceiver} from "solmate/tokens/ERC1155.sol";
 
-import {StakeUpErrors as Errors} from "../helpers/StakeUpErrors.sol";
+import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
-import {StUsdcLite} from "./StUsdcLite.sol";
-import {WstUsdcLite} from "./WstUsdcLite.sol";
+import {StUsdcLite} from "@StakeUp/token/StUsdcLite.sol";
+import {WstUsdcLite} from "@StakeUp/token/WstUsdcLite.sol";
 
-import {IStUsdc} from "../interfaces/IStUsdc.sol";
-import {IWstUsdc} from "../interfaces/IWstUsdc.sol";
+import {IStUsdc} from "@StakeUp/interfaces/IStUsdc.sol";
+import {IWstUsdc} from "@StakeUp/interfaces/IWstUsdc.sol";
 
 /**
  * @title Wrapped Staked TBY
