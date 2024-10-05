@@ -260,19 +260,22 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
      */
     function _calculateTbyMintAmount(IBloomPool pool, uint256 tbyId, uint256 amount) internal view returns (uint256) {
         uint256 tbyStart = pool.tbyMaturity(tbyId).start;
+        uint256 rate = pool.getRate(tbyId);
 
-        // If the TBY has been minted for more than 24 hours, then we discount the rate by a factor of 24 hours.
+        // If the TBY has been minted for more than 24 hours and is greater than 1e18, then we discount the rate by a factor of 24 hours.
+        //   (if the rate is greater than 1e18)
         uint256 timeElapsed = block.timestamp - tbyStart;
         if (timeElapsed > Constants.ONE_DAY) {
-            uint256 adjustedRate = Math.WAD
-                + ((pool.getRate(tbyId) - Math.WAD).mulWad(timeElapsed - Constants.ONE_DAY).divWad(timeElapsed));
-            return amount.mulWad(adjustedRate) * _scalingFactor;
+            if (rate > Math.WAD) {
+                uint256 adjustedRate =
+                    Math.WAD + ((rate - Math.WAD).mulWad(timeElapsed - Constants.ONE_DAY).divWad(timeElapsed));
+                return amount.mulWad(adjustedRate) * _scalingFactor;
+            }
+            return amount.mulWad(rate) * _scalingFactor;
         }
 
-        // If the TBY has been minted for less than or equal to 24 hours, then we discount the rate by sharesAmount * (_rewardPerSecond * 24 hours).
-        uint256 sharesAmount = sharesByUsd(amount);
-        uint256 discount = sharesAmount.mulWad(_rewardPerSecond.mulWad(Constants.ONE_DAY));
-        return (amount.mulWad(pool.getRate(tbyId)) * _scalingFactor) - discount;
+        // If the TBY has been minted for less than or equal to 24 hours, then we mint 1:1
+        return (rate >= Math.WAD) ? amount * _scalingFactor : amount.mulWad(rate) * _scalingFactor;
     }
 
     /**
