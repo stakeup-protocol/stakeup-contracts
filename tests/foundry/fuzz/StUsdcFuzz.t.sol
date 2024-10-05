@@ -5,6 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
 
 import {StakeUpErrors as Errors} from "src/helpers/StakeUpErrors.sol";
+import {StakeUpConstants as Constants} from "src/helpers/StakeUpConstants.sol";
+
 import {IStUsdc} from "src/interfaces/IStUsdc.sol";
 import {StUsdcSetup} from "../StUsdcSetup.t.sol";
 
@@ -84,7 +86,9 @@ contract StUsdcFuzzTest is StUsdcSetup {
         stUsdc.depositTby(id, amount);
 
         // The TBY has accrued value so the user should have received more stUSDC than their amount of TBYs
-        uint256 expectedStUsdc = amount.mulWad(bloomPool.getRate(id)) * SCALER;
+        uint256 adjustedRate =
+            FpMath.WAD + ((bloomPool.getRate(id) - FpMath.WAD).mulWad(90 days - Constants.ONE_DAY).divWad(90 days));
+        uint256 expectedStUsdc = amount.mulWad(adjustedRate) * SCALER;
         assertEq(stUsdc.balanceOf(alice), expectedStUsdc);
 
         // Validate that the user received mint rewards if they deposited 200M or less
