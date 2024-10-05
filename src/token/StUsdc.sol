@@ -264,7 +264,8 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         // If the TBY has been minted for more than 24 hours, then we discount the rate by a factor of 24 hours.
         uint256 timeElapsed = block.timestamp - tbyStart;
         if (timeElapsed > Constants.ONE_DAY) {
-            uint256 adjustedRate = pool.getRate(tbyId).mulWad(timeElapsed - Constants.ONE_DAY).divWad(timeElapsed);
+            uint256 adjustedRate =
+            Math.WAD + ((pool.getRate(tbyId) - Math.WAD).mulWad(timeElapsed - Constants.ONE_DAY).divWad(timeElapsed))   ;
             return amount.mulWad(adjustedRate) * _scalingFactor;
         }
 
