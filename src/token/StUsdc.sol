@@ -259,9 +259,18 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
      * @return The amount of stUsdc to mint
      */
     function _calculateTbyMintAmount(IBloomPool pool, uint256 tbyId, uint256 amount) internal view returns (uint256) {
+        uint256 tbyStart = pool.tbyMaturity(tbyId).start;
+
+        // If the TBY has been minted for more than 24 hours, then we discount the rate by a factor of 24 hours.
+        uint256 timeElapsed = block.timestamp - tbyStart;
+        if (timeElapsed > Constants.ONE_DAY) {
+            uint256 adjustedRate = pool.getRate(tbyId).mulWad(timeElapsed - Constants.ONE_DAY).divWad(timeElapsed);
+            return amount.mulWad(adjustedRate) * _scalingFactor;
+        }
+
+        // If the TBY has been minted for less than or equal to 24 hours, then we discount the rate by sharesAmount * (_rewardPerSecond * 24 hours).
         uint256 sharesAmount = sharesByUsd(amount);
-        uint256 timeElapsed = block.timestamp - _lastRateUpdate;
-        uint256 discount = sharesAmount.mulWad(_rewardPerSecond.mulWad(timeElapsed));
+        uint256 discount = sharesAmount.mulWad(_rewardPerSecond.mulWad(Constants.ONE_DAY));
         return (amount.mulWad(pool.getRate(tbyId)) * _scalingFactor) - discount;
     }
 
