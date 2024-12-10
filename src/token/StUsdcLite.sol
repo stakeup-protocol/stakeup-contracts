@@ -6,12 +6,12 @@ import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
 import {StakeUpConstants as Constants} from "@StakeUp/helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
-import {RebasingOFT} from "@StakeUp/token/RebasingOFT.sol";
+import {RebasingERC20} from "@StakeUp/token/RebasingERC20.sol";
 import {StakeUpKeeper} from "@StakeUp/messaging/StakeUpKeeper.sol";
 import {IStUsdcLite} from "@StakeUp/interfaces/IStUsdcLite.sol";
 
 /// @title Staked TBY Base Contract
-contract StUsdcLite is IStUsdcLite, RebasingOFT {
+contract StUsdcLite is IStUsdcLite, RebasingERC20 {
     using FpMath for uint256;
 
     // =================== Storage ===================
@@ -39,7 +39,7 @@ contract StUsdcLite is IStUsdcLite, RebasingOFT {
 
     // ================== Constructor ==================
     constructor(address layerZeroEndpoint, address bridgeOperator)
-        RebasingOFT("staked USDC", "stUSDC", layerZeroEndpoint, bridgeOperator)
+        RebasingERC20("staked USDC", "stUSDC")
     {
         _lastRateUpdate = block.timestamp;
         _lastUsdPerShare = FpMath.WAD;

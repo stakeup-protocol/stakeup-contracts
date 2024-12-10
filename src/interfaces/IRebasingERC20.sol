@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {IControllerBase} from "./IControllerBase.sol";
-
-interface IRebasingOFT is IControllerBase {
+interface IRebasingERC20 {
     // =================== Events ===================
     /**
      * @notice An executed shares transfer from `sender` to `recipient`.
