@@ -13,8 +13,6 @@ import {StakeUpConstants as Constants} from "@StakeUp/helpers/StakeUpConstants.s
 import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
 import {StUsdcLite} from "@StakeUp/token/StUsdcLite.sol";
-import {StakeUpRewardMathLib} from "@StakeUp/rewards/lib/StakeUpRewardMathLib.sol";
-import {StakeUpMintRewardLib} from "@StakeUp/rewards/lib/StakeUpMintRewardLib.sol";
 
 import {IStakeUpStaking} from "@StakeUp/interfaces/IStakeUpStaking.sol";
 import {IStakeUpToken} from "@StakeUp/interfaces/IStakeUpToken.sol";
@@ -30,12 +28,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     // =================== Storage ===================
     /// @dev The total amount of stUsdc shares in circulation on all chains
     uint256 internal _globalShares;
-
-    /// @dev Mint rewards remaining
-    uint256 internal _mintRewardsRemaining;
-
-    /// @notice Amount of rewards remaining to be distributed to users for poking the contract
-    uint256 private _pokeRewardsRemaining;
 
     /// @dev Last redeemed tbyId
     uint256 internal _lastRedeemedTbyId;
@@ -61,9 +53,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
     /// @dev SUP Token Contract
     IStakeUpToken private immutable _stakeupToken;
-
-    /// @dev Deployment timestamp
-    uint256 private immutable _startTimestamp;
 
     /// @dev Scaling factor for underlying token
     uint256 private immutable _scalingFactor;
@@ -95,10 +84,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         _wstUsdc = IWstUsdc(wstUsdc_);
 
         _scalingFactor = 10 ** (18 - _assetDecimals);
-        _startTimestamp = block.timestamp;
-
-        _pokeRewardsRemaining = Constants.POKE_REWARDS;
-        _mintRewardsRemaining = StakeUpMintRewardLib._getMintRewardAllocation();
 
         // On the first redemption we will increment this value to overflow and start at 0.
         _lastRedeemedTbyId = type(uint256).max;
@@ -126,8 +111,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
         amountMinted = _calculateTbyMintAmount(pool, tbyId, amount);
 
         _deposit(amountMinted);
-        // Calculate & mint SUP mint rewards to users.
-        _mintRewards(pool, tbyId, amount);
 
         emit TbyDeposited(msg.sender, tbyId, amount, amountMinted);
         _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
@@ -207,9 +190,8 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
             _processFee(prevFee);
         }
 
-        // Harvest matured TBYs and distribute rewards
+        // Harvest matured TBYs
         _harvest();
-        _distributePokeRewards();
     }
 
     /**
@@ -273,23 +255,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         // If the TBY has been minted for less than or equal to 24 hours, then we mint 1:1
         return (rate >= Math.WAD) ? amount * _scalingFactor : amount.mulWad(rate) * _scalingFactor;
-    }
-
-    /**
-     * @notice Mints SUP rewards to the depositor
-     * @dev Mint rewards are only eligible for users who deposit TBYs into the contract
-     * @param pool The Bloom Pool contract
-     * @param tbyId The TBY ID
-     * @param amount The amount of TBYs deposited
-     */
-    function _mintRewards(IBloomPool pool, uint256 tbyId, uint256 amount) internal {
-        uint256 mintRewardsRemaining = _mintRewardsRemaining;
-        if (mintRewardsRemaining > 0) {
-            uint256 maxRewards = _calculateRewards(pool, tbyId, amount);
-            uint256 eligibleAmount = Math.min(maxRewards, mintRewardsRemaining);
-            _mintRewardsRemaining -= eligibleAmount;
-            _stakeupToken.mintRewards(msg.sender, eligibleAmount);
-        }
     }
 
     /**
@@ -396,43 +361,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
         // Redeem TBYs
         pool.redeemLender(tbyId, amount);
-    }
-
-    /// @notice Calulates and mints SUP rewards to users who have poked the contract
-    function _distributePokeRewards() internal {
-        if (_pokeRewardsRemaining > 0) {
-            uint256 amount = StakeUpRewardMathLib._calculateDripAmount(
-                Constants.POKE_REWARDS, _startTimestamp, _pokeRewardsRemaining, false
-            );
-
-            if (amount > 0) {
-                amount = Math.min(amount, _pokeRewardsRemaining);
-                _pokeRewardsRemaining -= amount;
-                IStakeUpToken(_stakeupToken).mintRewards(msg.sender, amount);
-            }
-        }
-    }
-
-    /**
-     * @notice Calculates the maximum amount of mint rewards for a user depositing TBYs
-     * @dev There is an inverse relationship between the amount of time a TBY has been minted and the amount of rewards a user can earn.
-     * @dev This calculation method is used in order to prevent users from gaming the rewards system.
-     * @param pool The Bloom Pool contract
-     * @param tbyId The TBY ID
-     * @param amount The amount of TBYs deposited
-     * @return The maximum rewards eligible for a user depositing TBYs
-     */
-    function _calculateRewards(IBloomPool pool, uint256 tbyId, uint256 amount) internal view returns (uint256) {
-        IBloomPool.TbyMaturity memory maturity = pool.tbyMaturity(tbyId);
-
-        uint256 timeElapsed = block.timestamp - maturity.start;
-        uint256 percentMature = timeElapsed.divWad(maturity.end - maturity.start);
-        percentMature = percentMature >= Math.WAD ? Math.WAD : percentMature;
-
-        uint256 scaledAmount = amount * _scalingFactor;
-        uint256 rewardsAbandoned = scaledAmount.mulWad(percentMature);
-
-        return scaledAmount - rewardsAbandoned;
     }
 
     /// @inheritdoc IStUsdc
