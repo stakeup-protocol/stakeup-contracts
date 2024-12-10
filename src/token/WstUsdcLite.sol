@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {ERC20, ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 import {StUsdcLite} from "@StakeUp/token/StUsdcLite.sol";
@@ -14,7 +14,7 @@ import {IWstUsdcLite} from "@StakeUp/interfaces/IWstUsdcLite.sol";
  * @notice The non-rebasing, wrapped version of the stUsdc token that accues yield from TBYs
  * @dev This contract is the minimal implementation of the WstUsdc token
  */
-contract WstUsdcLite is IWstUsdcLite, ERC20Burnable {
+contract WstUsdcLite is IWstUsdcLite, ERC20 {
     // =================== Immutables ===================
     /// @notice Instance of the stUsdc contract
     IStUsdc internal immutable _stUsdc;

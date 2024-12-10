@@ -56,9 +56,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     /// @dev BloomPool Contract
     IBloomPool private immutable _bloomPool;
 
-    /// @notice WstUsdc token
-    IWstUsdc private immutable _wstUsdc;
-
     /// @dev StakeUp Staking Contract
     IStakeUpStaking private immutable _stakeupStaking;
 
@@ -446,11 +443,6 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     /// @inheritdoc IStUsdc
     function tby() external view returns (ERC1155) {
         return _tby;
-    }
-
-    /// @inheritdoc IStUsdc
-    function wstUsdc() external view returns (IWstUsdc) {
-        return _wstUsdc;
     }
 
     /// @inheritdoc IStUsdc

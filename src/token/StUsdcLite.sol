@@ -28,8 +28,8 @@ contract StUsdcLite is IStUsdcLite, RebasingERC20 {
     uint256 internal _rewardPerSecond;
 
     // =================== Immutables ===================
-    /// @dev The Keeper contract that handles cross-chain yield distribution
-    StakeUpKeeper internal immutable _keeper;
+    /// @notice WstUsdc token
+    IWstUsdc private immutable _wstUsdc;
 
     // =================== Modifiers ===================
     modifier onlyKeeper() {
@@ -38,9 +38,7 @@ contract StUsdcLite is IStUsdcLite, RebasingERC20 {
     }
 
     // ================== Constructor ==================
-    constructor(address layerZeroEndpoint, address bridgeOperator)
-        RebasingERC20("staked USDC", "stUSDC")
-    {
+    constructor(address layerZeroEndpoint, address bridgeOperator) RebasingERC20("staked USDC", "stUSDC") {
         _lastRateUpdate = block.timestamp;
         _lastUsdPerShare = FpMath.WAD;
 
@@ -62,6 +60,16 @@ contract StUsdcLite is IStUsdcLite, RebasingERC20 {
     /// @notice Get the amount of USD that is equivalent to a specified amount of shares
     function usdByShares(uint256 sharesAmount) public view override returns (uint256) {
         return _amountByShares(sharesAmount);
+    }
+
+    // ==================== Chainlink Support ====================
+    // TODO: Add protections
+    function mintShares(address to, uint256 sharesAmount) external {
+        _mintShares(to, sharesAmount);
+    }
+
+    function burnShares(uint256 sharesAmount) external {
+        _burnShares(msg.sender, sharesAmount);
     }
 
     // =================== Internal Functions ===================
@@ -143,6 +151,11 @@ contract StUsdcLite is IStUsdcLite, RebasingERC20 {
     /// @notice Get the total USD value of the protocol
     function totalUsd() external view override returns (uint256) {
         return _totalUsd();
+    }
+
+    /// @inheritdoc IStUsdcLite
+    function wstUsdc() external view returns (IWstUsdc) {
+        return _wstUsdc;
     }
 
     // =================== LayerZero Functions =====================

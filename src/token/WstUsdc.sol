@@ -58,7 +58,7 @@ contract WstUsdc is IWstUsdc, WstUsdcLite, ERC1155TokenReceiver {
         amountMinted = _stUsdc.depositTby(tbyId, amount);
         amountMinted = _mintWstUsdc(amountMinted);
         uint256 supEndBalance = _sup.balanceOf(address(this));
-        
+
         // If SUP rewards have been minted, transfer to the user
         if (supEndBalance > supStartBalance) {
             uint256 supMinted = supEndBalance - supStartBalance;

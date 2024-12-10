@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {StakeUpKeeper} from "@StakeUp/messaging/StakeUpKeeper.sol";
+import {IRebasingERC20} from "@StakeUp/interfaces/IRebasingERC20.sol";
+import {IWstUsdcLite} from "@StakeUp/interfaces/IWstUsdcLite.sol";
 
-import {IControllerBase} from "./IControllerBase.sol";
-import {IRebasingOFT} from "./IRebasingOFT.sol";
-
-interface IStUsdcLite is IRebasingOFT {
+interface IStUsdcLite is IRebasingERC20 {
     // =================== Events ===================
     /// @notice Emitted when usdPerShare is updated
     event UpdatedUsdPerShare(uint256 usdPerShare);
@@ -48,9 +46,9 @@ interface IStUsdcLite is IRebasingOFT {
     /// @notice Return the usdPerShare value at the time of the last rate update.
     function lastUsdPerShare() external view returns (uint256);
 
-    /// @notice Get the keeper that can update the yield per share
-    function keeper() external view returns (StakeUpKeeper);
-
     /// @notice The last time the rate was updated
     function lastRateUpdate() external view returns (uint256);
+
+    /// @notice Returns the WstUsdc contract
+    function wstUsdc() external view returns (IWstUsdc);
 }

@@ -16,3 +16,6 @@
 [submodule "lib/bloom-v2"]
 	path = lib/bloom-v2
 	url = https://github.com/Blueberryfi/bloom-v2
+[submodule "lib/ccip"]
+	path = lib/ccip
+	url = https://github.com/smartcontractkit/ccip

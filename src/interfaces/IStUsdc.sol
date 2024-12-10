@@ -9,7 +9,6 @@ import {IStakeUpStaking} from "./IStakeUpStaking.sol";
 import {IStakeUpToken} from "./IStakeUpToken.sol";
 import {IStUsdcLite} from "./IStUsdcLite.sol";
 import {IWstUsdc} from "./IWstUsdc.sol";
-import {ILayerZeroSettings} from "./ILayerZeroSettings.sol";
 
 interface IStUsdc is IStUsdcLite, ILayerZeroSettings {
     // =================== Events ===================
@@ -99,9 +98,6 @@ interface IStUsdc is IStUsdcLite, ILayerZeroSettings {
 
     /// @notice Returns the Bloom Pool Factory
     function bloomPool() external view returns (IBloomPool);
-
-    /// @notice Returns the WstUsdc contract
-    function wstUsdc() external view returns (IWstUsdc);
 
     /// @notice Returns the StakeUpStaking contract.
     function stakeUpStaking() external view returns (IStakeUpStaking);
