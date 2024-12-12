@@ -6,16 +6,6 @@ library StakeUpErrors {
     /// @notice Emitted if the staking is locked due to a user depositing less than 24 hours ago
     error Locked();
 
-    // =================== Curve Gauge Distributor ===================
-    /// @notice Emitted if the caller tries to seed the gauges to early
-    error TooEarlyToSeed();
-
-    /// @notice Emitted if the reward allocation is not met
-    error RewardAllocationNotMet();
-
-    /// @notice Emitted if the contract is not initialized
-    error NotInitialized();
-
     // ========================= Staking ===========================
     // @notice Token amount is 0
     error ZeroTokensStaked();
@@ -26,23 +16,10 @@ library StakeUpErrors {
     // @notice User has no rewards to claim
     error NoRewardsToClaim();
 
-    // ========================= Layer Zero ===========================
-    /// @notice If the LZ Compose call fails
-    error LZComposeFailed();
-
-    /// @notice If the originating OApp of the LZCompose call is invalid
-    error InvalidOApp();
-
-    /// @notice Invalid Peer ID
-    error InvalidPeerID();
-
-    /// @notice Error emmitted if the nonce of an incoming message is not what its suppose to be
-    error InvalidNonce();
-
-    /// @notice Error emmitted if the msg.value is less than the fee
-    error InvalidMsgValue();
-
     // ========================= SUP Token ===========================
+    /// @notice Emitted if the contract is not initialized
+    error NotInitialized();
+
     /// @notice Amount being minted is greater than the supply cap
     error ExceedsMaxSupply();
 

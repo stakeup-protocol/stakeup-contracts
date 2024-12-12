@@ -12,7 +12,6 @@ import {IWstUsdcLite} from "@StakeUp/interfaces/IWstUsdcLite.sol";
  * @notice A Chainlink CCIP compatible bridge for stUsdc and wstUsdc tokens.
  */
 contract StUsdcTokenPool is TokenPool, ITypeAndVersion {
-
     /// @notice Type and version of the pool.
     string public constant override typeAndVersion = "StUsdcTokenPool 1.0.0";
 
@@ -51,11 +50,10 @@ contract StUsdcTokenPool is TokenPool, ITypeAndVersion {
 
         emit Burned(msg.sender, lockOrBurnIn.amount);
 
-        return
-            Pool.LockOrBurnOutV1({
-                destTokenAddress: getRemoteToken(lockOrBurnIn.remoteChainSelector),
-                destPoolData: abi.encode(isWrapped)
-            });
+        return Pool.LockOrBurnOutV1({
+            destTokenAddress: getRemoteToken(lockOrBurnIn.remoteChainSelector),
+            destPoolData: abi.encode(isWrapped)
+        });
     }
 
     /// @notice Mint tokens from the pool to the recipient

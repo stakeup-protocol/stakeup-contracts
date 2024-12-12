@@ -141,7 +141,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
     }
 
     /// @inheritdoc IStUsdc
-    function poke(LzSettings calldata settings) external payable nonReentrant {
+    function poke() external payable nonReentrant {
         uint256 currentTimestamp = block.timestamp;
         uint256 lastUpdate = _lastRateUpdate;
         if (currentTimestamp - lastUpdate < Constants.ONE_DAY) return;

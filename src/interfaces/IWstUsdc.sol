@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {MessagingReceipt} from "@LayerZero/oft/interfaces/IOFT.sol";
-
 import {IWstUsdcLite} from "./IWstUsdcLite.sol";
 
 interface IWstUsdc is IWstUsdcLite {

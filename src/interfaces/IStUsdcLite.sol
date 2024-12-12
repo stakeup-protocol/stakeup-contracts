@@ -50,5 +50,5 @@ interface IStUsdcLite is IRebasingERC20 {
     function lastRateUpdate() external view returns (uint256);
 
     /// @notice Returns the WstUsdc contract
-    function wstUsdc() external view returns (IWstUsdc);
+    function wstUsdc() external view returns (IWstUsdcLite);
 }
