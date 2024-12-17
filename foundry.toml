@@ -14,8 +14,8 @@ remappings = [
     "solmate/=lib/solmate/src/",
     '@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/',
     "solady/=lib/solady/src/",
-    "solidity-bytes-utils/=lib/LayerZero-v2/oapp/node_modules/solidity-bytes-utils/",
     "@chainlink-ccip/=lib/ccip/contracts/src/v0.8/ccip/",
+    "@chainlink-shared/=lib/ccip/contracts/src/v0.8/shared/",
     "@bloom-v2/=lib/bloom-v2/src/",
     "@StakeUp/=src/"
 ]

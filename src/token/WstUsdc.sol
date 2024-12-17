@@ -51,14 +51,6 @@ contract WstUsdc is IWstUsdc, WstUsdcLite, ERC1155TokenReceiver {
     }
 
     /// @inheritdoc IWstUsdc
-    function depositTby(uint256 tbyId, uint256 amount) external override returns (uint256 amountMinted) {
-        _tby.safeTransferFrom(msg.sender, address(this), tbyId, amount, "");
-
-        amountMinted = _stUsdc.depositTby(tbyId, amount);
-        amountMinted = _mintWstUsdc(amountMinted);
-    }
-
-    /// @inheritdoc IWstUsdc
     function redeemWstUsdc(uint256 amount) external override returns (uint256 assetsRedeemed) {
         _burn(msg.sender, amount);
         uint256 stUsdcAmount = _stUsdc.usdByShares(amount);

@@ -64,8 +64,8 @@ contract WstUsdcLite is IWstUsdcLite, ERC20 {
     }
 
     /// @inheritdoc IWstUsdcLite
-    function stUsdc() external view override returns (IStUsdc) {
-        return _stUsdc;
+    function stUsdc() external view override returns (address) {
+        return address(_stUsdc);
     }
 
     /**

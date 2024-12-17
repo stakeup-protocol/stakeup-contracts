@@ -3,10 +3,11 @@ pragma solidity 0.8.27;
 
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-import {ERC20Burnable, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
+import {IStakeUpTokenLite} from "@StakeUp/interfaces/IStakeUpTokenLite.sol";
 
-contract StakeUpTokenLite is ERC20Burnable, Ownable2Step {
+contract StakeUpTokenLite is IStakeUpTokenLite, ERC20, Ownable2Step {
     // =================== Storage ===================
     address private _mintBurnRole;
 
@@ -23,12 +24,12 @@ contract StakeUpTokenLite is ERC20Burnable, Ownable2Step {
 
     // ==================== Chainlink Support ====================
 
-    /// @notice Mint tokens from the pool.
+    /// @inheritdoc IStakeUpTokenLite
     function mintFromPool(address to, uint256 amount) external onlyMintBurnRole {
         _mint(to, amount);
     }
 
-    /// @notice Burn tokens from the pool.
+    /// @inheritdoc IStakeUpTokenLite
     function burnFromPool(uint256 amount) external onlyMintBurnRole {
         _burn(msg.sender, amount);
     }

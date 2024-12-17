@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {ERC20Burnable, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import {ERC20Burnable, ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
 
 import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 import {IRebasingERC20} from "@StakeUp/interfaces/IRebasingERC20.sol";
 
-abstract contract RebasingERC20 is IRebasingERC20, ERC20Burnable {
+abstract contract RebasingERC20 is IRebasingERC20, ERC20Burnable, Ownable2Step {
     using FpMath for uint256;
 
     // =================== Storage ===================
@@ -18,8 +19,8 @@ abstract contract RebasingERC20 is IRebasingERC20, ERC20Burnable {
     uint256 internal _totalShares;
 
     // =================== Constructor ===================
-    constructor(string memory name_, string memory symbol_) ERC20(name_, symbol_) {
-        // Solhint-disable-previous-line no-empty-blocks
+    constructor(string memory name_, string memory symbol_, address owner_) ERC20(name_, symbol_) Ownable2Step() {
+        _transferOwnership(owner_);
     }
 
     // =================== External Functions =====================
@@ -148,12 +149,12 @@ abstract contract RebasingERC20 is IRebasingERC20, ERC20Burnable {
     }
 
     /// @inheritdoc ERC20
-    function totalSupply() public view virtual override returns (uint256) {
+    function totalSupply() public view virtual override(ERC20, IERC20) returns (uint256) {
         return _totalSupply();
     }
 
     /// @inheritdoc ERC20
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) public view override(ERC20, IERC20) returns (uint256) {
         return _amountByShares(_shares[account]);
     }
 

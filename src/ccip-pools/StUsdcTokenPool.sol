@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import {TokenPool} from "@chainlink-ccip/pools/TokenPool.sol";
+import {Pool} from "@chainlink-ccip/libraries/Pool.sol";
+import {TokenPool, IERC20} from "@chainlink-ccip/pools/TokenPool.sol";
 import {ITypeAndVersion} from "@chainlink/shared/interfaces/ITypeAndVersion.sol";
 
 import {IStUsdcLite} from "@StakeUp/interfaces/IStUsdcLite.sol";
@@ -12,17 +13,24 @@ import {IWstUsdcLite} from "@StakeUp/interfaces/IWstUsdcLite.sol";
  * @notice A Chainlink CCIP compatible bridge for stUsdc and wstUsdc tokens.
  */
 contract StUsdcTokenPool is TokenPool, ITypeAndVersion {
+
+    // =================== Storage ===================
+
     /// @notice Type and version of the pool.
     string public constant override typeAndVersion = "StUsdcTokenPool 1.0.0";
 
     /// @notice The WstUsdc instance on the source chain.
     IWstUsdcLite public immutable _wstUsdc;
 
-    constructor(IStUsdcLite token, address[] memory allowlist, address rmnProxy, address router)
-        TokenPool(token, allowlist, rmnProxy, router)
+    // =================== Constructor ===================
+
+    constructor(address token, IWstUsdcLite wstUsdc, address[] memory allowlist, address rmnProxy, address router)
+        TokenPool(IERC20(token), allowlist, rmnProxy, router)
     {
-        _wstUsdc = IWstUsdcLite(token.wstUsdc());
+        _wstUsdc = wstUsdc;
     }
+
+    // =================== Functions ===================
 
     /// @notice Burn the token in the pool
     /// @dev The _validateLockOrBurn check is an essential security check
@@ -32,17 +40,18 @@ contract StUsdcTokenPool is TokenPool, ITypeAndVersion {
         override
         returns (Pool.LockOrBurnOutV1 memory)
     {
+        address localToken = lockOrBurnIn.localToken;
         // This TokenPool accepts both WstUsdc and StUsdc. If the token is WstUsdc, we must unwrap it first.
-        bool isWrapped = lockOrBurnIn.localToken == address(_wstUsdc);
+        bool isWrapped = localToken == address(_wstUsdc);
 
         if (isWrapped) {
             // Set the local token to StUsdc since we will be burning and minting StUsdc before wrapping on the dst chain
-            lockOrBurnIn.localToken = address(i_token);
+            localToken = address(i_token);
             _validateLockOrBurn(lockOrBurnIn);
             _wstUsdc.unwrap(lockOrBurnIn.amount);
             _burnShares(lockOrBurnIn.amount);
         } else {
-            uint256 shares = IStUsdcLite(lockOrBurnIn.localToken).sharesByUsd(lockOrBurnIn.amount);
+            uint256 shares = IStUsdcLite(localToken).sharesByUsd(lockOrBurnIn.amount);
             _burnShares(shares);
         }
 
