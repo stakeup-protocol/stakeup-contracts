@@ -109,7 +109,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
             }
         }
 
-        data.amountStaked -= uint128(stakeupAmount);
+        data.amountStaked -= stakeupAmount;
         _totalStakeUpStaked -= stakeupAmount;
 
         emit StakeUpUnstaked(msg.sender, stakeupAmount);
@@ -175,7 +175,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         StakingData storage data = _stakingData[user];
         require(amount != 0, Errors.ZeroTokensStaked());
 
-        data.amountStaked += uint128(amount);
+        data.amountStaked += amount;
         _totalStakeUpStaked += amount;
 
         emit StakeUpStaked(user, amount);
@@ -198,14 +198,14 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
             uint256 accrued = _stUsdc.sharesOf(address(this)) - rewards.lastShares;
 
             if (rewards.index == 0) {
-                rewards.index = uint128(Constants.INITIAL_REWARD_INDEX);
+                rewards.index = Constants.INITIAL_REWARD_INDEX;
             }
 
             if (totalStakeUpLocked != 0) {
-                rewards.index += uint128(accrued.divWad(totalStakeUpLocked));
+                rewards.index += accrued.divWad(totalStakeUpLocked);
             }
 
-            rewards.lastShares = uint128(rewards.lastShares + accrued);
+            rewards.lastShares = rewards.lastShares + accrued;
 
             return rewards.index;
         } else {
@@ -227,7 +227,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         StakingData storage data = _stakingData[user];
 
         if (data.index == 0) {
-            data.index = uint128(Constants.INITIAL_REWARD_INDEX);
+            data.index = Constants.INITIAL_REWARD_INDEX;
         }
 
         uint256 rewardIndex = _rewardData.index;
@@ -235,8 +235,8 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
 
         uint256 rewardDelta = _calculateRewardDelta(data, user, rewardIndex);
 
-        data.index = uint128(rewardIndex);
-        data.rewardsAccrued += uint128(rewardDelta);
+        data.index = rewardIndex;
+        data.rewardsAccrued += rewardDelta;
 
         return data.rewardsAccrued;
     }
@@ -278,7 +278,7 @@ contract StakeUpStaking is IStakeUpStaking, SUPVesting, ReentrancyGuard {
         RewardData storage rewards = _rewardData;
         StakingData storage data = _stakingData[user];
 
-        uint128 rewardsEarned = data.rewardsAccrued;
+        uint256 rewardsEarned = data.rewardsAccrued;
         if (rewardsEarned > 0) {
             data.rewardsAccrued = 0;
             rewards.lastShares -= rewardsEarned;

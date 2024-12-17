@@ -16,8 +16,8 @@ interface IStakeUpStaking is ISUPVesting {
      */
     struct StakingData {
         uint256 amountStaked;
-        uint128 index;
-        uint128 rewardsAccrued;
+        uint256 index;
+        uint256 rewardsAccrued;
     }
 
     /**
@@ -27,8 +27,8 @@ interface IStakeUpStaking is ISUPVesting {
      * @param lastShares The last shares balance of rewards available in the contract
      */
     struct RewardData {
-        uint128 index;
-        uint128 lastShares;
+        uint256 index;
+        uint256 lastShares;
     }
 
     // =================== Events ====================
