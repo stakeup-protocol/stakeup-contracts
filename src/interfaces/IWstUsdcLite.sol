@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.27;
+pragma solidity ^0.8.0;
 
-import {IStUsdc} from "./IStUsdc.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface IWstUsdcLite {
+interface IWstUsdcLite is IERC20 {
     // =================== Events ===================
 
     /// @notice Emitted when stUsdc is wrapped to wstUsdc
@@ -66,5 +66,5 @@ interface IWstUsdcLite {
     /**
      * @notice stUsdc token
      */
-    function stUsdc() external view returns (IStUsdc);
+    function stUsdc() external view returns (address);
 }

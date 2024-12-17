@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.27;
+pragma solidity ^0.8.0;
 
 import {IBloomPool} from "@bloom-v2/interfaces/IBloomPool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -48,24 +48,6 @@ interface IStUsdc is IStUsdcLite {
     event AssetDeposited(address indexed account, uint256 amount);
 
     /**
-     * @notice Emitted when a TBY is deposited into stUSDC
-     * @param account User address
-     * @param tbyId The tokenID of a TBY
-     * @param amount TBY amount to deposit
-     * @param stUsdcAmount Amount of stUSDC minted
-     */
-    event TbyDeposited(address indexed account, uint256 indexed tbyId, uint256 amount, uint256 stUsdcAmount);
-
-    /**
-     * @notice Deposit TBY and get stUsdc minted
-     * @dev TBY deposits are eligible for additional mint rewards
-     * @param tbyId The tokenID of a TBY
-     * @param amount TBY amount to deposit
-     * @return amountMinted Amount of stUsdc minted
-     */
-    function depositTby(uint256 tbyId, uint256 amount) external returns (uint256 amountMinted);
-
-    /**
      * @notice Deposit underlying assets to mint stUsdc
      * @param amount Amount of underlying tokens to deposit
      * @return amountMinted Amount of stUsdc minted
@@ -112,7 +94,4 @@ interface IStUsdc is IStUsdcLite {
 
     /// @notice The total shares of stUsdc tokens in circulation on all chains
     function globalShares() external view returns (uint256);
-
-    /// @notice The pending fee to be captured during the next poke
-    function pendingFee() external view returns (uint256);
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.27;
+pragma solidity ^0.8.0;
 
 import {IWstUsdcLite} from "./IWstUsdcLite.sol";
 
@@ -11,14 +11,6 @@ interface IWstUsdc is IWstUsdcLite {
      * @return amountMinted Amount of wstUsdc minted
      */
     function depositAsset(uint256 amount) external returns (uint256 amountMinted);
-
-    /**
-     * @notice Mints wstUsdc directly to the user using TBYs
-     * @param tbyId TBY ID to deposit
-     * @param amount TBY amount to deposit
-     * @return amountMinted Amount of wstUsdc minted
-     */
-    function depositTby(uint256 tbyId, uint256 amount) external returns (uint256 amountMinted);
 
     /**
      * @notice Redeem wstUsdc in exchange for underlying assets.
