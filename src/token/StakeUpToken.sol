@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-
 import {StakeUpConstants as Constants} from "@StakeUp/helpers/StakeUpConstants.sol";
 import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
@@ -11,13 +9,10 @@ import {StakeUpTokenLite} from "@StakeUp/token/StakeUpTokenLite.sol";
 import {IStakeUpToken} from "@StakeUp/interfaces/IStakeUpToken.sol";
 import {IStakeUpStaking} from "@StakeUp/interfaces/IStakeUpStaking.sol";
 
-contract StakeUpToken is IStakeUpToken, StakeUpTokenLite, Ownable2Step {
+contract StakeUpToken is IStakeUpToken, StakeUpTokenLite {
     // =================== Storage ===================
     /// @notice The global supply of the token
     uint256 private _globalSupply;
-
-    /// @notice Mapping of authorized minters status'
-    mapping(address => bool) private _authorizedMinters;
 
     /// @notice Address of the StakeUp Staking contract
     address private _stakeupStaking;
@@ -31,32 +26,17 @@ contract StakeUpToken is IStakeUpToken, StakeUpTokenLite, Ownable2Step {
         _;
     }
 
-    modifier onlyAuthorized() {
-        require(_authorizedMinters[msg.sender], Errors.UnauthorizedCaller());
-        _;
-    }
-
     // ================= Constructor =================
-    constructor(address owner, address layerZeroEndpoint, address bridgeOperator)
-        StakeUpTokenLite(layerZeroEndpoint, bridgeOperator)
-        Ownable2Step()
-    {
+    constructor(address owner) StakeUpTokenLite() {
         require(owner != address(0), Errors.ZeroAddress());
         _transferOwnership(owner);
     }
 
     // =================== Functions ===================
-    function initialize(address stakeupStaking, address gaugeDistributor) external onlyOwner {
+    function initialize(address stakeupStaking) external onlyOwner {
         require(!_initialized, Errors.AlreadyInitialized());
         _initialized = true;
         _stakeupStaking = stakeupStaking;
-
-        _authorizedMinters[_stakeupStaking] = true;
-        _authorizedMinters[address(IStakeUpStaking(stakeupStaking).stUsdc())] = true;
-
-        if (gaugeDistributor != address(0)) {
-            _authorizedMinters[gaugeDistributor] = true;
-        }
     }
 
     /**
@@ -78,12 +58,6 @@ contract StakeUpToken is IStakeUpToken, StakeUpTokenLite, Ownable2Step {
      */
     function mintAndStartVest(address to, uint256 amount) external initialized onlyOwner {
         _mintAndStartVest(to, amount);
-    }
-
-    /// @inheritdoc IStakeUpToken
-    function mintRewards(address recipient, uint256 amount) external override initialized onlyAuthorized {
-        _updateGlobalSupply(amount);
-        _mint(recipient, amount);
     }
 
     /// @inheritdoc IStakeUpToken
@@ -118,13 +92,5 @@ contract StakeUpToken is IStakeUpToken, StakeUpTokenLite, Ownable2Step {
             revert Errors.ExceedsMaxSupply();
         }
         _globalSupply += amount;
-    }
-
-    function transferOwnership(address newOwner) public override(Ownable, Ownable2Step) {
-        super.transferOwnership(newOwner);
-    }
-
-    function _transferOwnership(address newOwner) internal override(Ownable, Ownable2Step) {
-        super._transferOwnership(newOwner);
     }
 }

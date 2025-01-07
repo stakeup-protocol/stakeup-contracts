@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.27;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Burnable, ERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {FixedPointMathLib as FpMath} from "solady/utils/FixedPointMathLib.sol";
 
 import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
-import {OFTController} from "@StakeUp/messaging/controllers/OFTController.sol";
-import {IRebasingOFT} from "@StakeUp/interfaces/IRebasingOFT.sol";
+import {IRebasingERC20} from "@StakeUp/interfaces/IRebasingERC20.sol";
 
-abstract contract RebasingOFT is IRebasingOFT, OFTController {
+abstract contract RebasingERC20 is IRebasingERC20, ERC20Burnable, Ownable2Step {
     using FpMath for uint256;
 
     // =================== Storage ===================
@@ -19,14 +19,12 @@ abstract contract RebasingOFT is IRebasingOFT, OFTController {
     uint256 internal _totalShares;
 
     // =================== Constructor ===================
-    constructor(string memory name_, string memory symbol_, address layerZeroEndpoint_, address bridgeOperator_)
-        OFTController(name_, symbol_, layerZeroEndpoint_, bridgeOperator_)
-    {
-        // Solhint-disable-previous-line no-empty-blocks
+    constructor(string memory name_, string memory symbol_, address owner_) ERC20(name_, symbol_) Ownable2Step() {
+        _transferOwnership(owner_);
     }
 
     // =================== External Functions =====================
-    /// @inheritdoc IRebasingOFT
+    /// @inheritdoc IRebasingERC20
     function transferShares(address recipient, uint256 sharesAmount) external returns (uint256) {
         _transferShares(msg.sender, recipient, sharesAmount);
         uint256 tokensAmount = _amountByShares(sharesAmount);
@@ -34,7 +32,7 @@ abstract contract RebasingOFT is IRebasingOFT, OFTController {
         return tokensAmount;
     }
 
-    /// @inheritdoc IRebasingOFT
+    /// @inheritdoc IRebasingERC20
     function transferSharesFrom(address sender, address recipient, uint256 sharesAmount) external returns (uint256) {
         uint256 tokensAmount = _amountByShares(sharesAmount);
         _spendAllowance(sender, msg.sender, tokensAmount);
@@ -104,9 +102,9 @@ abstract contract RebasingOFT is IRebasingOFT, OFTController {
 
         _shares[account] = accountShares - sharesAmount;
 
-        uint256 postRebaseTokenAmount = _amountByShares(sharesAmount);
+        // uint256 postRebaseTokenAmount = _amountByShares(sharesAmount);
 
-        _emitTransferEvents(account, address(0), postRebaseTokenAmount, sharesAmount);
+        _emitTransferEvents(account, address(0), preRebaseTokenAmount, sharesAmount);
     }
 
     /// @notice Get the amount of tokens that is equivalent to a specified amount of shares
@@ -140,44 +138,24 @@ abstract contract RebasingOFT is IRebasingOFT, OFTController {
     }
 
     // =================== View Functions =====================
-    /// @inheritdoc IRebasingOFT
+    /// @inheritdoc IRebasingERC20
     function totalShares() external view returns (uint256) {
         return _totalShares;
     }
 
-    /// @inheritdoc IRebasingOFT
+    /// @inheritdoc IRebasingERC20
     function sharesOf(address account) external view returns (uint256) {
         return _shares[account];
     }
 
     /// @inheritdoc ERC20
-    function totalSupply() public view virtual override returns (uint256) {
+    function totalSupply() public view virtual override(ERC20, IERC20) returns (uint256) {
         return _totalSupply();
     }
 
     /// @inheritdoc ERC20
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) public view override(ERC20, IERC20) returns (uint256) {
         return _amountByShares(_shares[account]);
-    }
-
-    // =================== LayerZero Functions =====================
-
-    function _debit(uint256 _amountLD, uint256 _minAmountLD, uint32 _dstEid)
-        internal
-        virtual
-        override
-        returns (uint256 amountSentLD, uint256 amountReceivedLD)
-    {
-        // Implement in child contract
-    }
-
-    function _credit(address _to, uint256 _amountToCreditLD, uint32 /*_srcEid*/ )
-        internal
-        virtual
-        override
-        returns (uint256 amountReceivedLD)
-    {
-        // Implement in child contract
     }
 
     // =================== Virtual Functions =====================

@@ -8,18 +8,14 @@ optimizer = true
 optimizer-runs = 150
 evm_version = "paris"
 
-solc = "0.8.27"
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
 
 remappings = [
     "solmate/=lib/solmate/src/",
     '@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/',
     "solady/=lib/solady/src/",
-    "@LayerZero/=lib/LayerZero-v2/oapp/contracts/",
-    "@LayerZero-Protocol/=lib/LayerZero-v2/protocol/contracts/",
-    "@layerzerolabs/=lib/LayerZero-v2/oapp/node_modules/@layerzerolabs/",
-    "@LayerZeroTesting/=lib/LayerZero-v2/oapp/test/",
-    "solidity-bytes-utils/=lib/LayerZero-v2/oapp/node_modules/solidity-bytes-utils/",
+    "@chainlink-ccip/=lib/ccip/contracts/src/v0.8/ccip/",
+    "@chainlink-shared/=lib/ccip/contracts/src/v0.8/shared/",
     "@bloom-v2/=lib/bloom-v2/src/",
     "@StakeUp/=src/"
 ]
