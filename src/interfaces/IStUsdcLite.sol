@@ -27,9 +27,6 @@ interface IStUsdcLite is IRebasingERC20 {
     /// @notice Get the total USD value of the protocol
     function totalUsd() external view returns (uint256);
 
-    /// @notice The last time the rate was updated
-    function lastRateUpdate() external view returns (uint256);
-
     function mintShares(address to, uint256 sharesAmount) external;
 
     function burnShares(uint256 sharesAmount) external;

@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {ERC1155TokenReceiver} from "solmate/tokens/ERC1155.sol";
 
+import {IBloomPool} from "@bloom-v2/interfaces/IBloomPool.sol";
 import {StakeUpErrors as Errors} from "@StakeUp/helpers/StakeUpErrors.sol";
 
 import {StUsdcLite} from "@StakeUp/token/StUsdcLite.sol";
@@ -25,19 +26,13 @@ contract WstUsdc is IWstUsdc, WstUsdcLite, ERC1155TokenReceiver {
 
     IERC20 private immutable _stUsdcAsset;
 
-    /// @notice Instance of the TBY token
-    ERC1155 private immutable _tby;
-
     /// @notice Instance of the SUP token
     IERC20 private immutable _sup;
 
     // ================== Constructor ==================
     constructor(address stUsdc_) WstUsdcLite(stUsdc_) {
         _stUsdcAsset = IStUsdc(stUsdc_).asset();
-        _tby = IStUsdc(stUsdc_).tby();
         _sup = IERC20(address(IStUsdc(stUsdc_).stakeUpToken()));
-        // Set approval for stUsdc to be able to transfer TBYs on behalf of the WstUsdc contract
-        _tby.setApprovalForAll(address(stUsdc_), true);
     }
 
     // =================== Functions ===================

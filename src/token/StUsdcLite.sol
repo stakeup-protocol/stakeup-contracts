@@ -18,9 +18,6 @@ contract StUsdcLite is IStUsdcLite, RebasingERC20 {
     /// @dev Total amount of Usd
     uint256 internal _totalUsd;
 
-    /// @dev Last rate update timestamp
-    uint256 internal _lastRateUpdate;
-
     /// @dev The address that has the mint and burn roles, will be set to the StUsdcTokenPool contract
     address private _mintBurnRole;
 
@@ -34,7 +31,6 @@ contract StUsdcLite is IStUsdcLite, RebasingERC20 {
     // ================== Constructor ==================
     constructor(address owner) RebasingERC20("staked USDC", "stUSDC", owner) {
         require(owner != address(0), Errors.ZeroAddress());
-        _lastRateUpdate = block.timestamp;
     }
 
     // =================== Functions ==================
@@ -83,11 +79,6 @@ contract StUsdcLite is IStUsdcLite, RebasingERC20 {
     }
 
     // =================== View Functions ===================
-
-    // /// @inheritdoc IStUsdcLite
-    function lastRateUpdate() public view returns (uint256) {
-        return _lastRateUpdate;
-    }
 
     /// @notice Get the total USD value of the protocol
     function totalUsd() external view override returns (uint256) {

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {IBloomPool} from "@bloom-v2/interfaces/IBloomPool.sol";
+import {IBloomRouter} from "@bloom-v2/interfaces/IBloomRouter.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC1155} from "solady/tokens/ERC1155.sol";
 
 import {IStakeUpStaking} from "./IStakeUpStaking.sol";
 import {IStakeUpToken} from "./IStakeUpToken.sol";
@@ -48,6 +47,13 @@ interface IStUsdc is IStUsdcLite {
     event AssetDeposited(address indexed account, uint256 amount);
 
     /**
+     * @notice Emitted when the high water mark is updated
+     * @param oldHighWaterMark The old high water mark
+     * @param newHighWaterMark The new high water mark
+     */
+    event HighWaterMarkUpdated(uint256 oldHighWaterMark, uint256 newHighWaterMark);
+
+    /**
      * @notice Deposit underlying assets to mint stUsdc
      * @param amount Amount of underlying tokens to deposit
      * @return amountMinted Amount of stUsdc minted
@@ -63,22 +69,14 @@ interface IStUsdc is IStUsdcLite {
      */
     function redeemStUsdc(uint256 amount) external returns (uint256 underlyingAmount);
 
-    /**
-     * @notice Invokes the auto stake feature or adjusts the remaining balance
-     * if the most recent deposit did not get fully staked
-     * @dev autoMint feature is invoked if the last created pool is in
-     * the commit state
-     */
-    function poke() external payable;
+    /// @notice Harvests matured TBYs, autocompounds rewards and updates protocol yield
+    function harvest() external;
 
     /// @notice Returns the underlying asset
     function asset() external view returns (IERC20);
 
-    /// @notice Returns the address of the TBY token
-    function tby() external view returns (ERC1155);
-
-    /// @notice Returns the Bloom Pool Factory
-    function bloomPool() external view returns (IBloomPool);
+    /// @notice Returns the Bloom Router
+    function bloomRouter() external view returns (IBloomRouter);
 
     /// @notice Returns the StakeUpStaking contract.
     function stakeUpStaking() external view returns (IStakeUpStaking);
@@ -94,4 +92,7 @@ interface IStUsdc is IStUsdcLite {
 
     /// @notice The total shares of stUsdc tokens in circulation on all chains
     function globalShares() external view returns (uint256);
+
+    /// @notice The high water mark representing the highest usdPerShare value in the history of the protocol. Used to calculate the performance fee.
+    function highWaterMark() external view returns (uint256);
 }

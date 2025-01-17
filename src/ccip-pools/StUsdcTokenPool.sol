@@ -13,7 +13,6 @@ import {IWstUsdcLite} from "@StakeUp/interfaces/IWstUsdcLite.sol";
  * @notice A Chainlink CCIP compatible bridge for stUsdc and wstUsdc tokens.
  */
 contract StUsdcTokenPool is TokenPool, ITypeAndVersion {
-
     // =================== Storage ===================
 
     /// @notice Type and version of the pool.

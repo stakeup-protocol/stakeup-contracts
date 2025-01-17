@@ -42,6 +42,9 @@ library StakeUpErrors {
     /// @notice Rate update too often
     error RateUpdateTooOften();
 
+    /// @notice Invalid start and end for generating consecutive TBY IDs
+    error InvalidStartEnd();
+
     // ========================= General ===========================
     /// @notice Zero amount
     error ZeroAmount();

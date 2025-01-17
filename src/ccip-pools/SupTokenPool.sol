@@ -11,9 +11,8 @@ import {IStakeUpToken} from "@StakeUp/interfaces/IStakeUpToken.sol";
  * @notice A Chainlink CCIP compatible bridge for Sup tokens.
  */
 contract SupTokenPool is BurnMintTokenPool {
-
     // =================== Constructor ===================
-    
+
     constructor(IStakeUpToken token, address[] memory allowlist, address rmnProxy, address router)
         BurnMintTokenPool(IBurnMintERC20(address(token)), allowlist, rmnProxy, router)
     {
@@ -21,7 +20,7 @@ contract SupTokenPool is BurnMintTokenPool {
     }
 
     // =================== Functions ===================
-    
+
     /// @notice Mint tokens from the pool to the recipient
     /// @dev The _validateReleaseOrMint check is an essential security check
     /// @dev Only change in this function is calling the mintFromPool function on SUP
