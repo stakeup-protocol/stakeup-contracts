@@ -45,6 +45,9 @@ library StakeUpErrors {
     /// @notice Invalid start and end for generating consecutive TBY IDs
     error InvalidStartEnd();
 
+    /// @notice If a data feed returns a usdPerShare value less than or equal to 0
+    error InvalidAnswer();
+
     // ========================= General ===========================
     /// @notice Zero amount
     error ZeroAmount();
@@ -57,4 +60,7 @@ library StakeUpErrors {
 
     /// @notice Contract has already been initialized
     error AlreadyInitialized();
+
+    /// @notice Invalid operation for the current deployment
+    error InvalidOperation();
 }

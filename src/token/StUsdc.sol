@@ -66,7 +66,9 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
 
     // ================== Constructor ==================
 
-    constructor(address asset_, address bloomRouter_, address stakeupStaking_, address owner) StUsdcLite(owner) {
+    constructor(address asset_, address bloomRouter_, address stakeupStaking_, address owner)
+        StUsdcLite(false, owner)
+    {
         require(
             asset_ != address(0) && bloomRouter_ != address(0) && stakeupStaking_ != address(0), Errors.ZeroAddress()
         );
@@ -197,7 +199,7 @@ contract StUsdc is IStUsdc, StUsdcLite, ReentrancyGuard, ERC1155TokenReceiver {
      */
     function _accrueYield(IBloomRouter router) internal {
         uint256 protocolValue = _protocolValue(router);
-        uint256 totalSupply = totalSupply();
+        uint256 totalSupply = _totalUsd;
 
         if (protocolValue > totalSupply) {
             uint256 performanceFee = _calculateFee(protocolValue, totalSupply);
